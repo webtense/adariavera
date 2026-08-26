@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%9D</text></svg>">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pre check-in · Hotel Adaria Vera</title>
+<style>
+:root{--od:#1b5e75;--om:#2d8aa3;--ol:#5ba8c7;--tc:#c67c6f;--off:#f8f9fa;--ch:#333}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:var(--ch);background:var(--off);min-height:100vh}
+.top{background:linear-gradient(135deg,var(--od),var(--om));color:#fff;padding:16px 18px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.top .b{font-size:17px;font-weight:700;flex:1}.top .b span{font-size:22px;margin-right:6px}
+.lang{display:flex;gap:6px}
+.lang button{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:6px;padding:5px 9px;font-size:12px;cursor:pointer;font-weight:600}
+.lang button.on{background:#fff;color:var(--od)}
+.wrap{max-width:480px;margin:0 auto;padding:18px 16px 60px}
+h1{color:var(--od);font-size:19px;margin-bottom:4px}
+.muted{color:#888;font-size:13px;margin-bottom:18px;line-height:1.4}
+.box{background:#fff;border-radius:14px;box-shadow:0 4px 10px rgba(0,0,0,.07);padding:18px;margin-bottom:16px;border:1px solid #eef3f5}
+label{font-size:13px;font-weight:600;color:#555;display:block;margin:12px 0 5px}
+label:first-child{margin-top:0}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid #cfdde3;border-radius:9px;font-size:15px;font-family:inherit}
+textarea{resize:vertical;min-height:70px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tabs button{flex:1;padding:9px;border:1px solid #cfdde3;border-radius:9px;background:#fff;font-size:13px;cursor:pointer;font-weight:600;color:#888}
+.tabs button.on{background:var(--od);color:#fff;border-color:var(--od)}
+.btn{width:100%;margin-top:16px;background:var(--od);color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer}
+.btn:hover{background:var(--om)}
+.btn.sec{background:#fff;color:var(--od);border:1px solid var(--od)}
+.btn.tc{background:var(--tc)}
+.err{background:#fdecea;color:#c0392b;padding:10px 12px;border-radius:9px;font-size:13px;margin-top:12px}
+.ok{background:#e8f8ef;color:#1e8449;padding:10px 12px;border-radius:9px;font-size:13px;margin-bottom:12px}
+.chip{display:inline-block;background:#eaf6ff;color:var(--od);padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;margin-right:6px}
+.persona{border:1px solid #eef3f5;border-radius:12px;padding:14px;margin-bottom:14px;position:relative}
+.persona h3{font-size:14px;color:var(--od);margin-bottom:6px}
+.summary{font-size:13px;color:#555;line-height:1.6}
+.summary b{color:var(--od)}
+.hide{display:none !important}
+.ver{position:fixed;bottom:8px;right:12px;font-size:11px;color:#bbb}
+.spinner{text-align:center;padding:20px;color:#888;font-size:13px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="b"><span>📝</span><span id="tit-app">Pre check-in</span></div>
+  <div class="lang">
+    <button data-lang="es" class="on">ES</button>
+    <button data-lang="en">EN</button>
+    <button data-lang="fr">FR</button>
+  </div>
+</div>
+<div class="wrap">
+
+  <!-- Paso 1: búsqueda -->
+  <div id="step-buscar">
+    <h1 data-i18n="buscar.h1">Encuentra tu reserva</h1>
+    <p class="muted" data-i18n="buscar.intro">Introduce tu localizador de reserva y tu apellido, o la fecha de entrada y tu apellido.</p>
+    <div class="box">
+      <div class="tabs">
+        <button id="tab-cod" class="on" data-i18n="buscar.tabCodigo">Localizador</button>
+        <button id="tab-fecha" data-i18n="buscar.tabFecha">Fecha de entrada</button>
+      </div>
+      <div id="campo-codigo">
+        <label data-i18n="buscar.localizador">Localizador de reserva</label>
+        <input id="in-codigo" placeholder="Ej. ADV12345" autocomplete="off">
+      </div>
+      <div id="campo-fecha" class="hide">
+        <label data-i18n="buscar.fechaEntrada">Fecha de entrada</label>
+        <input id="in-fecha" type="date">
+      </div>
+      <label data-i18n="buscar.apellido">Apellido del titular</label>
+      <input id="in-apellido" placeholder="" autocomplete="off">
+      <button class="btn" id="btn-buscar" data-i18n="buscar.buscar">Buscar reserva</button>
+      <div id="buscar-err" class="err hide"></div>
+    </div>
+  </div>
+
+  <!-- Cargando -->
+  <div id="step-loading" class="hide"><div class="spinner" data-i18n="cargando">Consultando reserva…</div></div>
+
+  <!-- Paso 2: confirmación de la reserva encontrada -->
+  <div id="step-confirmar" class="hide">
+    <h1 data-i18n="confirmar.h1">Hemos encontrado tu reserva</h1>
+    <div class="box">
+      <div class="summary" id="resumen-reserva"></div>
+    </div>
+    <button class="btn" id="btn-continuar" data-i18n="confirmar.continuar">Continuar</button>
+    <button class="btn sec" id="btn-volver-1" data-i18n="confirmar.volver">No es mi reserva</button>
+  </div>
+
+  <!-- Paso 3: formulario -->
+  <div id="step-formulario" class="hide">
+    <h1 data-i18n="form.h1">Completa tus datos</h1>
+    <p class="muted" data-i18n="form.intro">Estos datos se guardan de forma segura y solo los usará el hotel para tu llegada.</p>
+
+    <div class="box">
+      <h3 style="color:var(--od);margin-bottom:8px" data-i18n="form.contacto">Contacto</h3>
+      <label data-i18n="form.email">Email</label>
+      <input id="in-email" type="email" autocomplete="email">
+      <label data-i18n="form.telefono">Teléfono</label>
+      <input id="in-telefono" type="tel" autocomplete="tel">
+      <label data-i18n="form.horaLlegada">Hora estimada de llegada</label>
+      <input id="in-hora" type="time">
+      <label data-i18n="form.observaciones">Observaciones</label>
+      <textarea id="in-observaciones"></textarea>
+    </div>
+
+    <div id="personas-container"></div>
+
+    <button class="btn" id="btn-enviar" data-i18n="form.enviar">Enviar pre check-in</button>
+    <div id="form-err" class="err hide"></div>
+  </div>
+
+  <!-- Paso 4: confirmación final -->
+  <div id="step-ok" class="hide">
+    <div class="box" style="text-align:center;padding:30px 18px">
+      <div style="font-size:44px;margin-bottom:10px">✅</div>
+      <h1 data-i18n="ok.h1">¡Pre check-in completado!</h1>
+      <p class="muted" data-i18n="ok.intro">Hemos recibido tus datos. Te esperamos en el Hotel Adaria Vera.</p>
+    </div>
+  </div>
+
+</div>
+<div class="ver">v1.0</div>
+
+<script>
+const I18N = {
+  es: {
+    'buscar.h1': 'Encuentra tu reserva',
+    'buscar.intro': 'Introduce tu localizador de reserva y tu apellido, o la fecha de entrada y tu apellido.',
+    'buscar.tabCodigo': 'Localizador',
+    'buscar.tabFecha': 'Fecha de entrada',
+    'buscar.localizador': 'Localizador de reserva',
+    'buscar.fechaEntrada': 'Fecha de entrada',
+    'buscar.apellido': 'Apellido del titular',
+    'buscar.buscar': 'Buscar reserva',
+    'cargando': 'Consultando reserva…',
+    'confirmar.h1': 'Hemos encontrado tu reserva',
+    'confirmar.continuar': 'Continuar',
+    'confirmar.volver': 'No es mi reserva',
+    'form.h1': 'Completa tus datos',
+    'form.intro': 'Estos datos se guardan de forma segura y solo los usará el hotel para tu llegada.',
+    'form.contacto': 'Contacto',
+    'form.email': 'Email',
+    'form.telefono': 'Teléfono',
+    'form.horaLlegada': 'Hora estimada de llegada',
+    'form.observaciones': 'Observaciones',
+    'form.enviar': 'Enviar pre check-in',
+    'form.persona': 'Persona',
+    'form.titular': '(titular)',
+    'form.nombre': 'Nombre',
+    'form.apellido1': 'Primer apellido',
+    'form.apellido2': 'Segundo apellido',
+    'form.tipoDocumento': 'Tipo de documento',
+    'form.numeroDocumento': 'Número de documento',
+    'form.fechaNacimiento': 'Fecha de nacimiento',
+    'form.nacionalidad': 'Nacionalidad',
+    'doc.DNI': 'DNI', 'doc.NIE': 'NIE', 'doc.PASAPORTE': 'Pasaporte', 'doc.OTRO': 'Otro',
+    'ok.h1': '¡Pre check-in completado!',
+    'ok.intro': 'Hemos recibido tus datos. Te esperamos en el Hotel Adaria Vera.',
+    'err.reserva_no_encontrada': 'No hemos encontrado ninguna reserva con esos datos. Revisa el localizador/fecha y el apellido.',
+    'err.apellido_requerido': 'El apellido es obligatorio.',
+    'err.localizador_o_fecha_requerido': 'Indica el localizador o la fecha de entrada.',
+    'err.aci_no_disponible': 'No hemos podido consultar el sistema de reservas. Inténtalo de nuevo en unos minutos.',
+    'err.generico': 'Ha ocurrido un error. Inténtalo de nuevo.',
+    'err.personas_incompletas': 'Revisa el nombre y el primer apellido de cada persona.',
+    'resumen.habitacion': 'Habitación', 'resumen.entrada': 'Entrada', 'resumen.salida': 'Salida', 'resumen.pax': 'Personas',
+  },
+  en: {
+    'buscar.h1': 'Find your reservation',
+    'buscar.intro': 'Enter your booking reference and surname, or your arrival date and surname.',
+    'buscar.tabCodigo': 'Booking reference',
+    'buscar.tabFecha': 'Arrival date',
+    'buscar.localizador': 'Booking reference',
+    'buscar.fechaEntrada': 'Arrival date',
+    'buscar.apellido': "Main guest's surname",
+    'buscar.buscar': 'Find reservation',
+    'cargando': 'Checking reservation…',
+    'confirmar.h1': 'We found your reservation',
+    'confirmar.continuar': 'Continue',
+    'confirmar.volver': "This isn't my reservation",
+    'form.h1': 'Complete your details',
+    'form.intro': 'This information is stored securely and only used by the hotel to prepare your arrival.',
+    'form.contacto': 'Contact',
+    'form.email': 'Email',
+    'form.telefono': 'Phone',
+    'form.horaLlegada': 'Estimated arrival time',
+    'form.observaciones': 'Remarks',
+    'form.enviar': 'Send pre check-in',
+    'form.persona': 'Guest',
+    'form.titular': '(main guest)',
+    'form.nombre': 'First name',
+    'form.apellido1': 'Last name',
+    'form.apellido2': 'Second last name',
+    'form.tipoDocumento': 'Document type',
+    'form.numeroDocumento': 'Document number',
+    'form.fechaNacimiento': 'Date of birth',
+    'form.nacionalidad': 'Nationality',
+    'doc.DNI': 'National ID', 'doc.NIE': 'NIE', 'doc.PASAPORTE': 'Passport', 'doc.OTRO': 'Other',
+    'ok.h1': 'Pre check-in completed!',
+    'ok.intro': "We've received your details. See you at Hotel Adaria Vera.",
+    'err.reserva_no_encontrada': "We couldn't find a reservation with that information. Check the reference/date and surname.",
+    'err.apellido_requerido': 'Surname is required.',
+    'err.localizador_o_fecha_requerido': 'Enter the booking reference or the arrival date.',
+    'err.aci_no_disponible': "We couldn't check the reservation system. Please try again in a few minutes.",
+    'err.generico': 'Something went wrong. Please try again.',
+    'err.personas_incompletas': "Check each guest's first name and last name.",
+    'resumen.habitacion': 'Room', 'resumen.entrada': 'Check-in', 'resumen.salida': 'Check-out', 'resumen.pax': 'Guests',
+  },
+  fr: {
+    'buscar.h1': 'Trouvez votre réservation',
+    'buscar.intro': "Indiquez votre code de réservation et votre nom, ou votre date d'arrivée et votre nom.",
+    'buscar.tabCodigo': 'Code de réservation',
+    'buscar.tabFecha': "Date d'arrivée",
+    'buscar.localizador': 'Code de réservation',
+    'buscar.fechaEntrada': "Date d'arrivée",
+    'buscar.apellido': 'Nom du titulaire',
+    'buscar.buscar': 'Rechercher',
+    'cargando': 'Vérification de la réservation…',
+    'confirmar.h1': 'Nous avons trouvé votre réservation',
+    'confirmar.continuar': 'Continuer',
+    'confirmar.volver': "Ce n'est pas ma réservation",
+    'form.h1': 'Complétez vos informations',
+    'form.intro': "Ces données sont enregistrées de façon sécurisée et utilisées uniquement par l'hôtel pour votre arrivée.",
+    'form.contacto': 'Contact',
+    'form.email': 'E-mail',
+    'form.telefono': 'Téléphone',
+    'form.horaLlegada': "Heure d'arrivée estimée",
+    'form.observaciones': 'Remarques',
+    'form.enviar': 'Envoyer le pré check-in',
+    'form.persona': 'Personne',
+    'form.titular': '(titulaire)',
+    'form.nombre': 'Prénom',
+    'form.apellido1': 'Nom',
+    'form.apellido2': 'Second nom',
+    'form.tipoDocumento': 'Type de document',
+    'form.numeroDocumento': 'Numéro de document',
+    'form.fechaNacimiento': 'Date de naissance',
+    'form.nacionalidad': 'Nationalité',
+    'doc.DNI': "Carte d'identité", 'doc.NIE': 'NIE', 'doc.PASAPORTE': 'Passeport', 'doc.OTRO': 'Autre',
+    'ok.h1': 'Pré check-in terminé !',
+    'ok.intro': 'Nous avons bien reçu vos informations. À bientôt à l\'Hôtel Adaria Vera.',
+    'err.reserva_no_encontrada': "Aucune réservation trouvée avec ces informations. Vérifiez le code/date et le nom.",
+    'err.apellido_requerido': 'Le nom est obligatoire.',
+    'err.localizador_o_fecha_requerido': "Indiquez le code de réservation ou la date d'arrivée.",
+    'err.aci_no_disponible': "Impossible de consulter le système de réservation. Réessayez dans quelques minutes.",
+    'err.generico': "Une erreur s'est produite. Veuillez réessayer.",
+    'err.personas_incompletas': 'Vérifiez le prénom et le nom de chaque personne.',
+    'resumen.habitacion': 'Chambre', 'resumen.entrada': 'Arrivée', 'resumen.salida': 'Départ', 'resumen.pax': 'Personnes',
+  },
+};
+
+let LANG = 'es';
+let RESERVA = null;
+let MODO_BUSQUEDA = 'codigo';
+
+function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.es[key] || key; }
+
+function aplicarIdioma() {
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('.lang button').forEach((b) => b.classList.toggle('on', b.dataset.lang === LANG));
+  renderPersonas();
+}
+
+document.querySelectorAll('.lang button').forEach((b) => {
+  b.addEventListener('click', () => { LANG = b.dataset.lang; aplicarIdioma(); });
+});
+
+document.getElementById('tab-cod').addEventListener('click', () => {
+  MODO_BUSQUEDA = 'codigo';
+  document.getElementById('tab-cod').classList.add('on');
+  document.getElementById('tab-fecha').classList.remove('on');
+  document.getElementById('campo-codigo').classList.remove('hide');
+  document.getElementById('campo-fecha').classList.add('hide');
+});
+document.getElementById('tab-fecha').addEventListener('click', () => {
+  MODO_BUSQUEDA = 'fecha';
+  document.getElementById('tab-fecha').classList.add('on');
+  document.getElementById('tab-cod').classList.remove('on');
+  document.getElementById('campo-fecha').classList.remove('hide');
+  document.getElementById('campo-codigo').classList.add('hide');
+});
+
+function mostrarPaso(id) {
+  ['step-buscar', 'step-loading', 'step-confirmar', 'step-formulario', 'step-ok'].forEach((s) => {
+    document.getElementById(s).classList.toggle('hide', s !== id);
+  });
+}
+
+function mostrarError(elId, msgKey) {
+  const el = document.getElementById(elId);
+  el.textContent = t(msgKey);
+  el.classList.remove('hide');
+}
+
+document.getElementById('btn-buscar').addEventListener('click', async () => {
+  document.getElementById('buscar-err').classList.add('hide');
+  const apellido = document.getElementById('in-apellido').value.trim();
+  const codigo = document.getElementById('in-codigo').value.trim();
+  const fechaEntrada = document.getElementById('in-fecha').value;
+
+  if (!apellido) return mostrarError('buscar-err', 'err.apellido_requerido');
+  if (MODO_BUSQUEDA === 'codigo' && !codigo) return mostrarError('buscar-err', 'err.localizador_o_fecha_requerido');
+  if (MODO_BUSQUEDA === 'fecha' && !fechaEntrada) return mostrarError('buscar-err', 'err.localizador_o_fecha_requerido');
+
+  mostrarPaso('step-loading');
+  try {
+    const body = MODO_BUSQUEDA === 'codigo' ? { codigo, apellido } : { fechaEntrada, apellido };
+    const resp = await fetch('api/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await resp.json();
+    if (!data.ok) {
+      mostrarPaso('step-buscar');
+      return mostrarError('buscar-err', 'err.' + (data.error || 'generico'));
+    }
+    RESERVA = data.reserva;
+    RESERVA._codigoBusqueda = codigo;
+    RESERVA._apellidoBusqueda = apellido;
+    RESERVA._fechaEntradaBusqueda = fechaEntrada;
+    renderResumen();
+    mostrarPaso('step-confirmar');
+  } catch (e) {
+    mostrarPaso('step-buscar');
+    mostrarError('buscar-err', 'err.generico');
+  }
+});
+
+function renderResumen() {
+  const r = RESERVA;
+  document.getElementById('resumen-reserva').innerHTML = `
+    <p><span class="chip">${r.codigo || ''}</span></p>
+    <p style="margin-top:10px"><b>${t('resumen.habitacion')}:</b> ${r.habitacion || '-'}</p>
+    <p><b>${t('resumen.entrada')}:</b> ${r.entrada || '-'}</p>
+    <p><b>${t('resumen.salida')}:</b> ${r.salida || '-'}</p>
+    <p><b>${t('resumen.pax')}:</b> ${r.pax || 1}</p>`;
+}
+
+document.getElementById('btn-volver-1').addEventListener('click', () => { mostrarPaso('step-buscar'); });
+
+document.getElementById('btn-continuar').addEventListener('click', () => {
+  renderPersonas();
+  mostrarPaso('step-formulario');
+});
+
+function renderPersonas() {
+  if (!RESERVA) return;
+  const cont = document.getElementById('personas-container');
+  const n = Math.max(1, parseInt(RESERVA.pax || 1, 10));
+  let html = '';
+  for (let i = 0; i < n; i++) {
+    const esTitular = i === 0;
+    html += `<div class="box persona" data-idx="${i}">
+      <h3>${t('form.persona')} ${i + 1} ${esTitular ? t('form.titular') : ''}</h3>
+      <label>${t('form.nombre')}</label><input class="p-nombre" ${esTitular ? `value="${(RESERVA.titularNombre || '').replace(/"/g, '')}"` : ''}>
+      <div class="row2">
+        <div><label>${t('form.apellido1')}</label><input class="p-apellido1" ${esTitular ? `value="${(RESERVA.titularApellido || '').replace(/"/g, '')}"` : ''}></div>
+        <div><label>${t('form.apellido2')}</label><input class="p-apellido2"></div>
+      </div>
+      <div class="row2">
+        <div><label>${t('form.tipoDocumento')}</label>
+          <select class="p-tipodoc">
+            <option value="">—</option>
+            <option value="DNI">${t('doc.DNI')}</option>
+            <option value="NIE">${t('doc.NIE')}</option>
+            <option value="PASAPORTE">${t('doc.PASAPORTE')}</option>
+            <option value="OTRO">${t('doc.OTRO')}</option>
+          </select>
+        </div>
+        <div><label>${t('form.numeroDocumento')}</label><input class="p-numdoc"></div>
+      </div>
+      <div class="row2">
+        <div><label>${t('form.fechaNacimiento')}</label><input type="date" class="p-fechanac"></div>
+        <div><label>${t('form.nacionalidad')}</label><input class="p-nacionalidad"></div>
+      </div>
+    </div>`;
+  }
+  cont.innerHTML = html;
+}
+
+document.getElementById('btn-enviar').addEventListener('click', async () => {
+  document.getElementById('form-err').classList.add('hide');
+  const personas = [];
+  document.querySelectorAll('#personas-container .persona').forEach((div, idx) => {
+    personas.push({
+      esTitular: idx === 0,
+      nombre: div.querySelector('.p-nombre').value.trim(),
+      apellido1: div.querySelector('.p-apellido1').value.trim(),
+      apellido2: div.querySelector('.p-apellido2').value.trim(),
+      tipoDocumento: div.querySelector('.p-tipodoc').value,
+      numeroDocumento: div.querySelector('.p-numdoc').value.trim(),
+      fechaNacimiento: div.querySelector('.p-fechanac').value || null,
+      nacionalidad: div.querySelector('.p-nacionalidad').value.trim(),
+    });
+  });
+  const incompleta = personas.some((p) => p.nombre.length < 2 || p.apellido1.length < 2);
+  if (incompleta) return mostrarError('form-err', 'err.personas_incompletas');
+
+  const payload = {
+    codigo: RESERVA._codigoBusqueda || RESERVA.codigo,
+    fechaEntrada: RESERVA._fechaEntradaBusqueda,
+    apellidoBusqueda: RESERVA._apellidoBusqueda,
+    idioma: LANG,
+    contacto: {
+      email: document.getElementById('in-email').value.trim(),
+      telefono: document.getElementById('in-telefono').value.trim(),
+    },
+    horaLlegada: document.getElementById('in-hora').value,
+    observaciones: document.getElementById('in-observaciones').value.trim(),
+    personas,
+  };
+
+  try {
+    const resp = await fetch('api/precheckin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await resp.json();
+    if (!data.ok) return mostrarError('form-err', 'err.' + (data.error || 'generico'));
+    mostrarPaso('step-ok');
+  } catch (e) {
+    mostrarError('form-err', 'err.generico');
+  }
+});
+
+aplicarIdioma();
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛎️</text></svg>">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Hotel Adaria Vera · Check-in</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>Hotel Adaria Vera · Check-in</h1>
+      <div class="subtitle" id="subtitle">Llegadas de hoy</div>
+      <div class="version">v1.0.0</div>
+    </div>
+    <div class="lang-switch">
+      <button id="lang-es" class="active" onclick="setLang('es')">ES</button>
+      <button id="lang-en" onclick="setLang('en')">EN</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="arrivals-toolbar">
+      <h2 id="arrivals-title">Llegadas de hoy</h2>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <span class="badge-count" id="arrivals-count">0</span>
+        <button class="refresh-btn" id="refresh-btn" onclick="loadArrivals()">↻ <span id="refresh-label">Actualizar</span></button>
+      </div>
+    </div>
+
+    <div id="arrivals-container">
+      <div class="empty-state" id="loading-state">Cargando llegadas de hoy desde ACI…</div>
+    </div>
+  </main>
+
+  <footer class="app-footer">Hotel Adaria Vera · Check-in digital v1.0.0 · Datos de llegadas en solo lectura desde ACI Dali</footer>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "asanchez": {
+    "hash": "$2a$10$kprf8ok75P68F5raUWH9uugECgXoLIUjNmeBIeh6bLMGPKxtkHtzi",
+    "nombre": "Andrés Sánchez",
+    "role": "superadmin"
+  },
+  "mvidal": {
+    "hash": "$2a$10$kprf8ok75P68F5raUWH9uugECgXoLIUjNmeBIeh6bLMGPKxtkHtzi",
+    "nombre": "Marc Vidal",
+    "role": "admin"
+  },
+  "olga": {
+    "hash": "$2a$10$WFH8AjEg7BeHFtepE9./Qe0Go4s6qR2TlCgdkg0GxFeLlVmZfb7Am",
+    "nombre": "Olga (Dirección)",
+    "role": "admin"
+  },
+  "recepcion": {
+    "hash": "$2a$10$kprf8ok75P68F5raUWH9uugECgXoLIUjNmeBIeh6bLMGPKxtkHtzi",
+    "nombre": "Recepción",
+    "role": "guest"
+  },
+  "francesc": {
+    "hash": "$2a$10$c6dGW1hCR1VOQhR/8Md.te0Td9PrTaDKQtT1.BAtSY/lwQeX5CzRa",
+    "nombre": "Francesc",
+    "role": "admin"
+  }
+}

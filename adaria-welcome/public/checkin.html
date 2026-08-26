@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛎️</text></svg>">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Hotel Adaria Vera · Check-in</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1 id="hdr-title">Hotel Adaria Vera · Check-in</h1>
+      <div class="subtitle" id="hdr-subtitle">Revisa tus datos y firma</div>
+      <div class="version">v1.0.0</div>
+    </div>
+    <div class="lang-switch">
+      <button id="lang-es" class="active" onclick="setFormLang('es')">ES</button>
+      <button id="lang-en" onclick="setFormLang('en')">EN</button>
+    </div>
+  </header>
+
+  <main class="container" id="checkin-container">
+    <!-- rellenado dinamicamente por checkin.js -->
+  </main>
+
+  <footer class="app-footer">Hotel Adaria Vera · Check-in digital v1.0.0</footer>
+
+  <script src="/js/checkin.js"></script>
+</body>
+</html>

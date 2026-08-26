@@ -1,0 +1,23 @@
+{
+  "id_propiedad": "vera",
+  "nombre": "Hotel Adaria Vera",
+  "timezone": "Europe/Madrid",
+  "idioma": "es",
+  "branding": {
+    "icono_emoji": "👥",
+    "logo": null,
+    "colores": {
+      "primario": "#1b5e75",
+      "acento_medio": "#2d8aa3",
+      "acento_claro": "#5ba8c7",
+      "terracota": "#c67c6f"
+    }
+  },
+  "sociedad": {
+    "razon_social": null,
+    "cif": null,
+    "domicilio": null,
+    "nota_pendiente": "Datos fiscales de la sociedad titular de Hotel Adaria Vera aún no confirmados en la documentación disponible (11/08/2026). NO se han inventado. Rellenar aquí antes de usar este módulo para emitir documentos oficiales (contratos, informes con validez legal)."
+  },
+  "notas": "Config específica de la propiedad 'vera'. El núcleo (server.js/db.js) es común a todas las propiedades del grupo (p.ej. Monasterio de Poblet). Para añadir una nueva propiedad: mismo código + un property.json distinto + un .env distinto + su propia base de datos (o su propio property_id dentro de la misma BD)."
+}
