@@ -2,7 +2,22 @@
   "asanchez": {
     "hash": "$2a$10$kprf8ok75P68F5raUWH9uugECgXoLIUjNmeBIeh6bLMGPKxtkHtzi",
     "nombre": "Andrés Sánchez",
-    "role": "superadmin"
+    "role": "superadmin",
+    "apps": [
+      "welcome",
+      "parking",
+      "ine",
+      "guest",
+      "estadisticas",
+      "escaner",
+      "precheckin",
+      "manuales",
+      "it",
+      "personal",
+      "qr",
+      "changelog",
+      "usuarios"
+    ]
   },
   "mvidal": {
     "hash": "$2a$10$kprf8ok75P68F5raUWH9uugECgXoLIUjNmeBIeh6bLMGPKxtkHtzi",
