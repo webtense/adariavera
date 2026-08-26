@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- Instalable en el móvil de recepción: con el manifest, Chrome en Android
+       ofrece "Instalar aplicación" y abre a pantalla completa, sin la barra del
+       navegador. Importa más de lo que parece: esa barra se comía alto de
+       pantalla justo donde va la vista de la cámara. -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#8B1E2D">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Escáner DNI">
+  <link rel="apple-touch-icon" href="/icono-192.png">
+  <title>BTR · Escáner de Documentos</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           background: #f4f5f7; min-height: 100vh; color: #222; -webkit-tap-highlight-color: transparent; }
+
+    header { background: #8B1E2D; color: #fff; padding: 0 16px; height: 56px; display: flex;
+             align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.18);
+             position: sticky; top: 0; z-index: 100; }
+    .header-logo { font-size: 1rem; font-weight: 700; letter-spacing: .04em; }
+    .header-sep { flex: 1; }
+    .badge { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
+             border-radius: 4px; padding: 2px 7px; font-size: .64rem; font-weight: 700;
+             letter-spacing: .06em; text-transform: uppercase; }
+    .badge.sim { background: #d9b36b; border-color: #d9b36b; color: #4a3208; }
+    a.btn-back { color: rgba(255,255,255,.9); text-decoration: none; border: 1px solid rgba(255,255,255,.4);
+                 padding: 5px 11px; border-radius: 5px; font-size: .78rem; }
+
+    main { max-width: 760px; margin: 0 auto; padding: 14px 12px 80px; }
+    .vista { display: none; }
+    .vista.activa { display: block; }
+
+    .aviso { border-radius: 10px; padding: 10px 13px; font-size: .84rem; margin-bottom: 12px; line-height: 1.45; }
+    .aviso.sim  { background: #fffaf0; border: 1px solid #d9b36b; color: #6b4a10; }
+    .aviso.err  { background: #fdf1f0; border: 1px solid #e0b4b0; color: #a3352c; }
+    .aviso.info { background: #f2f7fd; border: 1px solid #b8d3ee; color: #23557f; }
+    .aviso.ok   { background: #f3fbf6; border: 1px solid #b7e0c4; color: #26663f; }
+
+    .tabs { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 13px; }
+    .tab { padding: 9px 15px; border-radius: 9px; border: 1px solid #d2d5db; background: #fff;
+           cursor: pointer; font-weight: 700; font-size: .87rem; color: #555; }
+    .tab.active { background: #8B1E2D; color: #fff; border-color: #8B1E2D; }
+
+    .buscador { display: flex; gap: 8px; margin-bottom: 14px; }
+    .buscador input { flex: 1; border: 1px solid #d2d5db; border-radius: 9px; padding: 12px 13px;
+                      font-size: 1rem; min-width: 0; }
+    .btn { border: none; border-radius: 9px; padding: 12px 16px; font-size: .9rem; font-weight: 700;
+           cursor: pointer; font-family: inherit; }
+    .btn-primary { background: #8B1E2D; color: #fff; }
+    .btn-ghost { background: #fff; border: 1px solid #d2d5db; color: #333; }
+    .btn-grande { width: 100%; padding: 16px; font-size: 1.05rem; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .seccion-tit { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em;
+                   color: #8a8f98; font-weight: 800; margin: 18px 0 8px; }
+
+    .lista { display: flex; flex-direction: column; gap: 8px; }
+    .fila { background: #fff; border: 1px solid #e2e4e9; border-radius: 12px; padding: 12px 14px;
+            display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .fila:active { background: #faf0f1; }
+    .fila .hab { font-weight: 800; font-size: 1.05rem; color: #8B1E2D; min-width: 46px; }
+    .fila .cuerpo { flex: 1; min-width: 0; }
+    .fila .nom { font-weight: 700; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fila .sub { font-size: .76rem; color: #888; margin-top: 2px; }
+    .pill { font-size: .68rem; font-weight: 800; border-radius: 20px; padding: 3px 9px; white-space: nowrap; }
+    .pill.ok   { background: #e6f5ec; color: #26663f; }
+    .pill.pend { background: #fdf0e6; color: #96551b; }
+    .pill.na   { background: #eceef1; color: #6b7280; }
+
+    /* Ficha de persona */
+    .persona { background: #fff; border: 1px solid #e2e4e9; border-radius: 12px; padding: 13px 14px;
+               display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .persona.pendiente { border-color: #e6c68f; }
+    .persona .cuerpo { flex: 1; min-width: 0; }
+    .persona .rol { font-size: .66rem; text-transform: uppercase; letter-spacing: .07em;
+                    color: #9aa0a8; font-weight: 800; }
+    .persona .nom { font-weight: 700; font-size: .98rem; }
+    .persona .doc { font-size: .8rem; color: #666; margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .btn-cam { background: #8B1E2D; color: #fff; border: none; border-radius: 11px; width: 52px;
+               height: 46px; font-size: 1.35rem; cursor: pointer; flex-shrink: 0; }
+    .btn-cam:disabled { background: #cfd3d9; }
+
+    .cabecera-res { background: #fff; border: 1px solid #e2e4e9; border-radius: 12px;
+                    padding: 13px 15px; margin-bottom: 14px; }
+    .cabecera-res .l1 { font-weight: 800; font-size: 1.05rem; color: #8B1E2D; }
+    .cabecera-res .l2 { font-size: .82rem; color: #777; margin-top: 3px; }
+
+    /* ── Cámara ──────────────────────────────────────────────────────────── */
+    #camara { position: fixed; inset: 0; background: #000; z-index: 900; display: none;
+              flex-direction: column; }
+    #camara.activa { display: flex; }
+    .cam-top { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+               background: rgba(0,0,0,.75); color: #fff; }
+    .cam-top .quien { flex: 1; font-size: .88rem; font-weight: 700; min-width: 0;
+                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cam-top .contador { font-size: .74rem; opacity: .8; }
+    .cam-x { background: none; border: 1px solid rgba(255,255,255,.45); color: #fff;
+             border-radius: 7px; padding: 5px 11px; font-size: .82rem; cursor: pointer; }
+    .cam-tipos { display: flex; gap: 8px; padding: 8px 14px; background: rgba(0,0,0,.75); }
+    .cam-tipos button { flex: 1; padding: 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,.35);
+                        background: transparent; color: #fff; font-weight: 700; font-size: .84rem; cursor: pointer; }
+    .cam-tipos button.active { background: #fff; color: #111; border-color: #fff; }
+    .cam-cuerpo { flex: 1; position: relative; display: flex; align-items: center;
+                  justify-content: center; overflow: hidden; }
+    #video { max-width: 100%; max-height: 100%; display: block; }
+    #marco { position: absolute; pointer-events: none; }
+    .cam-pie { padding: 12px 16px 22px; background: rgba(0,0,0,.8); color: #fff; text-align: center; }
+    .cam-msg { font-size: .9rem; min-height: 2.6em; line-height: 1.35; }
+    .cam-msg.leyendo { color: #ffd98a; }
+    .cam-msg.ok { color: #8ce0aa; font-weight: 700; }
+    .cam-diag { font-size: .68rem; color: rgba(255,255,255,.45); margin-top: 4px;
+                font-variant-numeric: tabular-nums; }
+    .cam-acciones { display: flex; align-items: center; justify-content: center; gap: 26px; margin-top: 12px; }
+    .cam-acciones button { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35);
+                           color: #fff; border-radius: 50%; width: 54px; height: 54px;
+                           font-size: 1.4rem; cursor: pointer; }
+    .cam-acciones button.disparo { width: 68px; height: 68px; background: #fff; color: #8B1E2D;
+                                   border-color: #fff; font-size: 1.7rem; }
+    .cam-acciones button.off { opacity: .45; }
+
+    /* ── Verificación ────────────────────────────────────────────────────── */
+    .campos { background: #fff; border: 1px solid #e2e4e9; border-radius: 12px; overflow: hidden; }
+    .campo { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-bottom: 1px solid #f0f1f4; }
+    .campo:last-child { border-bottom: none; }
+    .campo label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+                   color: #9aa0a8; font-weight: 800; width: 92px; flex-shrink: 0; }
+    .campo input, .campo select { flex: 1; border: 1px solid #dcdfe4; border-radius: 7px;
+                                  padding: 9px 10px; font-size: .95rem; font-family: inherit; min-width: 0; }
+    .campo .marca { width: 20px; text-align: center; font-size: .95rem; flex-shrink: 0; }
+    .campo.conflicto input { border-color: #d9a13b; background: #fffaf0; }
+    .campo .previo { font-size: .72rem; color: #96551b; }
+
+    .ident { border-radius: 12px; padding: 12px 14px; margin-bottom: 12px;
+             font-size: .84rem; line-height: 1.5; }
+    .ident.ok  { background: #f3fbf6; border: 1px solid #b7e0c4; color: #26663f; }
+    .ident.mal { background: #fffaf0; border: 1px solid #d9b36b; color: #6b4a10; }
+    .ident-t { font-weight: 800; margin-bottom: 6px; }
+    .ident-l { font-variant-numeric: tabular-nums; }
+    .ident-l span { display: inline-block; width: 58px; font-size: .68rem;
+                    text-transform: uppercase; letter-spacing: .05em; opacity: .7;
+                    font-weight: 800; }
+    .ident-n { margin-top: 6px; font-size: .78rem; opacity: .85; }
+
+    .avisos-doc { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+    .acciones { display: flex; gap: 10px; margin-top: 16px; }
+    .acciones .btn { flex: 1; }
+
+    .cargando { text-align: center; color: #999; padding: 26px; font-size: .88rem; }
+    .vacio { text-align: center; color: #9aa0a8; padding: 30px 16px; font-size: .88rem; line-height: 1.5; }
+    .oculto { display: none !important; }
+    /* Aviso de versión nueva. Mismo patrón que el resto del portal. */
+    .btr-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+      background:#8D2029;color:#fff;padding:10px 18px;border-radius:9999px;
+      font:600 13px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:99999;display:flex;
+      align-items:center;gap:8px}
+  </style>
+</head>
+<body>
+<header>
+  <span class="header-logo">BTR · Documentos</span>
+  <span class="badge" id="badgeVer" title="Versión de la app">v…</span>
+  <span class="badge sim oculto" id="badgeSim">simulación</span>
+  <span class="header-sep"></span>
+  <a class="btn-back" href="/manuales/escaner-dni.html">Manual</a>
+  <a class="btn-back" href="/">← Portal</a>
+</header>
+
+<main>
+  <!-- ── Vista 1 · buscar reserva ──────────────────────────────────────── -->
+  <section class="vista activa" id="vBuscar">
+    <div class="aviso sim oculto" id="avisoSim">
+      <strong>Modo simulación.</strong> Se lee el documento y se muestra qué se
+      escribiría en ACI, pero <strong>no se guarda nada</strong>.
+    </div>
+    <div class="aviso err oculto" id="avisoOcr"></div>
+
+    <div class="tabs" id="tabsHotel"></div>
+
+    <div class="buscador">
+      <input id="q" type="search" inputmode="search" placeholder="Código de reserva, habitación o apellido"
+             autocomplete="off" enterkeyhint="search">
+      <button class="btn btn-primary" id="btnBuscar">Buscar</button>
+    </div>
+
+    <div id="resultados"></div>
+
+    <div class="seccion-tit" id="titEntradas">Entradas de hoy</div>
+    <div class="lista" id="entradas"><div class="cargando">Cargando…</div></div>
+  </section>
+
+  <!-- ── Vista 2 · personas de la reserva ──────────────────────────────── -->
+  <section class="vista" id="vReserva">
+    <button class="btn btn-ghost" id="btnVolver" style="margin-bottom:12px">← Reservas</button>
+    <div class="cabecera-res" id="cabeceraRes"></div>
+    <div class="aviso info oculto" id="avisoSinFicha"></div>
+    <div id="personas"></div>
+  </section>
+
+  <!-- ── Vista 3 · verificación de la lectura ──────────────────────────── -->
+  <section class="vista" id="vVerificar">
+    <div class="aviso ok" id="avisoLectura"></div>
+    <div class="cabecera-res" id="verifQuien"></div>
+    <div class="campos" id="campos"></div>
+    <div class="avisos-doc" id="avisosDoc"></div>
+    <div class="acciones">
+      <button class="btn btn-ghost" id="btnCancelar">Cancelar</button>
+      <button class="btn btn-primary" id="btnGuardar">Guardar</button>
+    </div>
+    <div class="aviso info oculto" id="resultadoGuardar" style="margin-top:14px"></div>
+  </section>
+</main>
+
+<!-- ── Cámara a pantalla completa ─────────────────────────────────────── -->
+<div id="camara">
+  <div class="cam-top">
+    <span class="quien" id="camQuien"></span>
+    <span class="contador" id="camContador"></span>
+    <button class="cam-x" id="camCerrar">Cerrar</button>
+  </div>
+  <div class="cam-tipos">
+    <button id="tipoTarjeta" class="active">Tarjeta · DNI/TIE</button>
+    <button id="tipoPasaporte">Pasaporte</button>
+  </div>
+  <div class="cam-cuerpo">
+    <video id="video" playsinline autoplay muted onclick="reenfocar()"></video>
+    <svg id="marco"></svg>
+  </div>
+  <div class="cam-pie">
+    <div class="cam-msg" id="camMsg">Encuadra el documento. La banda de códigos, dentro del rectángulo interior.</div>
+    <div class="cam-diag" id="camDiag"></div>
+    <div class="cam-acciones">
+      <button id="btnLinterna" title="Linterna">🔦</button>
+      <button class="disparo" id="btnDisparo" title="Capturar">◉</button>
+      <button id="btnGaleria" title="Elegir foto">🖼️</button>
+    </div>
+  </div>
+  <input type="file" id="ficheroFoto" accept="image/*" capture="environment" class="oculto">
+</div>
+
+<script>
+'use strict';
+
+// ─── Estado ──────────────────────────────────────────────────────────────────
+const S = {
+  hotel: null,
+  hoteles: [],
+  simulacion: true,
+  edadRegistro: 14,
+  reserva: null,
+  personas: [],
+  objetivo: null,        // persona a la que se asigna la lectura
+  lectura: null,         // documento devuelto por el OCR
+  cola: [],              // pendientes para el escaneo en cadena
+  // Proporciones reales de los documentos: tarjeta ID-1 (85,6 × 54 mm) y página
+  // de datos del pasaporte (125 × 88 mm). El marco cambia según el tipo.
+  tipoMarco: 'tarjeta',
+  ratios: { tarjeta: 85.6 / 54, pasaporte: 125 / 88 },
+};
+
+let stream = null, bucle = null, enVuelo = false, linterna = false;
+
+const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g,
+  (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function vista(id) {
+  document.querySelectorAll('.vista').forEach((v) => v.classList.remove('activa'));
+  $(id).classList.add('activa');
+  window.scrollTo(0, 0);
+}
+function fechaES(iso) {
+  if (!iso) return '';
+  const [a, m, d] = iso.split('-');
+  return `${d}/${m}/${a}`;
+}
+// Para comparar apellidos: sin tildes y en mayúsculas, que es como los devuelve
+// la MRZ (el estándar OACI obliga a transliterar y elimina los diacríticos).
+function normalizar(t) {
+  return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase().replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// ─── Arranque ────────────────────────────────────────────────────────────────
+async function iniciar() {
+  try {
+    const r = await fetch('/api/doc/estado');
+    if (r.status === 401) { location.href = '/login.html'; return; }
+    if (r.status === 403) {
+      $('avisoOcr').textContent = 'Tu usuario no tiene acceso al escáner de documentos.';
+      $('avisoOcr').classList.remove('oculto');
+      return;
+    }
+    const e = await r.json();
+    S.hoteles = e.hoteles || [];
+    S.simulacion = !!e.simulacion;
+    S.edadRegistro = e.edadRegistro || 14;
+    S.altaDisponible = !!e.altaAcompanantes;
+
+    if (S.simulacion) { $('badgeSim').classList.remove('oculto'); $('avisoSim').classList.remove('oculto'); }
+    if (!e.ocr || !e.ocr.ok) {
+      $('avisoOcr').innerHTML = '<strong>El lector de documentos no responde.</strong> '
+        + 'Se puede consultar quién tiene documento, pero no escanear. '
+        + 'Avisar a IT (servicio <code>btr-mrz</code>).';
+      $('avisoOcr').classList.remove('oculto');
+    }
+    pintarTabs();
+    if (S.hoteles.length) { S.hotel = S.hoteles[0].key; cargarEntradas(); }
+  } catch (err) {
+    $('avisoOcr').textContent = 'No se ha podido contactar con el portal: ' + err.message;
+    $('avisoOcr').classList.remove('oculto');
+  }
+}
+
+function pintarTabs() {
+  $('tabsHotel').innerHTML = S.hoteles.map((h, i) =>
+    `<button class="tab${i === 0 ? ' active' : ''}" data-h="${esc(h.key)}">${esc(h.label)}</button>`).join('');
+  $('tabsHotel').querySelectorAll('.tab').forEach((b) => b.onclick = () => {
+    $('tabsHotel').querySelectorAll('.tab').forEach((x) => x.classList.remove('active'));
+    b.classList.add('active');
+    S.hotel = b.dataset.h;
+    $('resultados').innerHTML = '';
+    cargarEntradas();
+  });
+}
+
+// ─── Entradas del día ────────────────────────────────────────────────────────
+async function cargarEntradas() {
+  $('entradas').innerHTML = '<div class="cargando">Cargando entradas…</div>';
+  try {
+    const r = await fetch(`/api/doc/entradas?hotel=${encodeURIComponent(S.hotel)}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detalle || d.error || 'error');
+    $('titEntradas').textContent = `Entradas de hoy · ${d.reservas.length} reserva(s)`;
+    if (!d.reservas.length) {
+      $('entradas').innerHTML = '<div class="vacio">No hay entradas hoy en este hotel.<br>'
+        + 'Busca la reserva por código, habitación o apellido.</div>';
+      return;
+    }
+    $('entradas').innerHTML = d.reservas.map(filaReserva).join('');
+    enlazarFilas('#entradas');
+  } catch (e) {
+    $('entradas').innerHTML = `<div class="aviso err">No se han podido cargar las entradas: ${esc(e.message)}</div>`;
+  }
+}
+
+function filaReserva(f) {
+  const pill = f.completa
+    ? '<span class="pill ok">completa</span>'
+    : `<span class="pill pend">${f.documentados}/${f.pax}</span>`;
+  return `<div class="fila" data-res="${f.resGuid}">
+      <span class="hab">${esc(f.habitacion || '—')}</span>
+      <span class="cuerpo">
+        <span class="nom">${esc(f.titular || '(sin titular)')}</span>
+        <span class="sub">${f.pax} pax${f.canal ? ' · ' + esc(f.canal.slice(0, 22)) : ''}</span>
+      </span>${pill}
+    </div>`;
+}
+function enlazarFilas(sel) {
+  document.querySelectorAll(`${sel} .fila`).forEach((el) =>
+    el.onclick = () => abrirReserva(parseInt(el.dataset.res, 10)));
+}
+
+// ─── Búsqueda ────────────────────────────────────────────────────────────────
+async function buscar() {
+  const q = $('q').value.trim();
+  if (q.length < 2) return;
+  $('resultados').innerHTML = '<div class="cargando">Buscando…</div>';
+  try {
+    const r = await fetch(`/api/doc/buscar?hotel=${encodeURIComponent(S.hotel)}&q=${encodeURIComponent(q)}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detalle || d.error || 'error');
+    if (!d.resultados.length) {
+      $('resultados').innerHTML = `<div class="aviso info">Sin resultados para “${esc(q)}” en este hotel.
+        Prueba en otra pestaña de hotel o con el apellido del titular.</div>`;
+      return;
+    }
+    $('resultados').innerHTML = '<div class="seccion-tit">Resultados</div><div class="lista" id="lstBusca">'
+      + d.resultados.map((f) => `<div class="fila" data-res="${f.resGuid}">
+          <span class="hab">${esc(f.habitacion || '—')}</span>
+          <span class="cuerpo"><span class="nom">${esc(f.titular || '(sin titular)')}</span>
+          <span class="sub">${esc(f.codigo || '')} · ${fechaES(f.entrada)} → ${fechaES(f.salida)} · ${f.pax} pax</span>
+          </span></div>`).join('') + '</div>';
+    enlazarFilas('#lstBusca');
+  } catch (e) {
+    $('resultados').innerHTML = `<div class="aviso err">${esc(e.message)}</div>`;
+  }
+}
+
+// ─── Reserva y personas ──────────────────────────────────────────────────────
+async function abrirReserva(resGuid) {
+  vista('vReserva');
+  $('personas').innerHTML = '<div class="cargando">Cargando personas…</div>';
+  $('avisoSinFicha').classList.add('oculto');
+  try {
+    const r = await fetch(`/api/doc/reserva?hotel=${encodeURIComponent(S.hotel)}&resGuid=${resGuid}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detalle || d.error || 'error');
+    S.reserva = d.reserva;
+    S.personas = d.personas;
+    S.sinFicha = d.sinFicha || 0;
+    S.altaDisponible = !!d.altaDisponible;   // se puede ensayar
+    S.altaReal = !!d.altaReal;               // se puede hacer de verdad
+
+    $('cabeceraRes').innerHTML = `
+      <div class="l1">Hab. ${esc(d.reserva.habitacion || '—')} · ${esc(d.reserva.codigo || '')}</div>
+      <div class="l2">${fechaES(d.reserva.entrada)} → ${fechaES(d.reserva.salida)}
+        · ${d.reserva.pax} pax (${d.reserva.adultos} ad. + ${d.reserva.ninos} niños)
+        ${d.reserva.canal ? ' · ' + esc(d.reserva.canal.slice(0, 26)) : ''}</div>`;
+
+    if (d.sinFicha > 0) {
+      // Es el caso mayoritario: la reserva declara más personas de las que ACI
+      // tiene creadas. Se dice claramente, en vez de ocultarlo.
+      $('avisoSinFicha').innerHTML = `<strong>${d.sinFicha} persona(s) de esta reserva no tienen ficha en ACI.</strong>
+        ${S.altaReal
+          ? ' Se pueden dar de alta al escanear su documento.'
+          : (S.altaDisponible
+             ? ' Puedes ensayar el alta: se te mostrará la ficha que se crearía, sin escribir nada en ACI.'
+             : ' Hasta que se active el alta de acompañantes, sus datos habrá que teclearlos en ACI.')}`;
+      $('avisoSinFicha').classList.remove('oculto');
+    }
+    pintarPersonas();
+  } catch (e) {
+    $('personas').innerHTML = `<div class="aviso err">${esc(e.message)}</div>`;
+  }
+}
+
+function pintarPersonas() {
+  const html = S.personas.map((p, i) => {
+    const nombre = [p.nombre, p.apellido1, p.apellido2].filter(Boolean).join(' ') || '(sin nombre)';
+    let pill = '', sub = '';
+    if (p.estado === 'ok') {
+      pill = '<span class="pill ok">✓</span>';
+      sub = `${esc(p.tipoDoc || 'documento')} · ${esc(p.documento)}`;
+    } else if (p.estado === 'no_aplica') {
+      pill = '<span class="pill na">menor</span>';
+      sub = `${p.edad} años · no requiere registro individual`;
+    } else {
+      pill = '<span class="pill pend">falta</span>';
+      sub = p.edadDesconocida ? 'sin documento · edad desconocida' : 'sin documento';
+    }
+    return `<div class="persona${p.estado === 'pendiente' ? ' pendiente' : ''}">
+        <span class="cuerpo">
+          <span class="rol">${p.rol === 'titular' ? 'Titular' : 'Acompañante'}</span>
+          <div class="nom">${esc(nombre)}</div>
+          <div class="doc">${sub}</div>
+        </span>${pill}
+        <button class="btn-cam" data-i="${i}" title="Escanear documento">📷</button>
+      </div>`;
+  }).join('');
+
+  // ── Plazas sin ficha en ACI ────────────────────────────────────────────────
+  // Es el caso mayoritario, no una excepción: en las reservas vigentes hay
+  // 25.939 personas declaradas frente a 3.808 fichas de acompañante. Se muestran
+  // como huecos con su propio botón, para poder darlas de alta al escanear.
+  let huecos = '';
+  const n = S.sinFicha || 0;
+  if (n > 0) {
+    huecos = `<div class="seccion-tit">Sin ficha en ACI · ${n} plaza(s)</div>`
+      + Array.from({ length: n }, (_, k) => `
+        <div class="persona pendiente">
+          <span class="cuerpo">
+            <span class="rol">Acompañante nuevo</span>
+            <div class="nom">Plaza ${k + 1} de ${n}</div>
+            <div class="doc">${S.altaReal
+              ? 'se creará la ficha al guardar el documento'
+              : (S.altaDisponible
+                 ? 'en simulación: verás qué ficha se crearía'
+                 : 'alta desactivada: hay que teclearlo en ACI')}</div>
+          </span>
+          <span class="pill ${S.altaDisponible ? 'pend' : 'na'}">${
+            S.altaReal ? 'alta' : (S.altaDisponible ? 'ensayo' : 'bloqueado')}</span>
+          <button class="btn-cam" data-alta="${k}" title="Escanear y dar de alta"
+                  ${S.altaDisponible ? '' : 'disabled'}>📷</button>
+        </div>`).join('');
+  }
+
+  $('personas').innerHTML = (html + huecos)
+    || '<div class="vacio">Esta reserva no tiene personas con ficha en ACI.</div>';
+
+  $('personas').querySelectorAll('.btn-cam[data-i]').forEach((b) => b.onclick = () => {
+    const i = parseInt(b.dataset.i, 10);
+    S.cola = S.personas.map((p, idx) => idx).filter((idx) => S.personas[idx].estado === 'pendiente');
+    abrirCamara(S.personas[i]);
+  });
+
+  // Alta: no hay persona a la que asignar, así que el objetivo es un hueco.
+  // `alta: true` es lo que hace que el backend cree la fila en vez de rellenarla.
+  $('personas').querySelectorAll('.btn-cam[data-alta]').forEach((b) => b.onclick = () => {
+    const k = parseInt(b.dataset.alta, 10);
+    S.cola = [];
+    abrirCamara({
+      rol: 'nuevo', alta: true, hueGuid: null, racGuid: null,
+      nombre: `Plaza ${k + 1}`, apellido1: '', apellido2: '',
+      documento: null, estado: 'pendiente',
+    });
+  });
+}
+
+// ─── Cámara ──────────────────────────────────────────────────────────────────
+function dibujarMarco() {
+  const v = $('video'), svg = $('marco');
+  if (!v.videoWidth) return;
+  // El vídeo se muestra completo (sin recortar), así que el marco se puede
+  // expresar en fracciones del propio vídeo y coincide exactamente con lo que
+  // se recorta al capturar. Nada de adivinar el mapeo del CSS.
+  const r = v.getBoundingClientRect();
+  const ratio = S.ratios[S.tipoMarco];
+  const fw = 0.90;                                  // ancho del marco (fracción)
+  let fh = (fw * v.videoWidth / ratio) / v.videoHeight;
+  if (fh > 0.82) { fh = 0.82; }                     // que quepa en vertical
+  const w = r.width * fw, h = r.height * fh;
+  const x = (r.width - w) / 2, y = (r.height - h) / 2;
+  svg.setAttribute('width', r.width);
+  svg.setAttribute('height', r.height);
+  svg.style.left = (v.offsetLeft) + 'px';
+  svg.style.top = (v.offsetTop) + 'px';
+  // La zona de la MRZ. Coincide EXACTAMENTE con lo que recorta `capturar()`
+  // (del 52% al 100% de la altura del marco). Antes marcaba del 66% al 96% y
+  // no era lo que se enviaba: quien encuadraba fiándose del rectángulo estaba
+  // alineando con una referencia que no correspondía al recorte real.
+  const my = y + h * 0.52, mh = h * 0.48;
+  svg.innerHTML = `
+    <defs><mask id="hueco">
+      <rect width="100%" height="100%" fill="#fff"/>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="#000"/>
+    </mask></defs>
+    <rect width="100%" height="100%" fill="rgba(0,0,0,.55)" mask="url(#hueco)"/>
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10"
+          fill="none" stroke="#fff" stroke-width="2.5"/>
+    <rect x="${x + w * 0.03}" y="${my}" width="${w * 0.94}" height="${mh}" rx="4"
+          fill="rgba(255,217,138,.16)" stroke="#ffd98a" stroke-width="1.6" stroke-dasharray="7 5"/>`;
+  S.marcoFrac = { fw, fh };
+}
+
+async function abrirCamara(persona) {
+  S.objetivo = persona;
+  const nombre = [persona.nombre, persona.apellido1].filter(Boolean).join(' ') || '(sin nombre)';
+  $('camQuien').textContent = `${persona.rol === 'titular' ? 'Titular' : 'Acompañante'}: ${nombre}`;
+  const pend = S.cola.length;
+  $('camContador').textContent = pend > 1 ? `${pend} pendientes` : '';
+  $('camMsg').className = 'cam-msg';
+  $('camMsg').textContent = 'Encuadra el documento. La banda de códigos, dentro del rectángulo interior.';
+  $('camara').classList.add('activa');
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      // `min` además de `ideal`: con solo `ideal`, iOS puede entregar 640×480
+      // tranquilamente, y a esa resolución la MRZ no tiene detalle suficiente.
+      // El `ideal` se pide alto a propósito: el marco ocupa el 90% del ancho y
+      // la banda es una franja de ese marco, así que los píxeles del sensor se
+      // reparten mucho. A 1280 de vídeo salían unos 21 px por carácter y el OCR
+      // no llega; a 2560 pasan de 40, que es la zona en la que sí lee.
+      video: { facingMode: { ideal: 'environment' },
+               width: { min: 1280, ideal: 2560 },
+               height: { min: 720, ideal: 1440 } },
+      audio: false,
+    });
+    $('video').srcObject = stream;
+    await $('video').play().catch(() => {});
+    ajustarEnfoque();
+    setTimeout(dibujarMarco, 300);
+    window.addEventListener('resize', dibujarMarco);
+    arrancarBucle();
+  } catch (e) {
+    // Sin permiso de cámara o navegador antiguo: se degrada al selector de
+    // ficheros del sistema, que sí abre la cámara nativa (sin marco guía).
+    $('camMsg').className = 'cam-msg leyendo';
+    $('camMsg').textContent = 'No se ha podido abrir la cámara en directo ('
+      + e.name + '). Usa el botón de la foto.';
+    $('ficheroFoto').click();
+  }
+}
+
+function cerrarCamara() {
+  if (bucle) { clearInterval(bucle); bucle = null; }
+  // Cerrar el stream de verdad: una cámara que se queda encendida en el móvil
+  // del recepcionista se nota y no se perdona.
+  if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+  $('video').srcObject = null;
+  window.removeEventListener('resize', dibujarMarco);
+  linterna = false;
+  $('btnLinterna').classList.remove('off');
+  $('camara').classList.remove('activa');
+}
+
+// Frames seguidos sin nada legible antes de parar el bucle. A 450 ms son unos 45
+// segundos apuntando a la nada, de sobra para cualquier encuadre razonable. Existe
+// porque el 09/08 la cámara estuvo abierta seis minutos mandando cien peticiones
+// por minuto sin que nadie estuviera escaneando.
+const MAX_VACIOS = 100;
+let vacios = 0;
+
+function arrancarBucle() {
+  if (bucle) clearInterval(bucle);
+  vacios = 0;
+  // Lectura continua: no hay que pulsar nada. Se para en cuanto los dígitos de
+  // control cuadran. La cadencia baja de 850 a 450 ms porque ahora una lectura
+  // ronda los 200 ms: más intentos por segundo es acertar antes. El guard
+  // `enVuelo` evita que se solapen.
+  bucle = setInterval(() => { if (!enVuelo) intentarLeer(false); }, 450);
+}
+
+function pausarBucle(motivo) {
+  if (bucle) { clearInterval(bucle); bucle = null; }
+  $('camMsg').className = 'cam-msg leyendo';
+  $('camMsg').innerHTML = `${motivo}<br><button type="button" class="btn"
+    style="margin-top:8px" onclick="arrancarBucle();$('camMsg').textContent='Buscando la banda de códigos…'">Reanudar</button>`;
+}
+
+// (No se añade aquí un manejador de `visibilitychange`: más abajo ya hay uno que
+// cierra la cámara entera al ocultarse la página, que es más completo. Duplicarlo
+// para rearrancar el bucle habría dejado el intervalo corriendo sin stream, o sea
+// generando exactamente los frames negros que este filtro quiere evitar.)
+
+/**
+ * ¿Merece la pena mandar este frame al servidor?
+ *
+ * Medido en el log del 09/08/2026: de 1.028 frames enviados, 879 tenían nitidez
+ * CERO —imagen completamente uniforme, es decir, negra— y solo 10 llegaron a leer.
+ * El 87% del tráfico era basura. Pasaba, por ejemplo, entre las 14:05 y las 14:11,
+ * con la cámara abierta apuntando a la nada y el bucle mandando cien peticiones por
+ * minuto.
+ *
+ * Se mide la desviación típica de la luminancia: una banda MRZ es texto negro sobre
+ * fondo claro y pasa de 40 sin esfuerzo, mientras que un frame negro o la mesa vacía
+ * se quedan cerca de 0. El umbral es deliberadamente bajo (12) porque el coste de
+ * los dos errores no es el mismo: descartar un frame bueno solo retrasa la lectura
+ * 450 ms hasta el siguiente, pero mandar basura ocupa el servicio y gasta batería.
+ *
+ * Se muestrea 1 de cada 8 píxeles de la franja central: sobra para esto y no cuesta
+ * nada aunque se llame dos veces por segundo.
+ */
+function contrasteDe(ctx, ancho, alto) {
+  const y0 = Math.floor(alto * 0.2);
+  const h = Math.max(1, Math.floor(alto * 0.6));
+  let datos;
+  try {
+    datos = ctx.getImageData(0, y0, ancho, h).data;
+  } catch (e) {
+    return 999;            // sin acceso a los píxeles: no bloquear el envío
+  }
+  let suma = 0, sumaCuadrados = 0, n = 0;
+  for (let i = 0; i < datos.length; i += 32) {
+    const lum = datos[i] * 0.299 + datos[i + 1] * 0.587 + datos[i + 2] * 0.114;
+    suma += lum; sumaCuadrados += lum * lum; n++;
+  }
+  if (!n) return 999;
+  const media = suma / n;
+  return Math.sqrt(Math.max(0, sumaCuadrados / n - media * media));
+}
+
+// 10, validado con bandas MRZ sintéticas en distintas condiciones: la peor banda
+// legítima (muy oscura) da 15 y una sin contraste 21, mientras que el negro puro y
+// la mesa vacía dan 0 y el ruido del sensor a oscuras 8. Deja un 50% de margen por
+// debajo del peor caso bueno sin dejar pasar la basura.
+const CONTRASTE_MINIMO = 10;
+
+// Recorte del marco COMPLETO (todo el documento). Se usa para el domicilio, que
+// está en la parte de arriba del reverso, no en la banda.
+function capturarMarcoCompleto() {
+  const v = $('video');
+  if (!v.videoWidth) return Promise.resolve(null);
+  const { fw, fh } = S.marcoFrac || { fw: 0.9, fh: 0.6 };
+  const cw = v.videoWidth * fw, ch = v.videoHeight * fh;
+  const cx = (v.videoWidth - cw) / 2, cy = (v.videoHeight - ch) / 2;
+  // Más resolución que para la MRZ: el texto del domicilio es más pequeño que
+  // la OCR-B y encima compite con el fondo de seguridad del documento.
+  const escala = 1900 / cw;
+  const c = document.createElement('canvas');
+  c.width = Math.round(cw * escala); c.height = Math.round(ch * escala);
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(v, cx, cy, cw, ch, 0, 0, c.width, c.height);
+  return new Promise((res) => c.toBlob(res, 'image/jpeg', 0.9));
+}
+
+// Enfoque continuo y de cerca. Sin esto, muchos Android dejan el objetivo fijo
+// en una distancia media y la banda —que se lee a unos 15 cm— sale movida: es
+// desenfoque, no falta de luz, y por eso subir la resolución sola no bastaba.
+// Todas las capacidades son opcionales: si el móvil no las trae, se ignoran.
+async function ajustarEnfoque() {
+  try {
+    const track = stream && stream.getVideoTracks()[0];
+    if (!track || !track.getCapabilities) return;
+    const cap = track.getCapabilities();
+    const avanzado = [];
+    if (cap.focusMode && cap.focusMode.includes('continuous')) {
+      avanzado.push({ focusMode: 'continuous' });
+    }
+    // NO se fija `focusDistance`. Se probó y se ha retirado: fijar la distancia
+    // desactiva el autoenfoque, y si el valor no es el bueno para ese objetivo la
+    // imagen queda peor que dejándolo automático. En el log del 10/08 llegaban
+    // fotogramas con nitidez 3 sobre 300, o sea completamente desenfocados. No hay
+    // forma de acertar la distancia sin probar en cada modelo de dispositivo, así
+    // que se deja el enfoque continuo, que sí se adapta solo.
+    if (avanzado.length) await track.applyConstraints({ advanced: avanzado });
+  } catch (e) { /* sin enfoque configurable: se sigue igual */ }
+}
+
+// Toque para reenfocar: el gesto que ya espera cualquiera que use el móvil. Se
+// pide un ciclo de enfoque puntual y se vuelve a continuo.
+async function reenfocar() {
+  try {
+    const track = stream && stream.getVideoTracks()[0];
+    if (!track || !track.getCapabilities) return;
+    const cap = track.getCapabilities();
+    if (!cap.focusMode) return;
+    if (cap.focusMode.includes('single-shot')) {
+      await track.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] });
+    }
+    if (cap.focusMode.includes('continuous')) {
+      setTimeout(() => track.applyConstraints(
+        { advanced: [{ focusMode: 'continuous' }] }).catch(() => {}), 900);
+    }
+  } catch (e) { /* nada que hacer */ }
+}
+
+// Devuelve el recorte del marco como Blob JPEG. Se manda en binario y no en
+// base64: el parser JSON global del portal tiene un límite de 100 kB y devolvía
+// 413 antes de que la imagen llegara al lector.
+function capturar() {
+  const v = $('video');
+  if (!v.videoWidth) return Promise.resolve(null);
+  const { fw, fh } = S.marcoFrac || { fw: 0.9, fh: 0.6 };
+  const anchoMarco = v.videoWidth * fw;
+  const altoMarco = v.videoHeight * fh;
+  const xMarco = (v.videoWidth - anchoMarco) / 2;
+  const yMarco = (v.videoHeight - altoMarco) / 2;
+
+  // Se recorta SOLO la franja de la banda de códigos, la misma que marca el
+  // rectángulo amarillo. Es la optimización que más se nota: la imagen pesa un
+  // tercio y el servidor no tiene que buscar la banda dentro del documento.
+  // El margen es generoso (del 52% al 100% de la altura del marco) para que un
+  // encuadre algo desviado no la corte.
+  const cx = xMarco;
+  const cw = anchoMarco;
+  const cy = yMarco + altoMarco * 0.52;
+  const ch = Math.min(altoMarco * 0.48, v.videoHeight - cy);
+
+  // NUNCA se amplía. Fijar el ancho de envío en 1100 hacía que, en un móvil en
+  // vertical (vídeo de 720 de ancho, marco de 648), la banda se estirase de 648
+  // a 1100 px: eso no añade un solo detalle, emborrona por interpolación y luego
+  // el JPEG lo comprime a nada. Se veía en el log del servicio, que recibía
+  // imágenes de 2-3 KB cuando una banda legible pesa entre 50 y 150 KB.
+  // Se manda la resolución nativa del recorte y solo se reduce si excede el tope
+  // por encima del cual el OCR ya no mejora.
+  const ANCHO_MAXIMO = 1900;
+  const escala = Math.min(1, ANCHO_MAXIMO / cw);
+  const c = document.createElement('canvas');
+  c.width = Math.round(cw * escala);
+  c.height = Math.max(1, Math.round(ch * escala));
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(v, cx, cy, cw, ch, 0, 0, c.width, c.height);
+  S.ultimaCaptura = `${c.width}×${c.height}`;
+  S.ultimoContraste = contrasteDe(ctx, c.width, c.height);
+  // Calidad 0,85: al no ampliar, la imagen ya no trae interpolado que disimule
+  // los artefactos de compresión, y el borde de los caracteres OCR-B importa.
+  return new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85));
+}
+
+async function intentarLeer(manual) {
+  const v = $('video');
+  // readyState < 2 significa que aún no hay un fotograma pintado: el canvas saldría
+  // negro. Era una de las fuentes de los frames vacíos al abrir la cámara.
+  if (!manual && v.readyState < 2) return;
+
+  const blob = await capturar();
+  if (!blob) return;
+
+  // Filtro de contraste: no se manda lo que no puede contener una banda. Ahorra
+  // ~87% de las peticiones medidas el 09/08. En disparo manual NO se aplica: si
+  // alguien pulsa el botón, se le manda igual y que el servidor opine.
+  if (!manual && S.ultimoContraste < CONTRASTE_MINIMO) {
+    vacios += 1;
+    if (vacios === 6) {
+      $('camMsg').className = 'cam-msg';
+      $('camMsg').textContent = 'La imagen sale borrosa o muy oscura. Prueba a '
+        + 'separar un poco el documento (unos 15-20 cm), toca la pantalla para '
+        + 'enfocar y enciende la linterna si hay poca luz.';
+    }
+    if (vacios >= MAX_VACIOS) {
+      pausarBucle('Cámara en pausa: llevaba un rato sin ver ningún documento.');
+    }
+    return;
+  }
+  vacios = 0;
+  enVuelo = true;
+  if (manual) { $('camMsg').className = 'cam-msg leyendo'; $('camMsg').textContent = 'Leyendo…'; }
+  try {
+    const t0 = performance.now();
+    const r = await fetch('/api/doc/leer', {
+      method: 'POST', headers: { 'Content-Type': 'application/octet-stream' },
+      body: blob,
+    });
+    let d;
+    try {
+      d = await r.json();
+    } catch (e) {
+      // Si la respuesta no es JSON (un 413 de Express, por ejemplo), el error de
+      // parseo del navegador es incomprensible: mejor decir qué ha pasado.
+      throw new Error(`el servidor ha respondido ${r.status} sin datos`
+        + ` (imagen de ${Math.round(blob.size / 1024)} KB)`);
+    }
+    if (!r.ok) throw new Error(d.detalle || d.error || `error ${r.status}`);
+    diagnostico(d.kb, blob.size);
+
+    if (d.leido && d.documento && d.documento.valido) {
+      exito(d.documento, Math.round(performance.now() - t0));
+      return;
+    }
+    if (manual) {
+      $('camMsg').className = 'cam-msg leyendo';
+      $('camMsg').textContent = d.motivo
+        || (d.documento && !d.documento.valido
+            ? 'La lectura no es fiable: acerca más el documento y evita reflejos.'
+            : 'No se ve la banda de códigos.');
+    }
+  } catch (e) {
+    $('camMsg').className = 'cam-msg leyendo';
+    $('camMsg').textContent = e.message;
+  } finally {
+    enVuelo = false;
+  }
+}
+
+// Qué se está enviando de verdad. Sin esto, una captura diminuta o un vídeo de
+// baja resolución solo se detectan mirando logs del servidor.
+function diagnostico(kbServidor, bytes) {
+  const v = $('video');
+  $('camDiag').textContent =
+    `cámara ${v.videoWidth || '?'}×${v.videoHeight || '?'}`
+    + ` · recorte ${S.ultimaCaptura || '?'}`
+    + ` · ${kbServidor ?? Math.round(bytes / 1024)} KB`
+    // El contraste es lo que decide si un frame se manda: verlo en pantalla evita
+    // tener que ir al log del servidor para saber por qué no se envía nada.
+    + ` · contraste ${Math.round(S.ultimoContraste ?? 0)}`;
+}
+
+function pitido() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = 1180; o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.16, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+    o.start(); o.stop(ctx.currentTime + 0.19);
+    setTimeout(() => ctx.close(), 400);
+  } catch (e) { /* sin audio: no es crítico */ }
+}
+
+async function exito(documento, ms) {
+  if (bucle) { clearInterval(bucle); bucle = null; }
+  pitido();
+  if (navigator.vibrate) navigator.vibrate(70);
+  S.lectura = documento; S.lecturaMs = ms;
+  $('camMsg').className = 'cam-msg ok';
+  $('camMsg').textContent = '✓ Documento leído';
+
+  // Se guarda el marco completo ANTES de apagar la cámara: el domicilio está en
+  // la parte de arriba del documento y la MRZ que acabamos de leer era solo la
+  // franja de abajo. Se pide después, sin hacer esperar a nadie.
+  S.marcoCompleto = (documento.tipo === 'DNI' || documento.tipo === 'TIE')
+    ? await capturarMarcoCompleto() : null;
+
+  setTimeout(() => { cerrarCamara(); mostrarVerificacion(); }, 320);
+}
+
+// ─── Verificación ────────────────────────────────────────────────────────────
+// Cada campo con dígito de control lleva su ✓. Nombre y sexo van SIN marca: el
+// estándar OACI no los cubre con checksum, así que "válido" no dice nada de
+// ellos y conviene que se vea.
+function mostrarVerificacion() {
+  const d = S.lectura;
+  // Si es un alta no hay a quién asignar: se respeta el hueco elegido.
+  const p = S.objetivo && S.objetivo.alta
+    ? S.objetivo
+    : (elegirPersona(d) || S.objetivo);
+  S.objetivo = p;
+
+  const nombre = [p.nombre, p.apellido1, p.apellido2].filter(Boolean).join(' ') || '(sin nombre)';
+  const rotulo = p.alta ? 'Acompañante NUEVO'
+                        : (p.rol === 'titular' ? 'Titular' : 'Acompañante');
+  $('verifQuien').innerHTML = `
+    <div class="l1">${rotulo} · Hab. ${esc(S.reserva.habitacion || '—')}</div>
+    <div class="l2">${p.alta
+      ? 'Se creará una ficha nueva en ACI con estos datos'
+      : esc(nombre)}</div>`;
+
+  $('avisoLectura').innerHTML = `<strong>Lectura válida</strong> — ${esc(d.formato)},
+    ${esc(d.tipo)}${d.pais_emisor ? ' (' + esc(d.pais_emisor) + ')' : ''}.
+    Los dígitos de control cuadran.`;
+
+  const marca = (k) => d.checks && d.checks[k] === true ? '✓'
+                     : (d.checks && d.checks[k] === false ? '✗' : '');
+  // El nombre solo se pide cuando hay que ESCRIBIRLO, es decir al dar de alta un
+  // acompañante nuevo. Para una ficha que ya existe, el nombre bueno está en ACI
+  // y el escáner no lo toca: mostrarlo como campo editable con la lectura del OCR
+  // solo invita a "corregir" un dato que no se va a guardar.
+  const pideNombre = p.alta === true;
+
+  const filas = [
+    ['numero',    'Documento',   'text',  d.numero || '',            marca('numero')],
+    ['tipo',      'Tipo',        'tipo',  d.cod_tipo_pms || '',      ''],
+  ];
+  if (pideNombre) {
+    filas.push(
+      ['nombres',   'Nombre',      'text',  d.nombres || '',           ''],
+      ['apellido1', 'Apellido 1',  'text',  (d.apellidos || '').split(' ')[0] || '', ''],
+      ['apellido2', 'Apellido 2',  'text',  (d.apellidos || '').split(' ').slice(1).join(' '), '']);
+  }
+  filas.push(
+    ['fecha_nacimiento', 'F. nacim.', 'date', d.fecha_nacimiento || '', marca('nacimiento')],
+    ['sexo',      'Sexo',        'sexo',  d.sexo || '',              ''],
+    ['nacionalidad', 'Nacionalid.', 'text', d.nacionalidad || '',    ''],
+    ['fecha_caducidad', 'Caducidad', 'date', d.fecha_caducidad || '', marca('caducidad')]);
+  if (d.numero_soporte) {
+    filas.splice(1, 0, ['numero_soporte', 'Nº soporte', 'text', d.numero_soporte, '']);
+  }
+
+  // Se elimina el bloque de dirección de una verificación anterior, si lo hay.
+  ['camposDir', 'pistaCp'].forEach((id) => { const e = $(id); if (e) e.remove(); });
+  document.querySelectorAll('#vVerificar .seccion-tit, #vVerificar .ident')
+    .forEach((e) => e.remove());
+
+  $('campos').innerHTML = filas.map(([k, etiqueta, tipo, valor, mk]) => {
+    let control;
+    if (tipo === 'sexo') {
+      control = `<select id="f_${k}">
+        <option value=""  ${!valor ? 'selected' : ''}>—</option>
+        <option value="M" ${valor === 'M' ? 'selected' : ''}>Hombre</option>
+        <option value="F" ${valor === 'F' ? 'selected' : ''}>Mujer</option></select>`;
+    } else if (tipo === 'tipo') {
+      const opciones = [['D', 'DNI'], ['P', 'Pasaporte'], ['I', 'Carta de identidad'],
+                        ['N', 'Perm. residencia español'], ['X', 'Perm. residencia UE'],
+                        ['C', 'Carnet de conducir']];
+      control = `<select id="f_${k}">` + opciones.map(([v, t]) =>
+        `<option value="${v}" ${valor === v ? 'selected' : ''}>${t}</option>`).join('') + '</select>';
+    } else {
+      control = `<input id="f_${k}" type="${tipo}" value="${esc(valor)}">`;
+    }
+    return `<div class="campo"><label>${etiqueta}</label>${control}<span class="marca">${mk}</span></div>`;
+  }).join('');
+
+  // ── Dirección ──────────────────────────────────────────────────────────────
+  // El DNI español NO imprime el código postal, así que no hay OCR posible: se
+  // teclean 5 dígitos y con ellos se autocompletan población y provincia desde
+  // el histórico de ACI. Si la persona ya tiene dirección en su ficha, se
+  // muestra para no volver a pedirla.
+  $('campos').insertAdjacentHTML('afterend', `
+    <div class="seccion-tit">Dirección · no viene en el documento</div>
+    <div class="campos" id="camposDir">
+      <div class="campo">
+        <label>C. postal</label>
+        <input id="f_cp" type="tel" inputmode="numeric" maxlength="5"
+               placeholder="5 dígitos" value="${esc(p.cp || '')}">
+        <span class="marca" id="marcaCp"></span>
+      </div>
+      <div class="campo">
+        <label>Población</label>
+        <input id="f_poblacion" type="text" value="${esc(p.poblacion || '')}"
+               onchange="buscarPoblacion()" onblur="buscarPoblacion()">
+        <span class="marca"></span>
+      </div>
+      <div class="campo">
+        <label>Provincia</label>
+        <input id="f_provincia" type="text" value="${esc(p.provincia || '')}">
+        <span class="marca"></span>
+      </div>
+      <div class="campo">
+        <label>Domicilio</label>
+        <input id="f_domicilio" type="text" placeholder="calle y número"
+               value="${esc(p.domicilio || '')}">
+        <span class="marca"></span>
+      </div>
+    </div>
+    <div id="pistaCp" class="aviso info oculto" style="margin-top:8px"></div>`);
+  $('f_cp').addEventListener('input', buscarCp);
+
+  // Si la ficha no tiene dirección y hay foto del documento, se intenta leerla.
+  // Va en segundo plano: la pantalla ya es usable y esto solo la completa.
+  if (S.marcoCompleto && !p.cp && !p.poblacion) intentarDireccion();
+
+  // Comprobación de identidad: ¿el documento es de esta persona? Se compara el
+  // nombre leído con el de la ficha. Es lo que de verdad importa del campo de
+  // nombre, y detecta el error frecuente de escanear el documento equivocado
+  // cuando llega una familia entera al mostrador.
+  const avisos = (d.avisos || []).slice();
+  if (!pideNombre) {
+    const enFicha = [p.apellido1, p.apellido2, p.nombre].filter(Boolean).join(' ');
+    const enDoc = [d.apellidos, d.nombres].filter(Boolean).join(' ');
+    const sim = enFicha ? parecido(enDoc, enFicha) : 0;
+    const casa = sim >= 0.6;
+    $('campos').insertAdjacentHTML('beforebegin', `
+      <div class="ident ${casa ? 'ok' : 'mal'}">
+        <div class="ident-t">${casa ? '✓ Coincide con el titular' : '⚠ El nombre no coincide'}</div>
+        <div class="ident-l"><span>en ACI</span> ${esc(enFicha || '(sin nombre)')}</div>
+        <div class="ident-l"><span>leído</span> ${esc(enDoc || '(no legible)')}</div>
+        ${casa
+          ? '<div class="ident-n">El nombre de la ficha no se modifica.</div>'
+          : '<div class="ident-n">Comprueba que es el documento de esta persona. '
+            + 'El nombre de la MRZ es el único campo sin dígito de control, así que '
+            + 'el OCR puede equivocarse en él; pero si no se parece en nada, puede '
+            + 'que hayas escaneado otro documento.</div>'}
+      </div>`);
+    if (!casa) {
+      avisos.push('el nombre leído no se parece al de la ficha: verifica que es '
+                + 'el documento de esta persona');
+    }
+  } else if (d.nombre_dudoso) {
+    avisos.push('el nombre no lleva dígito de control en la MRZ: compruébalo '
+              + 'contra el documento antes de crear la ficha');
+  }
+  $('avisosDoc').innerHTML = avisos.map((a) =>
+    `<div class="aviso info">${esc(a)}</div>`).join('');
+  $('resultadoGuardar').classList.add('oculto');
+  $('btnGuardar').disabled = false;
+  $('btnGuardar').textContent = S.simulacion
+    ? 'Simular guardado'
+    : (p.alta ? 'Crear ficha en ACI' : 'Guardar en ACI');
+  vista('vVerificar');
+}
+
+// Parecido entre dos nombres, comparando por palabras y tolerando erratas.
+// Hace falta porque el campo de identidad de la MRZ es el ÚNICO que no lleva
+// dígito de control: el OCR se equivoca ahí y nada lo detecta. En vez de fiarnos
+// de lo leído, se compara con el nombre que ACI ya tiene, que es el bueno.
+function distancia(a, b) {
+  // Levenshtein sencillo: para palabras de 10-15 letras es de sobra.
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m || !n) return Math.max(m, n);
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const fila = [i];
+    for (let j = 1; j <= n; j++) {
+      fila[j] = Math.min(prev[j] + 1, fila[j - 1] + 1,
+                         prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = fila;
+  }
+  return prev[n];
+}
+
+function parecido(leido, ficha) {
+  const A = normalizar(leido).split(' ').filter(Boolean);
+  const B = normalizar(ficha).split(' ').filter(Boolean);
+  if (!A.length || !B.length) return 0;
+  // Cada palabra del nombre leído busca su mejor pareja en el de la ficha.
+  let suma = 0;
+  for (const pa of A) {
+    let mejor = 0;
+    for (const pb of B) {
+      const d = distancia(pa, pb);
+      mejor = Math.max(mejor, 1 - d / Math.max(pa.length, pb.length));
+    }
+    suma += mejor;
+  }
+  return suma / A.length;
+}
+
+// Intenta leer la dirección del reverso. A diferencia de la MRZ, ese texto no
+// tiene dígitos de control, así que el municipio se contrasta contra el catálogo
+// de ACI: si no casa con ninguno real, no se propone nada. Es la única forma de
+// no colar una dirección inventada por el OCR.
+async function intentarDireccion() {
+  const pista = $('pistaCp');
+  pista.className = 'aviso info';
+  pista.textContent = 'Leyendo la dirección del documento…';
+  pista.classList.remove('oculto');
+  try {
+    const r = await fetch('/api/doc/leer-domicilio', {
+      method: 'POST', headers: { 'Content-Type': 'application/octet-stream' },
+      body: S.marcoCompleto,
+    });
+    const d = await r.json();
+    if (!d.encontrado) {
+      pista.className = 'aviso info';
+      pista.textContent = 'No se ha podido leer la dirección del documento'
+        + (d.motivo ? ` (${d.motivo})` : '') + '. Teclea el código postal.';
+      return;
+    }
+    // Solo se rellena lo que esté vacío: nunca se pisa lo que ya haya escrito
+    // el recepcionista.
+    if (!$('f_cp').value.trim()) $('f_cp').value = d.cp || '';
+    if (!$('f_poblacion').value.trim()) $('f_poblacion').value = d.poblacion || '';
+    if (!$('f_provincia').value.trim()) $('f_provincia').value = d.provincia || '';
+    if (!$('f_domicilio').value.trim()) $('f_domicilio').value = d.domicilio || '';
+    // Rellenar un campo por código NO dispara su `onchange`, así que si la lectura
+    // del domicilio ha dado población pero se ha quedado sin código postal o sin
+    // provincia, se resuelve aquí a mano.
+    if (!$('f_cp').value.trim() || !$('f_provincia').value.trim()) {
+      buscarPoblacion();
+      return;
+    }
+    $('marcaCp').textContent = '~';
+    pista.className = 'aviso sim';
+    pista.innerHTML = `<strong>Dirección leída del documento — revísala.</strong><br>`
+      + `Municipio, provincia y código postal salen del histórico de ACI `
+      + `(coincidencia ${d.similitud}%). La calle la ha leído el OCR y `
+      + `<strong>no se puede verificar</strong>: compárala con el documento.`;
+  } catch (e) {
+    pista.className = 'aviso info';
+    pista.textContent = 'No se ha podido leer la dirección: ' + e.message;
+  }
+}
+
+/**
+ * Camino inverso: de la población a la provincia y el código postal.
+ *
+ * Lo pidió recepción y con razón. El reverso del DNI trae la población pero NO el
+ * código postal —el DNI español no lo imprime—, así que al leer «L'Hospitalet de
+ * Llobregat» se quedaban esos dos campos vacíos y había que buscarlos a mano.
+ *
+ * La provincia se rellena sola cuando el histórico es claro. El código postal solo
+ * si el municipio tiene uno; si tiene varios (L'Hospitalet tiene ocho) se ofrecen
+ * como botones para elegir con un toque, porque adivinarlo sería inventárselo.
+ */
+async function buscarPoblacion() {
+  const nombre = ($('f_poblacion').value || '').trim();
+  const pista = $('pistaCp');
+  // Con el código postal ya puesto no se toca nada: manda lo que haya escrito
+  // recepción, y `buscarCp()` ya se encarga de ese sentido.
+  if (nombre.length < 4 || ($('f_cp').value || '').trim().length === 5) return;
+
+  try {
+    const r = await fetch('/api/doc/municipio?nombre=' + encodeURIComponent(nombre));
+    const d = await r.json();
+    if (!d.encontrado) return;
+
+    if (!$('f_provincia').value.trim() && d.provincia) {
+      $('f_provincia').value = d.provincia;
+    }
+
+    if (d.cp) {
+      if (!$('f_cp').value.trim()) $('f_cp').value = d.cp;
+      $('marcaCp').textContent = '~';
+      pista.className = 'aviso sim';
+      pista.innerHTML = `<strong>${esc(d.poblacion)}</strong> · provincia `
+        + `<strong>${esc(d.provincia || '—')}</strong> y código postal `
+        + `<strong>${esc(d.cp)}</strong>, del histórico de ACI. Revísalo con el documento.`;
+      pista.classList.remove('oculto');
+      return;
+    }
+
+    if (d.cps_posibles && d.cps_posibles.length) {
+      pista.className = 'aviso sim';
+      pista.innerHTML = `<strong>${esc(d.poblacion)}</strong>`
+        + (d.provincia ? ` · provincia <strong>${esc(d.provincia)}</strong>` : '')
+        + `.<br>Ese municipio tiene ${d.cps_posibles.length} códigos postales: toca `
+        + `el que ponga el documento.<br>`
+        + d.cps_posibles.map((cp) =>
+            `<button type="button" class="btn btn-ghost" style="margin:4px 4px 0 0"
+              onclick="ponerCp('${esc(cp)}')">${esc(cp)}</button>`).join('');
+      pista.classList.remove('oculto');
+      return;
+    }
+
+    if (d.provincias_posibles) {
+      pista.className = 'aviso info';
+      pista.textContent = `Hay varias provincias con un municipio llamado así `
+        + `(${d.provincias_posibles.join(', ')}). Teclea el código postal para `
+        + `resolverlo.`;
+      pista.classList.remove('oculto');
+    }
+  } catch (e) { /* sin red: recepción teclea el código postal como siempre */ }
+}
+
+// Se usa desde los botones de código postal que ofrece buscarPoblacion().
+function ponerCp(cp) {
+  $('f_cp').value = cp;
+  buscarCp();
+}
+
+// Al teclear los 5 dígitos del código postal se rellenan población y provincia.
+// Se avisa cuando la sugerencia es dudosa: un CP de una ciudad grande puede
+// repartirse entre varios municipios en el histórico.
+async function buscarCp() {
+  const cp = ($('f_cp').value || '').replace(/\D/g, '').slice(0, 5);
+  $('f_cp').value = cp;
+  const pista = $('pistaCp');
+  $('marcaCp').textContent = '';
+  if (cp.length !== 5) { pista.classList.add('oculto'); return; }
+
+  $('marcaCp').textContent = '…';
+  try {
+    const r = await fetch(`/api/doc/cp/${cp}`);
+    const d = await r.json();
+    if (!r.ok || !d.existe) {
+      // No está en el catálogo oficial español. Puede ser un error de tecleo o un
+      // código extranjero. No se autocompleta nada: el histórico de ACI contiene
+      // códigos inválidos con población asociada ('00000' figura como BARCELONA),
+      // y proponerla sería propagar un dato sucio.
+      $('marcaCp').textContent = '✗';
+      pista.className = 'aviso err';
+      pista.textContent = 'Ese código postal no está en el catálogo oficial '
+        + 'español. Si es un domicilio extranjero, escribe la población a mano; '
+        + 'si no, compruébalo.';
+      pista.classList.remove('oculto');
+      return;
+    }
+    if (!d.encontrado) {
+      // El CP es válido y da la provincia, pero nadie de ese municipio se había
+      // alojado antes, así que su nombre no está en el histórico.
+      if (!$('f_provincia').value.trim()) $('f_provincia').value = d.provincia || '';
+      $('marcaCp').textContent = '✓';
+      pista.className = 'aviso info';
+      pista.innerHTML = `Código postal válido${d.provincia
+        ? ` · provincia <strong>${esc(d.provincia)}</strong>` : ''}.`
+        + ' El municipio no consta en el histórico: escríbelo a mano.';
+      pista.classList.remove('oculto');
+      return;
+    }
+    // Solo se rellena lo que esté vacío: nunca se pisa lo que ya haya escrito
+    // el recepcionista ni lo que traiga la ficha.
+    if (!$('f_poblacion').value.trim()) $('f_poblacion').value = d.poblacion || '';
+    if (!$('f_provincia').value.trim()) $('f_provincia').value = d.provincia || '';
+    $('marcaCp').textContent = d.fiable ? '✓' : '~';
+    pista.className = d.fiable ? 'aviso ok' : 'aviso info';
+    pista.innerHTML = d.fiable
+      ? `<strong>${esc(d.poblacion)}</strong>${d.provincia ? ' · ' + esc(d.provincia) : ''}`
+        + ` — coincide en el ${d.dominancia}% de las ${d.apariciones} fichas con este CP.`
+      : `Sugerencia: <strong>${esc(d.poblacion)}</strong>. Solo coincide en el `
+        + `${d.dominancia}% de los casos, así que conviene confirmarlo.`;
+    pista.classList.remove('oculto');
+  } catch (e) {
+    $('marcaCp').textContent = '';
+    pista.classList.add('oculto');
+  }
+}
+
+// Auto-asignación: entre las 2-6 personas de la reserva, se preselecciona la que
+// mejor casa por apellido. Aquí sí funciona (a diferencia de buscar la reserva
+// por apellido), porque el conjunto de candidatos es diminuto.
+function elegirPersona(d) {
+  const apeMrz = normalizar(d.apellidos).split(' ').filter((x) => x.length > 2);
+  if (!apeMrz.length) return null;
+  let mejor = null, mejorPunt = 0, empate = false;
+  for (const p of S.personas) {
+    const suyos = normalizar([p.apellido1, p.apellido2].filter(Boolean).join(' '));
+    const punt = apeMrz.filter((t) => suyos.includes(t)).length;
+    if (punt > mejorPunt) { mejorPunt = punt; mejor = p; empate = false; }
+    else if (punt === mejorPunt && punt > 0 && p !== mejor) { empate = true; }
+  }
+  return (mejorPunt > 0 && !empate) ? mejor : null;
+}
+
+function recogerCampos() {
+  const v = (k) => { const el = $(`f_${k}`); return el ? el.value.trim() : ''; };
+  const d = S.lectura;
+  // Si los campos de nombre no se mostraron, no se manda nada: la ficha ya lo
+  // tiene y el escáner no lo modifica.
+  const ape1 = v('apellido1'), ape2 = v('apellido2');
+  return {
+    formato: d.formato, tipo: d.tipo, valido: d.valido, confianza: d.confianza,
+    numero: v('numero'),
+    numero_soporte: v('numero_soporte') || d.numero_soporte || null,
+    cod_tipo_pms: v('tipo') || d.cod_tipo_pms,
+    nombres: v('nombres'), apellido1: ape1, apellido2: ape2,
+    apellidos: [ape1, ape2].filter(Boolean).join(' '),
+    fecha_nacimiento: v('fecha_nacimiento') || null,
+    fecha_caducidad: v('fecha_caducidad') || null,
+    sexo: v('sexo') || null,
+    nacionalidad: v('nacionalidad') || null,
+    nombre_dudoso: !!d.nombre_dudoso,
+    // Dirección: tecleada, no leída del documento.
+    cp: v('cp') || null,
+    poblacion: v('poblacion') || null,
+    provincia: v('provincia') || null,
+    domicilio: v('domicilio') || null,
+  };
+}
+
+async function guardar(forzar) {
+  const p = S.objetivo;
+  const documento = recogerCampos();
+  if (!documento.numero) {
+    $('resultadoGuardar').className = 'aviso err';
+    $('resultadoGuardar').textContent = 'Falta el número de documento.';
+    $('resultadoGuardar').classList.remove('oculto');
+    return;
+  }
+  $('btnGuardar').disabled = true;
+  $('btnGuardar').textContent = 'Guardando…';
+  try {
+    const r = await fetch('/api/doc/guardar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hotel: S.hotel, resGuid: S.reserva.resGuid,
+        // `alta` crea una ficha nueva; si no, se rellena la que ya existe.
+        alta: p.alta === true,
+        hueGuid: p.alta ? null : (p.hueGuid ?? null),
+        racGuid: p.alta ? null : (p.racGuid ?? null),
+        documento, forzar: !!forzar, ms: S.lecturaMs,
+      }),
+    });
+    const d = await r.json();
+    mostrarResultado(d, r.status);
+  } catch (e) {
+    $('resultadoGuardar').className = 'aviso err';
+    $('resultadoGuardar').textContent = 'Error al guardar: ' + e.message;
+    $('resultadoGuardar').classList.remove('oculto');
+  } finally {
+    $('btnGuardar').disabled = false;
+    $('btnGuardar').textContent = S.simulacion ? 'Simular guardado' : 'Guardar en ACI';
+  }
+}
+
+function mostrarResultado(d, estado) {
+  const caja = $('resultadoGuardar');
+  caja.classList.remove('oculto');
+
+  if (estado === 409 && d.requiereConfirmacion) {
+    // La ficha ya tiene datos distintos: nunca se sobrescribe en silencio.
+    caja.className = 'aviso err';
+    caja.innerHTML = '<strong>La ficha ya tiene otros datos.</strong><br>'
+      + d.conflictos.map((c) =>
+          `${esc(c.columna)}: ahora <strong>${esc(c.actual)}</strong> → se pondría <strong>${esc(c.propuesto)}</strong>`)
+        .join('<br>')
+      + '<br><br><button class="btn btn-primary" id="btnForzar">Sobrescribir de todos modos</button>';
+    $('btnForzar').onclick = () => guardar(true);
+    return;
+  }
+  if (!d.ok) {
+    caja.className = 'aviso err';
+    caja.textContent = d.motivo || d.error || 'No se ha podido guardar.';
+    return;
+  }
+
+  const cambios = (d.cambios || []).length;
+  caja.className = d.simulado ? 'aviso sim' : 'aviso ok';
+  if (d.sinCambios) {
+    caja.innerHTML = '<strong>Sin cambios.</strong> La ficha ya estaba completa.';
+  } else if (d.simulado) {
+    caja.innerHTML = `<strong>Simulación:</strong> se habrían rellenado ${cambios} campo(s) `
+      + `(${d.cambios.map((c) => esc(c.columna)).join(', ')}). No se ha escrito nada en ACI.`;
+  } else if (d.alta) {
+    caja.innerHTML = '<strong>Ficha creada en ACI.</strong> El acompañante ya '
+      + 'existe en la reserva y se le ha guardado el documento.';
+  } else {
+    caja.innerHTML = `<strong>Guardado en ACI.</strong> ${cambios} campo(s) rellenados.`;
+  }
+  if ((d.avisos || []).length) {
+    caja.innerHTML += '<br><br>' + d.avisos.map(esc).join('<br>');
+  }
+  siguienteDeLaCola();
+}
+
+// Escaneo en cadena: al acabar con una persona, la cámara se reabre sola para la
+// siguiente pendiente. Cuatro documentos volviendo atrás cada vez sería más
+// lento que teclear.
+function siguienteDeLaCola() {
+  const quedan = S.cola
+    .map((i) => S.personas[i])
+    .filter((p) => p && p !== S.objetivo && p.estado === 'pendiente');
+  if (!quedan.length) {
+    setTimeout(() => abrirReserva(S.reserva.resGuid), 1400);
+    return;
+  }
+  const total = S.cola.length;
+  const hechos = total - quedan.length;
+  $('resultadoGuardar').innerHTML +=
+    `<br><br><strong>${hechos} de ${total}.</strong> Siguiente: `
+    + esc([quedan[0].nombre, quedan[0].apellido1].filter(Boolean).join(' ') || 'acompañante')
+    + ' <button class="btn btn-primary" id="btnSiguiente" style="margin-left:8px">📷 Escanear</button>'
+    + ' <button class="btn btn-ghost" id="btnParar">Terminar</button>';
+  $('btnSiguiente').onclick = () => abrirCamara(quedan[0]);
+  $('btnParar').onclick = () => abrirReserva(S.reserva.resGuid);
+}
+
+// ─── Eventos ─────────────────────────────────────────────────────────────────
+$('btnBuscar').onclick = buscar;
+$('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') buscar(); });
+$('btnVolver').onclick = () => { vista('vBuscar'); cargarEntradas(); };
+$('btnCancelar').onclick = () => { S.marcoCompleto = null; abrirReserva(S.reserva.resGuid); };
+$('btnGuardar').onclick = () => guardar(false);
+$('camCerrar').onclick = cerrarCamara;
+$('btnDisparo').onclick = () => intentarLeer(true);
+$('btnGaleria').onclick = () => $('ficheroFoto').click();
+
+$('tipoTarjeta').onclick = () => {
+  S.tipoMarco = 'tarjeta';
+  $('tipoTarjeta').classList.add('active'); $('tipoPasaporte').classList.remove('active');
+  dibujarMarco();
+};
+$('tipoPasaporte').onclick = () => {
+  S.tipoMarco = 'pasaporte';
+  $('tipoPasaporte').classList.add('active'); $('tipoTarjeta').classList.remove('active');
+  dibujarMarco();
+};
+
+// Linterna: en los mostradores hay mala luz y es la diferencia entre leer al
+// primer intento o al quinto. No todos los navegadores lo soportan.
+$('btnLinterna').onclick = async () => {
+  if (!stream) return;
+  const track = stream.getVideoTracks()[0];
+  const capacidades = track.getCapabilities ? track.getCapabilities() : {};
+  if (!capacidades.torch) {
+    $('camMsg').className = 'cam-msg leyendo';
+    $('camMsg').textContent = 'Este navegador no permite encender la linterna.';
+    return;
+  }
+  linterna = !linterna;
+  try {
+    await track.applyConstraints({ advanced: [{ torch: linterna }] });
+    $('btnLinterna').classList.toggle('off', !linterna);
+  } catch (e) { linterna = false; }
+};
+
+// Respaldo cuando no hay cámara en directo: foto del sistema.
+/**
+ * Reduce una foto del carrete antes de subirla.
+ *
+ * Antes se enviaba el fichero en bruto (`body: f`), 2-6 MB en cualquier móvil actual.
+ * Eso tenía una consecuencia que no se veía: el microservicio recibe la imagen como
+ * parte multipart, y por encima de 1 MB Starlette deja de guardarla en memoria y la
+ * VUELCA A UN FICHERO en disco. Es decir, la promesa de que la imagen del documento
+ * no toca el disco se rompía justo por esta vía, y además subía la foto completa del
+ * documento en lugar del recorte que hace falta.
+ *
+ * Se reescala al mismo tope que la captura en directo. Con eso baja a decenas de KB,
+ * muy por debajo del umbral, y no llega a haber fichero temporal.
+ */
+async function reducirFoto(fichero) {
+  const ANCHO_MAXIMO = 1900;
+  const url = URL.createObjectURL(fichero);
+  try {
+    const img = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = () => rej(new Error('no se ha podido abrir la foto'));
+      i.src = url;
+    });
+    const escala = Math.min(1, ANCHO_MAXIMO / img.naturalWidth);
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * escala);
+    c.height = Math.round(img.naturalHeight * escala);
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    S.ultimaCaptura = `${c.width}×${c.height}`;
+    return await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+$('ficheroFoto').addEventListener('change', async (ev) => {
+  const f = ev.target.files && ev.target.files[0];
+  ev.target.value = '';
+  if (!f) return;
+  $('camMsg').className = 'cam-msg leyendo';
+  $('camMsg').textContent = 'Leyendo la foto…';
+  try {
+    // Si la reducción falla por lo que sea, se manda el original: es peor no poder
+    // escanear que escribir un temporal.
+    let cuerpo = f;
+    try { cuerpo = (await reducirFoto(f)) || f; } catch (e) { cuerpo = f; }
+    const r = await fetch('/api/doc/leer', {
+      method: 'POST', headers: { 'Content-Type': 'application/octet-stream' },
+      body: cuerpo,
+    });
+    const d = await r.json();
+    if (d.leido && d.documento && d.documento.valido) { exito(d.documento, null); return; }
+    $('camMsg').textContent = d.motivo || 'No se ha podido leer esa foto.';
+  } catch (e) {
+    $('camMsg').textContent = e.message;
+  }
+});
+
+// Si el móvil se bloquea o se cambia de pestaña, se suelta la cámara.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && stream) cerrarCamara();
+});
+window.addEventListener('pagehide', cerrarCamara);
+
+iniciar();
+
+/* ─── Aviso y recarga cuando hay versión nueva ──────────────────────────────
+ * Esto faltaba en esta página, y se notó: el badge tenía la versión ESCRITA A MANO
+ * («v1.8.0») mientras el portal iba por la 1.17, así que nadie podía saber con qué
+ * versión estaba trabajando. Peor: la app instalada en el móvil de recepción se
+ * quedaba con el HTML de días atrás y no recibía ninguna mejora del lector. Se vio
+ * en el log del 10/08: llegaban fotogramas que la versión nueva habría descartado
+ * en el propio móvil.
+ *
+ * Se replica el patrón que ya usan `index.html` y `ordenes.html`: se pregunta la
+ * versión al arrancar y cada minuto, y si cambia se recarga. La recarga NO se hace
+ * con la cámara abierta ni a media lectura: sería perder el escaneo en curso.
+ */
+(function () {
+  var versionInicial = null;
+
+  function pintar(v) {
+    var b = document.getElementById('badgeVer');
+    if (b) b.textContent = 'v' + v;
+  }
+
+  function recargar() {
+    var t = document.createElement('div');
+    t.className = 'btr-toast';
+    t.textContent = 'Nueva versión — actualizando…';
+    document.body.appendChild(t);
+    // `location.reload(true)` está obsoleto; con no-store en la petición y el
+    // Cache-Control del portal basta para que traiga el HTML nuevo.
+    setTimeout(function () { location.reload(); }, 1800);
+  }
+
+  function comprobar(inicial) {
+    fetch('/api/status', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (s) {
+        var v = s && s.version;
+        if (!v) return;
+        if (inicial) { versionInicial = v; pintar(v); return; }
+        if (v === versionInicial) return;
+        // Con la cámara encendida o una lectura a medias se espera: recargar aquí
+        // le tiraría a recepción el documento que está escaneando.
+        var camaraAbierta = document.getElementById('camara')
+          && document.getElementById('camara').classList.contains('activa');
+        var verificando = document.getElementById('vVerificar')
+          && document.getElementById('vVerificar').classList.contains('activa');
+        if (camaraAbierta || verificando) return;
+        recargar();
+      })
+      .catch(function () { /* sin red: se reintenta al minuto siguiente */ });
+  }
+
+  comprobar(true);
+  setInterval(function () { comprobar(false); }, 60000);
+})();
+</script>
+</body>
+</html>
