@@ -1,5 +1,7 @@
-// Adaria Gestión — portal launcher v1.2.0
-// Login único + cards + gestión de usuarios (superadmin) + auditoría (superadmin) + Gestor de QR. Branding Vera. Sin ACI/Odoo.
+// Adaria Gestión — portal launcher v1.1.0-doc (base v1.2.0)
+// Login único + cards + gestión de usuarios (superadmin) + auditoría (superadmin) + Gestor de QR. Branding Vera.
+// FASE 4 (26/08/2026): módulo Escáner DNI/MRZ en MODO PRUEBA (documentos.js + lib/aci-write.js clonados de
+// btr-gestion-portal, DOC_DRY_RUN=true fijo, sin escritura en ACI). Ver VeraAdaria_memory/tarea_fase4_escaner_dni.md.
 // Modelo de 3 roles: guest (recepción, cards operativas básicas) < admin (todas las cards operativas) < superadmin (todo + /usuarios + /auditoria).
 const express = require('express');
 const session = require('express-session');
@@ -28,6 +30,20 @@ const qrPersonalPool = process.env.QR_PERSONAL_PGUSER ? new Pool({
   idleTimeoutMillis: 30000,
 }) : null;
 
+// ─── FASE 4 (26/08/2026) — Escáner DNI/MRZ, MODO PRUEBA: pool propio para
+// documentos.js (copia previa de fila, catálogo CP, log de lecturas). Si no
+// está configurado en .env, register() de documentos.js no se llama y la
+// card queda oculta — no rompe el arranque del portal.
+const docPool = process.env.DOC_PGUSER ? new Pool({
+  host: process.env.DOC_PGHOST || '127.0.0.1',
+  port: parseInt(process.env.DOC_PGPORT || '5432', 10),
+  user: process.env.DOC_PGUSER,
+  password: process.env.DOC_PGPASSWORD,
+  database: process.env.DOC_PGDATABASE || 'adaria_documentos',
+  max: 3,
+  idleTimeoutMillis: 30000,
+}) : null;
+
 let USERS = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
 const saveUsers = () => fs.writeFileSync(USERS_FILE, JSON.stringify(USERS, null, 2));
 
@@ -46,7 +62,12 @@ const CARDS = [
   { key:'ine', nombre:'INE', icono:'📊', url:'https://ine.hoteladariavera.com', ready:true, admin:true },
   { key:'guest', nombre:'Guest Portal', icono:'📱', url:'https://guest.hoteladariavera.com', ready:true },
   { key:'estadisticas', nombre:'Estadísticas', icono:'📈', url:'https://estadisticas.hoteladariavera.com', ready:true },
-  { key:'escaner', nombre:'Escáner DNI', icono:'🪪', url:'#', ready:false, admin:true },
+  // FASE 4 (26/08/2026): modo prueba, sin escritura en ACI (DOC_DRY_RUN=true
+  // fijo en .env, DOC_HOTELES_ESCRITURA vacío). Visible SOLO para estas tres
+  // cuentas, no para todo admin/superadmin (por eso `usuarios` y no `admin`).
+  { key:'escaner', nombre:'Escáner DNI', icono:'🪪', url:'/documentos.html', ready:true,
+    estadoTexto:'Disponible (modo prueba)', estadoClase:'test',
+    usuarios:['asanchez','olga','francesc'] },
   { key:'precheckin', nombre:'Pre check-in', icono:'📝', url:'https://precheckin.hoteladariavera.com/', ready:true },
   { key:'manuales', nombre:'Manuales', icono:'📚', url:'/manuales/', ready:true },
   { key:'it', nombre:'Dashboard IT', icono:'🖥️', url:'https://it.hoteladariavera.com', ready:true, admin:true },
@@ -65,6 +86,23 @@ app.use(express.urlencoded({ extended:false }));
 app.use(session({ secret:SECRET, resave:false, saveUninitialized:false,
   cookie:{ httpOnly:true, sameSite:'lax', secure:false, maxAge:1000*60*60*8 } }));
 
+// Ficheros estáticos (solo lo que necesita el Escáner DNI: documentos.html +
+// favicon/manifest). El resto del portal se sirve renderizado desde aquí.
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Puente de sesión → req.user para documentos.js (clonado de btr-gestion-
+// portal, que espera `req.user = { login, rol }`). Nunca se concede
+// `rol:'admin'` aquí a propósito: dentro de documentos.js eso saltaría
+// cualquier restricción de DOC_USERS, y el acceso al escáner en modo prueba
+// debe decidirse SOLO por esa lista (asanchez, olga, francesc), no por ser
+// admin/superadmin del portal (mvidal es admin y no debe entrar).
+app.use((req,res,next)=>{
+  if (req.session && req.session.user) {
+    req.user = { login: req.session.user.login, rol: 'user' };
+  }
+  next();
+});
+
 const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 const layout = (title, body, user, path0='') => `<!DOCTYPE html><html lang="es"><head><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>"><meta charset="UTF-8">
@@ -79,7 +117,7 @@ const layout = (title, body, user, path0='') => `<!DOCTYPE html><html lang="es">
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
 .card{background:#fff;border-radius:14px;box-shadow:0 4px 10px rgba(0,0,0,.07);padding:22px;text-decoration:none;color:var(--ch);transition:.15s;border:1px solid #eef3f5;display:block}
 .card:hover{transform:translateY(-3px);box-shadow:0 12px 22px rgba(0,0,0,.12)}.card .ic{font-size:34px}.card .nm{font-weight:700;color:var(--od);margin-top:10px;font-size:16px}
-.card .st{font-size:11px;margin-top:8px;display:inline-block;padding:2px 9px;border-radius:999px}.st.ok{background:#e8f8ef;color:#27ae60}.st.soon{background:#fef5e7;color:#b9770e}.card.soon{opacity:.72}
+.card .st{font-size:11px;margin-top:8px;display:inline-block;padding:2px 9px;border-radius:999px}.st.ok{background:#e8f8ef;color:#27ae60}.st.soon{background:#fef5e7;color:#b9770e}.st.test{background:#eaf6ff;color:#1b5e75}.card.soon{opacity:.72}
 table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.06);font-size:14px}
 th{background:var(--od);color:#fff;text-align:left;padding:9px 12px;font-size:13px}td{border-bottom:1px solid #eee;padding:9px 12px}
 .btn{background:var(--od);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:13px;cursor:pointer}.btn:hover{background:var(--om)}
@@ -129,8 +167,14 @@ app.get('/logout',(req,res)=>{ audit('LOGOUT',req); req.session.destroy(()=>res.
 
 app.get('/',requireAuth,(req,res)=>{
   const atLeastAdmin=isAtLeastAdmin(req.session.user);
-  const cards=CARDS.filter(c=>!c.admin||atLeastAdmin).map(c=>{
-    const st=c.ready?'<span class="st ok">Disponible</span>':'<span class="st soon">En preparación</span>';
+  const loginActual=(req.session.user.login||'').toLowerCase();
+  const cards=CARDS
+    .filter(c=>!c.admin||atLeastAdmin)
+    // `usuarios`: allowlist por cuenta, independiente del rol (p.ej. el
+    // Escáner DNI en modo prueba: mvidal es admin pero no está en la lista).
+    .filter(c=>!c.usuarios||c.usuarios.includes(loginActual))
+    .map(c=>{
+    const st=c.ready?`<span class="st ${c.estadoClase||'ok'}">${esc(c.estadoTexto||'Disponible')}</span>`:'<span class="st soon">En preparación</span>';
     const href=c.ready&&c.url!=='#'?c.url:'#'; const tgt=c.ready&&c.url!=='#'?' target="_blank"':'';
     return `<a class="card ${c.ready?'':'soon'}" href="${href}"${tgt}><div class="ic">${c.icono}</div><div class="nm">${esc(c.nombre)}</div><div>${st}</div></a>`;
   }).join('');
@@ -523,6 +567,24 @@ app.get('/qr/empleados/:id/png', requireAuth, requireAtLeastAdmin, async (req,re
   }
 });
 
+
+// ─── Escáner DNI/MRZ — FASE 4 (26/08/2026), MODO PRUEBA ────────────────────
+// Clonado de btr-gestion-portal/documentos.js + lib/aci-write.js, sin tocar
+// su lógica: las salvaguardas (DOC_DRY_RUN, copia previa, GRANT por columna)
+// son las mismas que llevan en producción en BTR desde el 06/08/2026. Lo que
+// cambia aquí es la configuración: DOC_DRY_RUN=true fijo y
+// DOC_HOTELES_ESCRITURA vacío en .env, así que aci-write.js nunca ejecuta un
+// UPDATE real pase lo que pase en el código. Ver
+// VeraAdaria_memory/sql_aci_doc_rw_bloqueador.md para qué falta para
+// activarlo de verdad (usuario de escritura, pendiente de Hotansa).
+if (docPool) {
+  const documentos = require('./documentos');
+  documentos.register(app, { pgPool: docPool, requireAuth, auditLog: audit });
+  documentos.ensureSchema(docPool).catch((e) =>
+    console.error('[escaner-dni] ensureSchema falló:', e.message));
+} else {
+  console.warn('[escaner-dni] DOC_PGUSER no configurado en .env: módulo documentos.js NO registrado.');
+}
 
 app.get('/health',(req,res)=>res.json({ok:true,app:'adaria-gestion',v:'1.2.0'}));
 app.listen(PORT,'0.0.0.0',()=>console.log('Adaria Gestión v1.2.0 en :'+PORT));
