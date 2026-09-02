@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vera Adaria Health Monitor v1.1.0</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+      color: #667eea;
+    }
+
+    .header .status-badge {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+
+    .status-badge.healthy {
+      background: #d1fae5;
+      color: #059669;
+    }
+
+    .status-badge.degraded {
+      background: #fef3c7;
+      color: #b45309;
+    }
+
+    .status-badge.offline {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .header-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .info-item .label {
+      font-weight: 600;
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .service-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border-left: 4px solid #ccc;
+      transition: all 0.3s ease;
+    }
+
+    .service-card.online {
+      border-left-color: #10b981;
+    }
+
+    .service-card.offline {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+
+    .service-card.degraded {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
+
+    .service-card:hover {
+      box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .service-name {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .service-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .service-status.online {
+      background: #d1fae5;
+      color: #059669;
+    }
+
+    .service-status.offline {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .service-status.degraded {
+      background: #fef3c7;
+      color: #b45309;
+    }
+
+    .service-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .service-status.online .dot {
+      background: #10b981;
+      animation: pulse-green 2s infinite;
+    }
+
+    .service-status.offline .dot {
+      background: #ef4444;
+      animation: pulse-red 2s infinite;
+    }
+
+    @keyframes pulse-green {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes pulse-red {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .service-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .metric {
+      font-size: 12px;
+      padding: 8px;
+      background: #f9fafb;
+      border-radius: 4px;
+    }
+
+    .metric-label {
+      color: #666;
+      font-weight: 500;
+    }
+
+    .metric-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-top: 2px;
+    }
+
+    .error-message {
+      background: #fee2e2;
+      color: #dc2626;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-top: 12px;
+      font-size: 12px;
+      border-left: 3px solid #dc2626;
+    }
+
+    .last-check {
+      font-size: 11px;
+      color: #999;
+      margin-top: 12px;
+      text-align: right;
+    }
+
+    .alerts-section {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .alerts-section h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+      color: #1f2937;
+    }
+
+    .alert-list {
+      list-style: none;
+    }
+
+    .alert-item {
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      border-left: 3px solid;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .alert-item.warning {
+      background: #fef3c7;
+      border-left-color: #f59e0b;
+      color: #92400e;
+    }
+
+    .alert-item.error {
+      background: #fee2e2;
+      border-left-color: #ef4444;
+      color: #7f1d1d;
+    }
+
+    .alert-item.success {
+      background: #d1fae5;
+      border-left-color: #10b981;
+      color: #065f46;
+    }
+
+    .refresh-info {
+      text-align: right;
+      font-size: 12px;
+      color: #999;
+      margin-top: 20px;
+    }
+
+    .chart-section {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      margin-top: 30px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .chart-section h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+      color: #1f2937;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background: #667eea;
+      border-radius: 50%;
+      animation: spin 0.6s infinite;
+    }
+
+    @keyframes spin {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Vera Adaria — Health Monitor v1.1.0</h1>
+      <div class="status-badge" id="overallStatus">
+        <span class="spinner"></span> Cargando...
+      </div>
+
+      <div class="header-info">
+        <div class="info-item">
+          <span class="label">Estado General:</span>
+          <span id="healthOverall">—</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Servicios Online:</span>
+          <span id="onlineCount">0</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Servicios Offline:</span>
+          <span id="offlineCount">0</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Uptime Promedio:</span>
+          <span id="avgUptime">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="services-grid" id="servicesContainer">
+      <div class="loading">
+        <span class="spinner"></span> Conectando con watchdog...
+      </div>
+    </div>
+
+    <div class="alerts-section">
+      <h2>Últimas Alertas</h2>
+      <ul class="alert-list" id="alertsList">
+        <li class="alert-item success">
+          Sistema inicializándose...
+        </li>
+      </ul>
+      <div class="refresh-info">
+        Actualización automática cada 5 segundos
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3100';
+    const REFRESH_INTERVAL = 5000; // 5 segundos
+    let alertHistory = [];
+
+    /**
+     * Obtener estado de servicios desde watchdog
+     */
+    async function fetchServiceStatus() {
+      try {
+        const response = await fetch(`${API_URL}/services/status`);
+        const data = await response.json();
+        renderServices(data);
+        updateHeaderStatus(data);
+      } catch (error) {
+        console.error('Error fetching status:', error);
+        document.getElementById('servicesContainer').innerHTML =
+          '<div class="error-message" style="grid-column: 1/-1;">Error de conexión con watchdog. ¿Está ejecutándose en puerto 3100?</div>';
+      }
+    }
+
+    /**
+     * Renderizar tarjetas de servicios
+     */
+    function renderServices(data) {
+      const container = document.getElementById('servicesContainer');
+      container.innerHTML = '';
+
+      data.services.forEach(service => {
+        const card = document.createElement('div');
+        card.className = `service-card ${service.status}`;
+        card.innerHTML = `
+          <div class="service-name">
+            <span>${service.name}</span>
+            <span class="service-status ${service.status}">
+              <span class="dot"></span>
+              ${service.status === 'online' ? 'Online' : 'Offline'}
+            </span>
+          </div>
+
+          <div class="service-metrics">
+            <div class="metric">
+              <div class="metric-label">Uptime</div>
+              <div class="metric-value">${service.uptime || 'N/A'}</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Error Rate</div>
+              <div class="metric-value">${service.errorRate || '0%'}</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Latencia</div>
+              <div class="metric-value">${service.responseTime ? service.responseTime + 'ms' : 'N/A'}</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Estado</div>
+              <div class="metric-value">${service.status === 'online' ? '✓' : '✗'}</div>
+            </div>
+          </div>
+
+          ${service.lastErrorMessage ? `
+            <div class="error-message">
+              ${service.lastErrorMessage}
+            </div>
+          ` : ''}
+
+          <div class="last-check">
+            Última verificación: ${new Date(service.lastCheck).toLocaleTimeString('es-ES')}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    /**
+     * Actualizar estado general en header
+     */
+    function updateHeaderStatus(data) {
+      const badge = document.getElementById('overallStatus');
+      const healthClass = data.healthOverall.toLowerCase();
+      badge.className = `status-badge ${healthClass}`;
+      badge.textContent = data.healthOverall;
+
+      document.getElementById('healthOverall').textContent = data.healthOverall;
+
+      const online = data.services.filter(s => s.status === 'online').length;
+      const offline = data.services.filter(s => s.status === 'offline').length;
+      document.getElementById('onlineCount').textContent = online;
+      document.getElementById('offlineCount').textContent = offline;
+
+      // Calcular uptime promedio
+      const totalUptime = data.services.reduce((sum, s) => {
+        const uptime = parseFloat(s.uptime) || 0;
+        return sum + uptime;
+      }, 0);
+      const avgUptime = (totalUptime / data.services.length).toFixed(1);
+      document.getElementById('avgUptime').textContent = avgUptime + '%';
+
+      // Actualizar alertas
+      updateAlerts(data);
+    }
+
+    /**
+     * Actualizar lista de alertas
+     */
+    function updateAlerts(data) {
+      data.services.forEach(service => {
+        // Si hay cambio de estado, registrar alerta
+        const lastAlert = alertHistory.find(a => a.name === service.name);
+
+        if (lastAlert && lastAlert.status !== service.status) {
+          const message = service.status === 'offline'
+            ? `⚠️ ${service.name} se desconectó a las ${new Date().toLocaleTimeString('es-ES')}`
+            : `✅ ${service.name} se reconectó a las ${new Date().toLocaleTimeString('es-ES')}`;
+
+          const alertType = service.status === 'offline' ? 'error' : 'success';
+          addAlert(message, alertType);
+        }
+
+        // Actualizar historial
+        const idx = alertHistory.findIndex(a => a.name === service.name);
+        if (idx >= 0) {
+          alertHistory[idx].status = service.status;
+        } else {
+          alertHistory.push({ name: service.name, status: service.status });
+        }
+      });
+    }
+
+    /**
+     * Agregar alerta a la lista
+     */
+    function addAlert(message, type = 'info') {
+      const alertsList = document.getElementById('alertsList');
+
+      // Evitar duplicados en los últimos 30 segundos
+      const recent = Array.from(alertsList.querySelectorAll('.alert-item'))
+        .filter(item => {
+          const text = item.textContent;
+          return text.includes(message);
+        });
+
+      if (recent.length > 0) return;
+
+      const item = document.createElement('li');
+      item.className = `alert-item ${type}`;
+      item.innerHTML = `
+        <span>${message}</span>
+        <span style="font-size: 11px; color: inherit; opacity: 0.7;">
+          ${new Date().toLocaleTimeString('es-ES')}
+        </span>
+      `;
+
+      alertsList.insertBefore(item, alertsList.firstChild);
+
+      // Mantener máximo 10 alertas
+      while (alertsList.children.length > 10) {
+        alertsList.removeChild(alertsList.lastChild);
+      }
+    }
+
+    /**
+     * Iniciar refresh automático
+     */
+    function startAutoRefresh() {
+      fetchServiceStatus(); // Cargar inmediatamente
+      setInterval(fetchServiceStatus, REFRESH_INTERVAL);
+    }
+
+    // Iniciar cuando cargue DOM
+    document.addEventListener('DOMContentLoaded', startAutoRefresh);
+  </script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+{
+  "comment": "Vera Adaria v1.1.0 — Services Monitor Configuration",
+  "description": "Health checker centralizado para todos los servicios de Vera Adaria",
+  "checkInterval": 30000,
+  "services": [
+    {
+      "name": "Welcome Check-in",
+      "url": "http://localhost:3093",
+      "healthEndpoint": "/health",
+      "timeout": 3000,
+      "interval": 30000,
+      "criticalThreshold": 2,
+      "alertChannels": [
+        "whatsapp",
+        "slack"
+      ],
+      "alertNumber": "+34630219712"
+    },
+    {
+      "name": "Pre Check-in",
+      "url": "http://localhost:3094",
+      "healthEndpoint": "/health",
+      "timeout": 3000,
+      "interval": 30000,
+      "criticalThreshold": 2,
+      "alertChannels": [
+        "whatsapp"
+      ],
+      "alertNumber": "+34630219712"
+    },
+    {
+      "name": "Admin Dashboard",
+      "url": "http://adariait.boitaullresort.com",
+      "healthEndpoint": "/health",
+      "timeout": 3000,
+      "interval": 30000,
+      "criticalThreshold": 1,
+      "alertChannels": [
+        "whatsapp"
+      ],
+      "alertNumber": "+34630219712"
+    },
+    {
+      "name": "Portales Hub",
+      "url": "http://localhost:3095",
+      "healthEndpoint": "/health",
+      "timeout": 3000,
+      "interval": 30000,
+      "criticalThreshold": 2,
+      "alertChannels": [
+        "whatsapp"
+      ],
+      "alertNumber": "+34630219712"
+    },
+    {
+      "name": "INE Module",
+      "url": "http://localhost:5000",
+      "healthEndpoint": "/health",
+      "timeout": 3000,
+      "interval": 30000,
+      "criticalThreshold": 2,
+      "alertChannels": [
+        "whatsapp"
+      ],
+      "alertNumber": "+34630219712"
+    },
+    {
+      "name": "Parking System",
+      "url": "http://localhost:3096",
+      "healthEndpoint": "/health",
+      "timeout": 3000,
+      "interval": 30000,
+      "criticalThreshold": 2,
+      "alertChannels": [
+        "whatsapp"
+      ],
+      "alertNumber": "+34630219712"
+    },
+    {
+      "name": "Guest Portal",
+      "url": "http://localhost:3097",
+      "healthEndpoint": "/health",
+      "timeout": 3000,
+      "interval": 30000,
+      "criticalThreshold": 2,
+      "alertChannels": [
+        "whatsapp"
+      ],
+      "alertNumber": "+34630219712"
+    },
+    {
+      "name": "Scanner Module",
+      "url": "http://localhost:3098",
+      "healthEndpoint": "/health",
+      "timeout": 3000,
+      "interval": 30000,
+      "criticalThreshold": 2,
+      "alertChannels": [
+        "whatsapp"
+      ],
+      "alertNumber": "+34630219712"
+    },
+    {
+      "name": "Manuales Portal",
+      "url": "http://localhost:3099",
+      "healthEndpoint": "/health",
+      "timeout": 3000,
+      "interval": 30000,
+      "criticalThreshold": 2,
+      "alertChannels": [
+        "whatsapp"
+      ],
+      "alertNumber": "+34630219712"
+    }
+  ],
+  "whatsapp": {
+    "enabled": true,
+    "provider": "twilio",
+    "accountSid": "process.env.TWILIO_ACCOUNT_SID",
+    "authToken": "process.env.TWILIO_AUTH_TOKEN",
+    "fromNumber": "+34634567890",
+    "webhookUrl": "http://localhost:5678/webhook/vera-alerts"
+  },
+  "database": {
+    "user": "vera_monitor",
+    "password": "process.env.DB_PASSWORD",
+    "host": "localhost",
+    "port": 5432,
+    "database": "vera_monitoring"
+  },
+  "alertConfig": {
+    "antiSpamWindow": 300000,
+    "maxAlertsPerService": 3,
+    "escalationEnabled": false,
+    "escalationNumbers": [
+      "+34630219712"
+    ]
+  },
+  "dashboard": {
+    "port": 3100,
+    "publicUrl": "http://dashboard.vera.local:3100",
+    "refreshInterval": 5000
+  }
+}
