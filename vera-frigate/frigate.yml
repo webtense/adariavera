@@ -1,0 +1,445 @@
+# ============================================================================
+# FRIGATE NVR - CONFIGURACIÓN
+# v1.1.0 | Vera Adaria | 2026-09-01
+# ============================================================================
+# Configuración completa de Frigate para NVR inteligente con:
+# - Detección de objetos (YOLO v8)
+# - Movimiento
+# - Grabación on-demand (pre/post buffer)
+# - 6 Cámaras Tapo C210
+
+database:
+  path: /media/frigate/frigate.db
+  sqlite_pragma:
+    journal_mode: wal
+    synchronous: normal
+
+# ============================================================================
+# OBJETO DETECTION (YOLO v8 - CPU o GPU)
+# ============================================================================
+detectors:
+  coral:
+    type: cpu           # Cambiar a 'edgetpu' si disponible
+    num_threads: 2
+
+model:
+  path: /media/frigate/models/yolov8s.pt
+  input_tensor: uint8
+  input_size: 320
+  confidence: 0.5      # Umbral mínimo de confianza
+
+# ============================================================================
+# STORAGE - Almacenamiento optimizado
+# ============================================================================
+ffmpeg:
+  global_args:
+    - -hide_banner
+    - -loglevel
+    - warning
+  hwaccel_args: []     # Sin aceleración GPU
+  output_args:
+    record: -c:v libx264 -preset veryfast -b:v 1500k -f segment -segment_time 10 -segment_format mp4 -reset_timestamps 1 -strftime 1 -c:a aac
+
+record:
+  enabled: false       # NO grabar siempre
+  retain:
+    default: 0         # No guardar frames por defecto
+    motions: 30        # Guardar 30 eventos de movimiento
+  # Resolución reducida para ahorrar espacio
+  output_args: -c:v libx264 -preset veryfast -b:v 1500k -f segment
+
+snapshots:
+  enabled: true
+  clean:
+    days: 30
+  retain:
+    default: 10
+    objects: 30
+
+# ============================================================================
+# CÁMARAS (6x Tapo C210)
+# ============================================================================
+cameras:
+  # =========================================================================
+  # CÁMARA 1: RECEPCIÓN
+  # =========================================================================
+  recepcion:
+    name: Recepción
+    enabled: true
+
+    # RTSP Stream (Tapo default: admin/password)
+    ffmpeg:
+      inputs:
+        - path: rtsp://admin:password@192.168.1.11:554/stream1
+          roles:
+            - detect
+            - record
+
+    # Resolución nativa (se reduce en grabación)
+    frame:
+      width: 2560
+      height: 1440
+
+    # =========================================================================
+    # DETECCIÓN
+    # =========================================================================
+    detect:
+      enabled: true
+      fps: 5                # Detectar a 5 FPS (CPU efficient)
+      max_disappeared: 5    # Máx frames sin ver objeto antes de perderlo
+      stationary:
+        interval: 0         # No reportar objetos estacionarios
+        threshold: 50
+
+    objects:
+      track:
+        - person
+        - car
+        - dog
+        - cat
+      filters:
+        person:
+          min_area: 500     # Ignorar personas muy pequeñas
+          max_area: 100000
+          threshold: 0.7    # Confianza mínima 70%
+        car:
+          min_area: 500
+          threshold: 0.6
+        dog:
+          min_area: 100
+          threshold: 0.5
+        cat:
+          min_area: 100
+          threshold: 0.5
+
+    # =========================================================================
+    # GRABACIÓN INTELIGENTE
+    # =========================================================================
+    record:
+      enabled: false        # NO grabar siempre
+      retain:
+        motions: 30         # Guardar hasta 30 eventos
+        objects: 30
+
+    motion:
+      enabled: true
+      contour_area: 10      # Detectar cambios >10px²
+      delta_alpha: 0.005
+      frame_alpha: 0.005
+      frame_height: 50      # Escala reducida para motion
+      lightning_threshold: 0.8
+
+    # =========================================================================
+    # ZONA DE INTERÉS (Recepción entrada)
+    # =========================================================================
+    zones:
+      entrada:
+        coordinates: 0,0,100,100,100,500,0,500
+        objects:
+          - person
+        filters:
+          person:
+            min_area: 500
+
+    # =========================================================================
+    # SNAPSHOTS
+    # =========================================================================
+    snapshots:
+      enabled: true
+      height: 480
+      retain:
+        default: 10
+        objects: 30
+
+    # Frame predictor (mejorar detección)
+    frame_resolution: 1280x720
+
+  # =========================================================================
+  # CÁMARA 2: PARKING
+  # =========================================================================
+  parking:
+    name: Parking
+    enabled: true
+
+    ffmpeg:
+      inputs:
+        - path: rtsp://admin:password@192.168.1.12:554/stream1
+          roles:
+            - detect
+            - record
+
+    frame:
+      width: 2560
+      height: 1440
+
+    detect:
+      enabled: true
+      fps: 5
+      max_disappeared: 5
+      stationary:
+        interval: 0
+        threshold: 50
+
+    objects:
+      track:
+        - person
+        - car
+      filters:
+        person:
+          min_area: 500
+          threshold: 0.7
+        car:
+          min_area: 1000
+          threshold: 0.6
+
+    record:
+      enabled: false
+      retain:
+        motions: 30
+        objects: 30
+
+    motion:
+      enabled: true
+      contour_area: 10
+      delta_alpha: 0.005
+      frame_alpha: 0.005
+
+    zones:
+      parking_lot:
+        coordinates: 0,0,200,100,200,500,0,500
+        objects:
+          - car
+        filters:
+          car:
+            min_area: 1000
+
+    snapshots:
+      enabled: true
+      height: 480
+      retain:
+        default: 10
+        objects: 30
+
+  # =========================================================================
+  # CÁMARA 3: ENTRADA PRINCIPAL
+  # =========================================================================
+  entrada_principal:
+    name: Entrada Principal
+    enabled: true
+
+    ffmpeg:
+      inputs:
+        - path: rtsp://admin:password@192.168.1.13:554/stream1
+          roles:
+            - detect
+            - record
+
+    frame:
+      width: 2560
+      height: 1440
+
+    detect:
+      enabled: true
+      fps: 5
+      max_disappeared: 5
+
+    objects:
+      track:
+        - person
+        - car
+      filters:
+        person:
+          min_area: 500
+          threshold: 0.7
+
+    record:
+      enabled: false
+      retain:
+        motions: 30
+        objects: 30
+
+    motion:
+      enabled: true
+      contour_area: 10
+
+    zones:
+      puerta:
+        coordinates: 100,200,300,200,300,400,100,400
+        objects:
+          - person
+
+    snapshots:
+      enabled: true
+      height: 480
+
+  # =========================================================================
+  # CÁMARA 4: SERV ICIO (Zona de servicios)
+  # =========================================================================
+  servicio:
+    name: Servicio
+    enabled: true
+
+    ffmpeg:
+      inputs:
+        - path: rtsp://admin:password@192.168.1.14:554/stream1
+          roles:
+            - detect
+            - record
+
+    frame:
+      width: 2560
+      height: 1440
+
+    detect:
+      enabled: true
+      fps: 5
+      max_disappeared: 5
+
+    objects:
+      track:
+        - person
+        - dog
+        - cat
+      filters:
+        person:
+          min_area: 500
+          threshold: 0.7
+        dog:
+          min_area: 100
+          threshold: 0.5
+
+    record:
+      enabled: false
+      retain:
+        motions: 30
+        objects: 30
+
+    motion:
+      enabled: true
+      contour_area: 10
+
+    zones:
+      zona_restringida:
+        coordinates: 0,0,500,0,500,400,0,400
+        objects:
+          - person
+          - dog
+
+    snapshots:
+      enabled: true
+      height: 480
+
+  # =========================================================================
+  # CÁMARA 5: TRASERA
+  # =========================================================================
+  trasera:
+    name: Trasera
+    enabled: true
+
+    ffmpeg:
+      inputs:
+        - path: rtsp://admin:password@192.168.1.15:554/stream1
+          roles:
+            - detect
+            - record
+
+    frame:
+      width: 2560
+      height: 1440
+
+    detect:
+      enabled: true
+      fps: 5
+      max_disappeared: 5
+
+    objects:
+      track:
+        - person
+        - car
+        - dog
+      filters:
+        person:
+          min_area: 500
+          threshold: 0.7
+
+    record:
+      enabled: false
+      retain:
+        motions: 30
+        objects: 30
+
+    motion:
+      enabled: true
+      contour_area: 10
+
+    snapshots:
+      enabled: true
+      height: 480
+
+  # =========================================================================
+  # CÁMARA 6: LATERAL
+  # =========================================================================
+  lateral:
+    name: Lateral
+    enabled: true
+
+    ffmpeg:
+      inputs:
+        - path: rtsp://admin:password@192.168.1.16:554/stream1
+          roles:
+            - detect
+            - record
+
+    frame:
+      width: 2560
+      height: 1440
+
+    detect:
+      enabled: true
+      fps: 5
+      max_disappeared: 5
+
+    objects:
+      track:
+        - person
+        - car
+      filters:
+        person:
+          min_area: 500
+          threshold: 0.7
+
+    record:
+      enabled: false
+      retain:
+        motions: 30
+        objects: 30
+
+    motion:
+      enabled: true
+      contour_area: 10
+
+    snapshots:
+      enabled: true
+      height: 480
+
+# ============================================================================
+# WEBHOOK - Alertas a sistemas externos
+# ============================================================================
+# Los eventos se envían a http://localhost:3000/api/alert/frigate
+# (reutilizar alerter.js del watchdog existente)
+#
+# NO configurar webhook aquí, manejado por alerts-frigate.js
+# que consulta API REST de Frigate
+
+# ============================================================================
+# COMENTARIOS v1.1.0
+# ============================================================================
+# • detect.fps: Reducido a 5 FPS para ahorrar CPU (suficiente para CCTV)
+# • record.enabled: false → Grabación INTELIGENTE solo en eventos
+# • objects.filters: Confianza mínima 0.5-0.7 según objeto
+# • zones: Configuración geográfica por cámara (coordenadas)
+# • snapshots: Se guardan para mostrar en dashboard
+# • motion.contour_area: >10px² para evitar ruido (lluvia, sombras)
+# • record.retain.motions/objects: Máx 30 eventos (limitar almacenamiento)
+# • frame_resolution: Ajustar según resolución nativa de Tapo (2560x1440)
+# • Pre/post buffer: Configurar en alerts-frigate.js al procesar eventos

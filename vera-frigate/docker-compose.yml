@@ -1,0 +1,238 @@
+# ============================================================================
+# FRIGATE NVR - DOCKER COMPOSE
+# v1.1.0 | Vera Adaria | 2026-09-01
+# ============================================================================
+# Orquestación de servicios Frigate:
+# - Frigate NVR (puerto 5000)
+# - PostgreSQL (puerto 5432)
+# - Redis (puerto 6379)
+
+version: '3.8'
+
+services:
+  # =========================================================================
+  # FRIGATE NVR - Sistema principal
+  # =========================================================================
+  frigate:
+    image: ghcr.io/blakeblackshear/frigate:latest
+    container_name: frigate
+    privileged: true
+    restart: unless-stopped
+    shm_size: '256mb'  # Memoria compartida para detección
+
+    environment:
+      FRIGATE_RTSP_PASSWORD: password
+      TZ: Europe/Madrid
+      YOLO_MODELS: yolov8s
+      LOG_LEVEL: info
+
+    volumes:
+      # Configuración
+      - ./frigate.yml:/config/config.yml:ro
+
+      # Almacenamiento
+      - /media/frigate/recordings:/media/frigate/recordings
+      - /media/frigate/clips:/media/frigate/clips
+      - /media/frigate/snapshots:/media/frigate/snapshots
+      - /media/frigate/models:/media/frigate/models
+      - /media/frigate/frigate.db:/config/frigate.db
+
+      # Zona horaria
+      - /etc/localtime:/etc/localtime:ro
+
+    ports:
+      # API REST
+      - "5000:5000"
+
+      # RTSP streams (reenviados desde cámaras)
+      - "8554:8554"
+
+      # WebRTC (opcional, para streaming en vivo)
+      - "8555:8555/tcp"
+      - "8555:8555/udp"
+
+    networks:
+      - frigate-net
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # =========================================================================
+  # POSTGRESQL - Base de datos eventos
+  # =========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: frigate-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: vera_adaria
+      POSTGRES_USER: frigate
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-frigate_secure_password_change_me}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c max_connections=100"
+
+    volumes:
+      # Almacenamiento persistente
+      - /media/frigate/postgres:/var/lib/postgresql/data
+
+      # Schema inicial
+      - ./schema-frigate.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+
+    networks:
+      - frigate-net
+
+    ports:
+      # Puerto accesible localmente
+      - "5432:5432"
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U frigate -d vera_adaria"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # =========================================================================
+  # REDIS - Cache + Anti-spam alertas
+  # =========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: frigate-redis
+    restart: unless-stopped
+
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+
+    volumes:
+      # Persistencia
+      - /media/frigate/redis:/data
+
+    networks:
+      - frigate-net
+
+    ports:
+      - "6379:6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # =========================================================================
+  # ALERTS FRIGATE - Polling y gestión de alertas
+  # =========================================================================
+  frigate-alerts:
+    image: node:18-alpine
+    container_name: frigate-alerts
+    restart: unless-stopped
+    working_dir: /app
+
+    environment:
+      FRIGATE_HOST: frigate
+      FRIGATE_PORT: 5000
+      FRIGATE_API_URL: http://frigate:5000
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: vera_adaria
+      POSTGRES_USER: frigate
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-frigate_secure_password_change_me}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      WHATSAPP_WEBHOOK: http://host.docker.internal:3000/api/alert/frigate
+      NODE_ENV: production
+
+    volumes:
+      # Script de alertas
+      - ./alerts-frigate.js:/app/alerts-frigate.js:ro
+      - ./alerts-frigate-config.json:/app/config.json:ro
+
+    networks:
+      - frigate-net
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      frigate:
+        condition: service_healthy
+
+    command: sh -c "npm install && node alerts-frigate.js"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ============================================================================
+# REDES
+# ============================================================================
+networks:
+  frigate-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+# ============================================================================
+# VOLÚMENES (persistencia)
+# ============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  frigate_recordings:
+    driver: local
+  frigate_clips:
+    driver: local
+  frigate_snapshots:
+    driver: local
+
+# ============================================================================
+# COMENTARIOS v1.1.0
+# ============================================================================
+# • frigate.shm_size: 256MB para detección de 6 cámaras simultáneas
+# • postgres.max_connections: 100 (suficiente para Frigate + alerter)
+# • redis.maxmemory-policy: allkeys-lru (limpiar automáticamente)
+# • frigate-alerts: Depende de Frigate + PostgreSQL + Redis
+# • host.docker.internal: Acceso a servidor host desde contenedor
+# • healthcheck: Verificar servicios antes de arrancar dependientes
+# • logging: Limitar tamaño de logs para no llenar disco
+# • POSTGRES_PASSWORD: CAMBIAR en .env antes de producción
+# • Orden arranque: postgres → redis → frigate → frigate-alerts

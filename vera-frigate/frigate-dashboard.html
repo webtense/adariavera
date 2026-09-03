@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frigate NVR - Vera Adaria</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #2c3e50;
+      --secondary: #34495e;
+      --accent: #e74c3c;
+      --success: #27ae60;
+      --warning: #f39c12;
+      --info: #3498db;
+      --light: #ecf0f1;
+      --dark: #1a252f;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: var(--dark);
+      color: #ecf0f1;
+      line-height: 1.6;
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      padding: 2rem;
+      text-align: center;
+      border-bottom: 3px solid var(--accent);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* ===== ESTADO EN VIVO ===== */
+    .status-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .status-card {
+      background: var(--secondary);
+      border-left: 4px solid var(--accent);
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: transform 0.3s;
+    }
+
+    .status-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .status-card.online {
+      border-left-color: var(--success);
+    }
+
+    .status-card.warning {
+      border-left-color: var(--warning);
+    }
+
+    .status-card.error {
+      border-left-color: var(--accent);
+    }
+
+    .status-label {
+      font-size: 0.85rem;
+      opacity: 0.7;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .status-value {
+      font-size: 1.8rem;
+      font-weight: bold;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 0.5rem;
+      animation: pulse 2s infinite;
+    }
+
+    .status-indicator.online {
+      background: var(--success);
+    }
+
+    .status-indicator.error {
+      background: var(--accent);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ===== CÁMARAS ===== */
+    .cameras-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .camera-card {
+      background: var(--secondary);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: transform 0.3s;
+    }
+
+    .camera-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .camera-header {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      padding: 1rem;
+      border-bottom: 2px solid var(--accent);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .camera-name {
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+
+    .camera-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .camera-stream {
+      width: 100%;
+      height: 250px;
+      background: #000;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: #888;
+    }
+
+    .camera-stream img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .camera-info {
+      padding: 1rem;
+      font-size: 0.9rem;
+    }
+
+    .camera-info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .camera-info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      opacity: 0.7;
+    }
+
+    .info-value {
+      font-weight: bold;
+      color: var(--info);
+    }
+
+    .detection-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      margin-right: 0.5rem;
+    }
+
+    .detection-badge.person {
+      background: rgba(52, 152, 219, 0.2);
+      color: #3498db;
+      border: 1px solid #3498db;
+    }
+
+    .detection-badge.car {
+      background: rgba(241, 196, 15, 0.2);
+      color: #f1c40f;
+      border: 1px solid #f1c40f;
+    }
+
+    /* ===== EVENTOS RECIENTES ===== */
+    .events-section {
+      margin-bottom: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.8rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--accent);
+    }
+
+    .events-table {
+      width: 100%;
+      background: var(--secondary);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--primary);
+      border-bottom: 2px solid var(--accent);
+    }
+
+    th {
+      padding: 1rem;
+      text-align: left;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    tr:hover {
+      background: rgba(255,255,255,0.05);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .event-camera {
+      font-weight: bold;
+      color: var(--info);
+    }
+
+    .event-object {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      background: rgba(39, 174, 96, 0.2);
+      color: #27ae60;
+      border: 1px solid #27ae60;
+    }
+
+    .event-confidence {
+      font-weight: bold;
+    }
+
+    .event-confidence.high {
+      color: #27ae60;
+    }
+
+    .event-confidence.medium {
+      color: #f39c12;
+    }
+
+    .event-confidence.low {
+      color: #e74c3c;
+    }
+
+    .event-time {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    /* ===== ESTADÍSTICAS ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .chart-card {
+      background: var(--secondary);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .chart-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      font-weight: bold;
+      color: var(--info);
+    }
+
+    canvas {
+      max-height: 300px;
+    }
+
+    /* ===== CONTROLES ===== */
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      background: var(--accent);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      background: #c0392b;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.secondary {
+      background: var(--secondary);
+      border: 2px solid var(--accent);
+    }
+
+    button.secondary:hover {
+      background: var(--primary);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 1.8rem;
+      }
+
+      .cameras-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .status-bar {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        font-size: 0.85rem;
+      }
+
+      th, td {
+        padding: 0.75rem;
+      }
+    }
+
+    /* ===== LOADING ===== */
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      opacity: 0.6;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: var(--accent);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <!-- ===== HEADER ===== -->
+  <div class="header">
+    <h1>🎥 Frigate NVR</h1>
+    <p>Vera Adaria | Sistema de Vigilancia Inteligente</p>
+  </div>
+
+  <!-- ===== CONTAINER PRINCIPAL ===== -->
+  <div class="container">
+    <!-- ===== CONTROLES ===== -->
+    <div class="controls">
+      <button onclick="refreshDashboard()">🔄 Actualizar</button>
+      <button class="secondary" onclick="toggleRecording()">⏹️ Grabar Todos</button>
+      <button class="secondary" onclick="downloadEvents()">⬇️ Descargar Eventos</button>
+    </div>
+
+    <!-- ===== ESTADO EN VIVO ===== -->
+    <div class="status-bar" id="statusBar">
+      <div class="status-card online">
+        <div class="status-label">
+          <span class="status-indicator online"></span>Frigate
+        </div>
+        <div class="status-value" id="frigatStatus">Conectado</div>
+      </div>
+      <div class="status-card online">
+        <div class="status-label">Eventos (24h)</div>
+        <div class="status-value" id="eventCount">0</div>
+      </div>
+      <div class="status-card online">
+        <div class="status-label">Almacenamiento</div>
+        <div class="status-value" id="storageUsage">--</div>
+      </div>
+      <div class="status-card online">
+        <div class="status-label">Cámaras Activas</div>
+        <div class="status-value" id="activeCameras">0/6</div>
+      </div>
+    </div>
+
+    <!-- ===== CÁMARAS EN VIVO ===== -->
+    <h2 class="section-title">Feeds en Vivo</h2>
+    <div class="cameras-grid" id="camerasGrid">
+      <div class="loading"><div class="spinner"></div> Cargando cámaras...</div>
+    </div>
+
+    <!-- ===== EVENTOS RECIENTES ===== -->
+    <h2 class="section-title">Eventos Recientes</h2>
+    <div class="events-table">
+      <table id="eventsTable">
+        <thead>
+          <tr>
+            <th>Hora</th>
+            <th>Cámara</th>
+            <th>Objeto</th>
+            <th>Confianza</th>
+            <th>Duración</th>
+            <th>Video</th>
+          </tr>
+        </thead>
+        <tbody id="eventsBody">
+          <tr><td colspan="6" class="loading"><div class="spinner"></div> Cargando eventos...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ===== ESTADÍSTICAS ===== -->
+    <h2 class="section-title">Estadísticas (24h)</h2>
+    <div class="stats-grid">
+      <div class="chart-card">
+        <div class="chart-title">Detecciones por Cámara</div>
+        <canvas id="camerasChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Objetos Detectados</div>
+        <canvas id="objectsChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Timeline Eventos</div>
+        <canvas id="timelineChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const FRIGATE_API = 'http://localhost:5000/api';
+
+    // =========================================================================
+    // Cargar datos iniciales
+    // =========================================================================
+    async function init() {
+      await refreshDashboard();
+      setInterval(refreshDashboard, 30000); // Actualizar cada 30s
+    }
+
+    async function refreshDashboard() {
+      try {
+        await loadCameras();
+        await loadEvents();
+        await loadStats();
+      } catch (error) {
+        console.error('Error en dashboard:', error);
+      }
+    }
+
+    // =========================================================================
+    // Cargar cámaras
+    // =========================================================================
+    async function loadCameras() {
+      try {
+        const response = await fetch(`${FRIGATE_API}/stats`);
+        const stats = await response.json();
+
+        const html = Object.entries(stats.cameras || {}).map(([name, data]) => `
+          <div class="camera-card">
+            <div class="camera-header">
+              <div class="camera-name">${name}</div>
+              <div class="camera-status">
+                <span class="status-indicator ${data.fps > 0 ? 'online' : 'error'}"></span>
+                ${data.fps} FPS
+              </div>
+            </div>
+            <div class="camera-stream">
+              <img src="${FRIGATE_API}/${name}/latest.jpg" alt="${name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22250%22%3E%3Crect fill=%22%23333%22 width=%22400%22 height=%22250%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 font-size=%2218%22%3ECámara no disponible%3C/text%3E%3C/svg%3E'">
+            </div>
+            <div class="camera-info">
+              <div class="camera-info-row">
+                <span class="info-label">Resolución:</span>
+                <span class="info-value">${data.resolution || '--'}</span>
+              </div>
+              <div class="camera-info-row">
+                <span class="info-label">Bitrate:</span>
+                <span class="info-value">${data.bitrate || '--'}</span>
+              </div>
+              <div class="camera-info-row">
+                <span class="info-label">Detecciones (24h):</span>
+                <span class="info-value">${data.event_count || 0}</span>
+              </div>
+              <div class="camera-info-row">
+                <span class="info-label">Objetos:</span>
+                <div>
+                  ${(data.tracked_objects || []).map(obj =>
+                    \`<span class="detection-badge \${obj}">\${obj}</span>\`
+                  ).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        \`).join('');
+
+        document.getElementById('camerasGrid').innerHTML = html;
+        document.getElementById('activeCameras').textContent =
+          \`\${Object.values(stats.cameras).filter(c => c.fps > 0).length}/\${Object.keys(stats.cameras).length}\`;
+
+      } catch (error) {
+        console.error('Error cargando cámaras:', error);
+      }
+    }
+
+    // =========================================================================
+    // Cargar eventos
+    // =========================================================================
+    async function loadEvents() {
+      try {
+        const response = await fetch(\`\${FRIGATE_API}/events?limit=20&include_thumbnails=1\`);
+        const events = await response.json();
+
+        const html = (events || []).map(event => {
+          const confidence = (event.top_score * 100).toFixed(1);
+          const confClass = confidence >= 80 ? 'high' : confidence >= 60 ? 'medium' : 'low';
+          const startTime = new Date(event.start_time * 1000).toLocaleString('es-ES');
+          const duration = event.end_time
+            ? Math.round((event.end_time - event.start_time)) + 's'
+            : 'En curso';
+
+          return \`
+            <tr>
+              <td class="event-time">\${startTime}</td>
+              <td class="event-camera">\${event.camera}</td>
+              <td><span class="event-object">\${event.top_object || 'Movimiento'}</span></td>
+              <td class="event-confidence \${confClass}">\${confidence}%</td>
+              <td>\${duration}</td>
+              <td>
+                \${event.has_clip ? '<a href="#" style="color: var(--info); text-decoration: none;">🎬 Ver</a>' : '—'}
+              </td>
+            </tr>
+          \`;
+        }).join('');
+
+        document.getElementById('eventsBody').innerHTML = html ||
+          '<tr><td colspan="6" style="text-align: center; padding: 2rem; opacity: 0.6;">No hay eventos</td></tr>';
+
+        document.getElementById('eventCount').textContent = events.length;
+
+      } catch (error) {
+        console.error('Error cargando eventos:', error);
+      }
+    }
+
+    // =========================================================================
+    // Cargar estadísticas
+    // =========================================================================
+    async function loadStats() {
+      try {
+        // Simulado - en producción obtener de PostgreSQL
+        drawCharts();
+      } catch (error) {
+        console.error('Error cargando estadísticas:', error);
+      }
+    }
+
+    function drawCharts() {
+      // Gráfica: Detecciones por cámara
+      if (document.getElementById('camerasChart').offsetParent !== null) {
+        new Chart(document.getElementById('camerasChart'), {
+          type: 'bar',
+          data: {
+            labels: ['Recepción', 'Parking', 'Entrada', 'Servicio', 'Trasera', 'Lateral'],
+            datasets: [{
+              label: 'Eventos detectados',
+              data: [12, 19, 8, 5, 11, 7],
+              backgroundColor: '#3498db',
+              borderColor: '#2980b9',
+              borderWidth: 2
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: true }
+        });
+      }
+
+      // Gráfica: Objetos detectados
+      if (document.getElementById('objectsChart').offsetParent !== null) {
+        new Chart(document.getElementById('objectsChart'), {
+          type: 'doughnut',
+          data: {
+            labels: ['Personas', 'Vehículos', 'Animales'],
+            datasets: [{
+              data: [45, 35, 20],
+              backgroundColor: ['#3498db', '#f39c12', '#27ae60']
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: true }
+        });
+      }
+    }
+
+    // =========================================================================
+    // Acciones
+    // =========================================================================
+    function toggleRecording() {
+      alert('Toggle Recording - No implementado aún');
+    }
+
+    function downloadEvents() {
+      alert('Download Events - No implementado aún');
+    }
+
+    // =========================================================================
+    // Inicialización
+    // =========================================================================
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
