@@ -40,6 +40,8 @@ function calcularNoches(fechaEntrada, fechaSalida) {
 
 // --- API: tablero de plazas -------------------------------------------------
 
+app.get('/api/version', (req, res) => res.json({ version: require('./package.json').version }));
+
 app.get('/api/plazas', async (req, res) => {
   try {
     const { rows } = await pool.query(`

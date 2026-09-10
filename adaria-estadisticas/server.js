@@ -135,6 +135,8 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
+app.get('/api/version', (req, res) => res.json({ version: require('./package.json').version }));
+
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.listen(PORT, '0.0.0.0', () => {

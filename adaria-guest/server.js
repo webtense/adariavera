@@ -53,6 +53,8 @@ function getPublicContent() {
 
 // ---- Routes ------------------------------------------------------------
 
+app.get('/api/version', (req, res) => res.json({ version: require('./package.json').version }));
+
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'adaria-guest', ts: new Date().toISOString() });
 });
