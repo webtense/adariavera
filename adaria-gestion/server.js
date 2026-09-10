@@ -59,7 +59,8 @@ function audit(event, req, extra={}) {
 const CARDS = [
   { key:'welcome', nombre:'Welcome Check-in', icono:'🛎️', url:'https://welcome.hoteladariavera.com', ready:true },
   { key:'parking', nombre:'Parking', icono:'🅿️', url:'https://parking.hoteladariavera.com', ready:true },
-  { key:'ine', nombre:'INE', icono:'📊', url:'https://ine.hoteladariavera.com', ready:true, admin:true },
+  { key:'ine', nombre:'INE', icono:'📊', url:'https://ine.hoteladariavera.com', ready:true, admin:true,
+    estadoTexto:'BETA', estadoClase:'test' },
   { key:'guest', nombre:'Guest Portal', icono:'📱', url:'https://guest.hoteladariavera.com', ready:true },
   { key:'estadisticas', nombre:'Estadísticas', icono:'📈', url:'https://estadisticas.hoteladariavera.com', ready:true },
   // FASE 4 (26/08/2026): modo prueba, sin escritura en ACI (DOC_DRY_RUN=true
@@ -132,8 +133,8 @@ input,select{padding:8px 11px;border:1px solid #cfdde3;border-radius:8px;font-si
 .login button{width:100%;margin-top:20px;background:var(--od);color:#fff;border:none;border-radius:10px;padding:12px;font-size:15px;font-weight:600;cursor:pointer}
 .err{background:#fdecea;color:#c0392b;padding:9px 12px;border-radius:8px;font-size:13px;margin-top:14px;text-align:center}
 .ok{background:#e8f8ef;color:#1e8449;padding:9px 12px;border-radius:8px;font-size:13px;margin-bottom:14px}
-.ver{position:fixed;bottom:8px;right:12px;font-size:11px;color:#bbb}
-</style></head><body>${user?topbar(user,path0):''}${body}<div class="ver">Adaria Gestión v1.2.0</div></body></html>`;
+
+</style></head><body>${user?topbar(user,path0):''}${body}<script src="/version-badge.js"></script></body></html>`;
 
 function topbar(u, p){
   const sup = u.role==='superadmin';
@@ -585,6 +586,8 @@ if (docPool) {
 } else {
   console.warn('[escaner-dni] DOC_PGUSER no configurado en .env: módulo documentos.js NO registrado.');
 }
+
+app.get('/api/version',(req,res)=>res.json({version:require('./package.json').version}));
 
 app.get('/health',(req,res)=>res.json({ok:true,app:'adaria-gestion',v:'1.2.0'}));
 app.listen(PORT,'0.0.0.0',()=>console.log('Adaria Gestión v1.2.0 en :'+PORT));
