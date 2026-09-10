@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="es">
+<head><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hotel Adaria Vera · INE</title>
+<style>
+  :root {
+    --azul: #1b5e75;
+    --azul-osc: #124a5c;
+    --terracota: #c67c6f;
+    --terracota-osc: #ab6255;
+    --bg: #f5f3f0;
+    --texto: #2c2c2c;
+    --borde: #ddd6d0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--texto);
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    background: linear-gradient(135deg, var(--azul), var(--azul-osc));
+    color: #fff;
+    padding: 24px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+  header .subt {
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+  .badge-version {
+    background: var(--terracota);
+    color: #fff;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+  .aviso-xsd {
+    background: #fff3ee;
+    border: 1px solid var(--terracota);
+    border-left: 5px solid var(--terracota);
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin-bottom: 24px;
+    font-size: 0.92rem;
+    line-height: 1.4;
+  }
+  .aviso-xsd strong { color: var(--terracota-osc); }
+  .card {
+    background: #fff;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    padding: 22px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+    margin-top: 0;
+    color: var(--azul-osc);
+    font-size: 1.1rem;
+    border-bottom: 2px solid var(--terracota);
+    padding-bottom: 8px;
+  }
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--azul-osc);
+  }
+  input[type=month], input[type=number], input[type=text] {
+    padding: 8px 10px;
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    width: 100%;
+  }
+  .fila-selector {
+    display: flex;
+    gap: 16px;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+  .fila-selector > div { min-width: 180px; }
+  button {
+    background: var(--azul);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: var(--azul-osc); }
+  button.secundario {
+    background: var(--terracota);
+  }
+  button.secundario:hover { background: var(--terracota-osc); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--borde);
+  }
+  th {
+    background: #f0ede8;
+    color: var(--azul-osc);
+    position: sticky;
+    top: 0;
+  }
+  tr.total-row td {
+    font-weight: 700;
+    border-top: 2px solid var(--azul);
+    background: #f0f6f8;
+  }
+  .grid-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  #estado-carga { font-size: 0.85rem; color: #666; margin-top: 8px; }
+  footer {
+    text-align: center;
+    font-size: 0.78rem;
+    color: #888;
+    padding: 20px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Hotel Adaria Vera · INE</h1>
+    <div class="subt">Encuesta de Ocupación Hotelera (EOH) · Provincia de Almería (04){% if num_orden %} · Nº orden establecimiento: {{ num_orden }}{% endif %}</div>
+  </div>
+  <span class="badge-version">v{{ version }}</span>
+</header>
+
+<main>
+  <div class="aviso-xsd">
+    <strong>Validación XSD pendiente:</strong> no se dispone en este despliegue del XSD oficial
+    de la encuesta EOH del INE. El XML generado sigue la estructura conocida del cuestionario
+    (identificación, periodo, ocupación, personal y viajeros/pernoctaciones por país), pero
+    <strong>no ha sido validado contra el esquema oficial</strong>. Validar antes de un envío real.
+  </div>
+
+  <div class="card">
+    <h2>1. Mes a consultar</h2>
+    <div class="fila-selector">
+      <div>
+        <label for="mes">Mes / año</label>
+        <input type="month" id="mes" name="mes" value="{{ mes_valor }}">
+      </div>
+      <div>
+        <button type="button" id="btn-cargar">Cargar datos de ACI</button>
+      </div>
+    </div>
+    <div id="estado-carga"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. Pernoctaciones y viajeros por nacionalidad (ACI, solo lectura)</h2>
+    <table id="tabla-nacionalidades">
+      <thead>
+        <tr><th>País</th><th>Código</th><th>Viajeros (entradas)</th><th>Pernoctaciones</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>3. Datos manuales del establecimiento</h2>
+    <form id="form-manual">
+      <input type="hidden" name="mes" id="mes-form">
+      <div class="grid-form">
+        <div>
+          <label for="establecimiento_nombre">Establecimiento</label>
+          <input type="text" name="establecimiento_nombre" id="establecimiento_nombre" value="Hotel Adaria Vera">
+        </div>
+        <div>
+          <label for="dias_abierto">Días abierto en el mes</label>
+          <input type="number" name="dias_abierto" id="dias_abierto" min="0" max="31">
+        </div>
+        <div>
+          <label for="plazas_disponibles">Plazas disponibles</label>
+          <input type="number" name="plazas_disponibles" id="plazas_disponibles" min="0">
+        </div>
+        <div>
+          <label for="habitaciones_disponibles">Habitaciones disponibles</label>
+          <input type="number" name="habitaciones_disponibles" id="habitaciones_disponibles" min="0">
+        </div>
+        <div>
+          <label for="personal_fijo">Personal fijo</label>
+          <input type="number" name="personal_fijo" id="personal_fijo" min="0">
+        </div>
+        <div>
+          <label for="personal_eventual">Personal eventual</label>
+          <input type="number" name="personal_eventual" id="personal_eventual" min="0">
+        </div>
+      </div>
+      <button type="submit" class="secundario">Generar XML EOH</button>
+    </form>
+  </div>
+</main>
+
+<footer>Hotel Adaria Vera · Módulo INE v{{ version }} · Datos ACI en solo lectura · Puerto 3092</footer>
+
+<script>
+const mesInput = document.getElementById('mes');
+const mesForm = document.getElementById('mes-form');
+const estado = document.getElementById('estado-carga');
+const tbody = document.querySelector('#tabla-nacionalidades tbody');
+const habDisponiblesInput = document.getElementById('habitaciones_disponibles');
+
+function sincronizarMesForm() {
+  mesForm.value = mesInput.value;
+}
+mesInput.addEventListener('change', sincronizarMesForm);
+sincronizarMesForm();
+
+async function cargarDatos() {
+  const mes = mesInput.value;
+  if (!mes) { estado.textContent = 'Selecciona un mes.'; return; }
+  estado.textContent = 'Consultando ACI...';
+  tbody.innerHTML = '';
+  try {
+    const resp = await fetch(`/api/nacionalidades?mes=${mes}`);
+    const data = await resp.json();
+    if (!resp.ok) {
+      estado.textContent = 'Error: ' + (data.error || resp.status);
+      return;
+    }
+    if (data.habitaciones_disponibles_aci && !habDisponiblesInput.value) {
+      habDisponiblesInput.value = data.habitaciones_disponibles_aci;
+    }
+    if (data.filas.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4">Sin reservas para el mes seleccionado.</td></tr>';
+    } else {
+      data.filas.forEach(f => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${f.pais}</td><td>${f.codigo || '-'}</td><td>${f.viajeros}</td><td>${f.pernoctaciones}</td>`;
+        tbody.appendChild(tr);
+      });
+      const trTotal = document.createElement('tr');
+      trTotal.className = 'total-row';
+      trTotal.innerHTML = `<td colspan="2">TOTAL</td><td>${data.total_viajeros}</td><td>${data.total_pernoctaciones}</td>`;
+      tbody.appendChild(trTotal);
+    }
+    estado.textContent = `Datos cargados (${new Date().toLocaleTimeString('es-ES')}).`;
+  } catch (e) {
+    estado.textContent = 'Error de conexión: ' + e;
+  }
+}
+
+document.getElementById('btn-cargar').addEventListener('click', cargarDatos);
+window.addEventListener('DOMContentLoaded', cargarDatos);
+
+document.getElementById('form-manual').addEventListener('submit', function(e) {
+  sincronizarMesForm();
+  if (!mesForm.value) {
+    e.preventDefault();
+    estado.textContent = 'Selecciona un mes antes de generar el XML.';
+    return;
+  }
+  this.action = '/generar-xml';
+  this.method = 'POST';
+});
+</script>
+</body>
+</html>
