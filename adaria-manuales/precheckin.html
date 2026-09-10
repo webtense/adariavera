@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pre check-in online — Manuales Adaria Vera</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark">AV</div>
+      <div class="brand-text">
+        <h1>Hotel Adaria Vera · Manuales</h1>
+        <div class="subtitle">Guías de uso para el equipo de recepción</div>
+      </div>
+    </div>
+    <div class="version-badge">v1.1.0</div>
+  </div>
+</header>
+
+<div class="breadcrumb"><a href="index.html">← Volver al índice de manuales</a></div>
+
+<main>
+  <span class="tag">Huésped</span>
+  <h1 class="page-title">Pre check-in online</h1>
+  <p class="page-lead">
+    Formulario donde el huésped adelanta sus datos y los de sus acompañantes
+    antes de llegar, buscando su propia reserva. Recepción revisa y marca
+    como procesado desde el panel interno.
+  </p>
+
+  <div class="callout info">
+    <strong>Cómo es hoy realmente</strong> (no un enlace personalizado):
+    el huésped entra en <code>precheckin.hoteladariavera.com</code> y
+    <strong>busca su propia reserva</strong> tecleando el localizador (o la
+    fecha de entrada) + su apellido. No existe todavía un email automático
+    que lleve un enlace directo a cada huésped — eso está en el diseño de
+    fases futuras, gate <code>PRECHECKIN_EMAIL_ENABLED</code> (apagado de
+    fábrica). Hoy el huésped necesita conocer la URL por su cuenta (p. ej.
+    porque se le indica en la confirmación de reserva o al hacer el check-in
+    online se le facilita el enlace).
+  </div>
+
+  <div class="section">
+    <h2>Qué es y para qué sirve</h2>
+    <p>
+      El huésped rellena, desde su propio móvil, los datos de identidad de
+      todo su grupo (nombre, apellidos, tipo y número de documento, fecha de
+      nacimiento, nacionalidad) y datos de contacto (email, teléfono, hora
+      estimada de llegada, observaciones). Esos datos se guardan
+      <strong>únicamente en la base de datos propia del pre check-in</strong>
+      — nunca se escriben automáticamente en la ficha de ACI Dali: es
+      recepción quien, al llegar el huésped, verifica el documento físico y
+      traslada los datos a la ficha del hotel como en un check-in normal.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>Datos del hotel que suele preguntar el huésped</h2>
+    <ul>
+      <li><strong>Check-in:</strong> a partir de las 14:00.</li>
+      <li><strong>Check-out:</strong> hasta las 12:00.</li>
+      <li><strong>Parking:</strong> 61 plazas, 10 €/noche.</li>
+      <li>El hotel no dispone de SPA.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Acceso</h2>
+    <ul>
+      <li>Formulario público del huésped: <code>https://precheckin.hoteladariavera.com/</code> (idiomas ES/EN/FR).</li>
+      <li>Panel de recepción: <code>https://precheckin.hoteladariavera.com/admin</code> (usuario único de servicio, no es SSO).</li>
+      <li>Panel de errores (FASE 3): <code>/admin/errores</code> — notificaciones con incidencia, check-ins próximos sin marcar como procesados y las últimas ejecuciones del cron de reintentos.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Pasos de uso típicos (para recepción)</h2>
+    <ol class="steps">
+      <li>Entrar en <code>/admin</code> y revisar el listado: cada fila es una reserva con su estado (Pendiente / Procesado).</li>
+      <li>Abrir "Ver" en una reserva para consultar los datos de todas las personas del grupo y sus documentos.</li>
+      <li>El día de la llegada: verificar la identidad con el documento físico frente a lo que el huésped tecleó, y pulsar "Marcar como procesado".</li>
+      <li>Revisar de vez en cuando <code>/admin/errores</code>: si hay check-ins próximos sin procesar o notificaciones que llevan varios intentos fallando, contactar al huésped por otro canal si hace falta.</li>
+      <li>Para huéspedes que no han rellenado nada: continuar con el check-in habitual, sin depender del pre check-in.</li>
+    </ol>
+  </div>
+
+  <div class="section">
+    <h2>Incidencias frecuentes</h2>
+    <ul>
+      <li><strong>El huésped no encuentra su reserva:</strong> comprobar que escribe el apellido del titular tal cual figura en la reserva y, si usa el localizador, que no tiene espacios de más; si sigue sin aparecer, buscar por fecha de entrada + apellido en vez de localizador.</li>
+      <li><strong>El aviso interno a recepción no llega:</strong> normal hoy — el gate <code>PRECHECKIN_EMAIL_ENABLED</code> está apagado de fábrica, así que el aviso por email a <code>vera@boitaullresort.com</code> queda solo registrado (no se envía). El pre check-in en sí SÍ queda guardado igualmente: consultar el listado de <code>/admin</code> directamente en vez de esperar el correo.</li>
+      <li><strong>Discrepancia entre los datos enviados y el documento físico:</strong> prevalece siempre el documento de identidad; corregir el registro en ACI durante la formalización de la entrada (esta app no escribe en ACI, solo sirve de apoyo/consulta).</li>
+    </ul>
+  </div>
+</main>
+
+<footer class="site-footer">
+  Hotel Adaria Vera · Manuales internos de recepción · precheckin v1.2.0 (código) · manual v1.1 · actualizado 26/08/2026
+</footer>
+
+</body>
+</html>
