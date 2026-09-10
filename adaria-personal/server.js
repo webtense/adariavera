@@ -249,7 +249,11 @@ function requireAuth(req, res, next) {
   // (KIOSK_KEY, ver requireKiosk más abajo). Se excluye aquí del login admin.
   // req.path ya llega SIN el prefijo /rrhh (Apache lo recorta al reenviar,
   // y la red de seguridad de más arriba lo recorta si llegase puesto).
-  if (req.path.startsWith('/quiosco') || req.path.startsWith('/api/quiosco')) return next();
+  // version-badge.js también se exime: lo carga tanto la SPA autenticada
+  // como la vista /quiosco (sin sesión de admin) — es un script estático
+  // sin datos sensibles, y sin esta excepción el quiosco lo recibiría
+  // redirigido a /login en vez de al JS real.
+  if (req.path.startsWith('/quiosco') || req.path.startsWith('/api/quiosco') || req.path === '/version-badge.js') return next();
   if (req.session && req.session.user) return next();
   if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'No autenticado' });
   res.redirect(BASE_PATH + '/login');
@@ -889,10 +893,13 @@ app.get('/quiosco', (req, res) => {
 <link rel="icon" href="${favicon}"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Fichar · ${esc(PROPERTY_NAME)}</title><link rel="stylesheet" href="${BASE_PATH}/quiosco.css"></head>
 <body>
+<div id="adaria-header-version" class="k-ver k-ver-top"></div>
 <div id="app" class="k-wrap"><div class="k-loading">Cargando…</div></div>
+<div id="adaria-footer-version" class="k-ver k-ver-bottom"></div>
 <script>window.__PROPERTY__ = ${JSON.stringify({ nombre: PROPERTY_NAME, icono: ICON, colores: COLORS })};
 window.BASE_PATH = ${JSON.stringify(BASE_PATH)};</script>
 <script src="${BASE_PATH}/quiosco.js"></script>
+<script src="${BASE_PATH}/version-badge.js"></script>
 </body></html>`);
 });
 

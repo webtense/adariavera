@@ -177,6 +177,7 @@ function layout(title, body, user) {
 body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:var(--ch);background:var(--off)}
 .top{background:linear-gradient(135deg,var(--od),var(--om));color:#fff;padding:14px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .top .b{font-size:17px;font-weight:700}.top .b span{font-size:21px;margin-right:6px}
+.top .top-ver{font-size:11px;font-weight:400;opacity:.75;margin-top:2px}
 .top .r{margin-left:auto;font-size:13px}.top .r a{color:#fff;margin-left:12px;opacity:.85;text-decoration:none}
 .wrap{max-width:1100px;margin:0 auto;padding:26px 24px}
 h1{color:var(--od);font-size:22px;margin-bottom:4px}.muted{color:#888;font-size:14px;margin-bottom:20px}
@@ -196,12 +197,12 @@ td{border-bottom:1px solid #eee;padding:9px 12px;vertical-align:top}
 .login input{width:100%;padding:8px 11px;border:1px solid #cfdde3;border-radius:8px;font-size:14px}
 .login button{width:100%;margin-top:20px;background:var(--od);color:#fff;border:none;border-radius:10px;padding:12px;font-size:15px;font-weight:600;cursor:pointer}
 .err{background:#fdecea;color:#c0392b;padding:9px 12px;border-radius:8px;font-size:13px;margin-top:14px;text-align:center}
-.ver{position:fixed;bottom:8px;right:12px;font-size:11px;color:#bbb}
-</style></head><body>${user ? topbar(user) : ''}${body}<div class="ver">Pre check-in v${VERSION}</div></body></html>`;
+.foot{text-align:center;font-size:11px;color:#999;padding:16px 0 26px}
+</style></head><body>${user ? topbar(user) : ''}${body}<footer class="foot">Hotel Adaria Vera · Pre check-in <span id="adaria-footer-version"></span></footer><script src="/version-badge.js"></script></body></html>`;
 }
 
 function topbar(u) {
-  return `<div class="top"><div class="b"><span>📝</span>Adaria Vera · Pre check-in</div>
+  return `<div class="top"><div class="b"><span>📝</span>Adaria Vera · Pre check-in<div id="adaria-header-version" class="top-ver"></div></div>
    <div class="r">👤 ${esc(u.login)} <a href="/admin/logout">Salir</a></div></div>`;
 }
 
@@ -211,6 +212,9 @@ function requireAuth(req, res, next) {
 }
 
 // ─── Salud ─────────────────────────────────────────────────────────────────
+// /api/version: fuente real para el header/footer del front (version-badge.js),
+// nunca un texto escrito a mano — lee siempre de package.json.
+app.get('/api/version', (req, res) => res.json({ version: require('./package.json').version }));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'adaria-precheckin', version: VERSION, ts: new Date().toISOString() });
 });

@@ -4,7 +4,9 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:var(--ch);bac
 .top{background:linear-gradient(135deg,var(--od),var(--om));color:#fff;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.15);position:sticky;top:0;z-index:10}
 .top .b{font-size:17px;font-weight:700;flex:1}
 .top .b span{font-size:21px;margin-right:6px}
+.top .top-ver{font-size:11px;font-weight:400;opacity:.75;margin-top:2px}
 .top a.out{color:#fff;opacity:.85;text-decoration:none;font-size:13px}
+.foot{text-align:center;font-size:11px;color:#999;padding:16px 0 26px}
 .wrap{max-width:960px;margin:0 auto;padding:18px 16px 70px}
 h1{color:var(--od);font-size:20px;margin-bottom:4px}
 h2{color:var(--od);font-size:17px;margin:18px 0 10px}

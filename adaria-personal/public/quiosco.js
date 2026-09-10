@@ -110,7 +110,6 @@ function vistaTeclado(mensaje) {
       <button class="wide borrar" id="kBorrar">⌫</button><button data-d="0">0</button><button class="wide" id="kOk">OK</button>
     </div>
     <div class="k-hint">O pasa tu tarjeta/QR por el lector</div>
-    <div class="k-foot">Adaria Personal v1.4</div>
   `;
   renderDots();
   document.querySelectorAll('.k-pad button[data-d]').forEach((b) => {

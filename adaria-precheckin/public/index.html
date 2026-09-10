@@ -38,13 +38,19 @@ textarea{resize:vertical;min-height:70px}
 .summary{font-size:13px;color:#555;line-height:1.6}
 .summary b{color:var(--od)}
 .hide{display:none !important}
-.ver{position:fixed;bottom:8px;right:12px;font-size:11px;color:#bbb}
+.top .subt{font-size:11px;font-weight:400;opacity:.8;margin-top:2px}
+.top .ver-top{font-size:11px;font-weight:400;opacity:.65;margin-top:1px}
+.foot{text-align:center;font-size:11px;color:#999;padding:16px 0 26px}
 .spinner{text-align:center;padding:20px;color:#888;font-size:13px}
 </style>
 </head>
 <body>
 <div class="top">
-  <div class="b"><span>📝</span><span id="tit-app">Pre check-in</span></div>
+  <div class="b">
+    <span>📝</span><span id="tit-app">Pre check-in</span>
+    <div class="subt">Hotel Adaria Vera</div>
+    <div id="adaria-header-version" class="ver-top"></div>
+  </div>
   <div class="lang">
     <button data-lang="es" class="on">ES</button>
     <button data-lang="en">EN</button>
@@ -123,7 +129,7 @@ textarea{resize:vertical;min-height:70px}
   </div>
 
 </div>
-<div class="ver">v1.2.0</div>
+<footer class="foot">Hotel Adaria Vera · Pre check-in <span id="adaria-footer-version"></span></footer>
 
 <script>
 const I18N = {
@@ -424,5 +430,6 @@ document.getElementById('btn-enviar').addEventListener('click', async () => {
 
 aplicarIdioma();
 </script>
+<script src="/version-badge.js"></script>
 </body>
 </html>
