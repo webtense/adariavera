@@ -1,26 +1,11 @@
 {
   "asanchez": {
-    "hash": "$2a$10$kprf8ok75P68F5raUWH9uugECgXoLIUjNmeBIeh6bLMGPKxtkHtzi",
+    "hash": "$2a$10$kAg7LB61FeII9BzQK7urQOnBhXnUn8UdLBpnqhdZKIMmOSnS5.bny",
     "nombre": "Andrés Sánchez",
-    "role": "superadmin",
-    "apps": [
-      "welcome",
-      "parking",
-      "ine",
-      "guest",
-      "estadisticas",
-      "escaner",
-      "precheckin",
-      "manuales",
-      "it",
-      "personal",
-      "qr",
-      "changelog",
-      "usuarios"
-    ]
+    "role": "superadmin"
   },
   "mvidal": {
-    "hash": "$2a$10$kprf8ok75P68F5raUWH9uugECgXoLIUjNmeBIeh6bLMGPKxtkHtzi",
+    "hash": "$2a$10$AGppWIYERIMCNTJV7qR/w.BES2zYHWOD.6NxEVTzGl5bDeFIzMO9G",
     "nombre": "Marc Vidal",
     "role": "admin"
   },
@@ -30,7 +15,7 @@
     "role": "admin"
   },
   "recepcion": {
-    "hash": "$2a$10$kprf8ok75P68F5raUWH9uugECgXoLIUjNmeBIeh6bLMGPKxtkHtzi",
+    "hash": "$2a$10$aGLYlMrRzWkUJzdq8HCM7uv85BgqFHnHFoIFpr7YG2cZEeuL.ozLK",
     "nombre": "Recepción",
     "role": "guest"
   },

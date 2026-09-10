@@ -1,0 +1,16 @@
+{
+  "name": "Escáner de documentos · Boí Taüll Resort",
+  "short_name": "Escáner DNI",
+  "description": "Lectura del DNI, la TIE y el pasaporte para la ficha del huésped.",
+  "start_url": "/documentos.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#8B1E2D",
+  "theme_color": "#8B1E2D",
+  "icons": [
+    { "src": "/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
