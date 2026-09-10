@@ -193,7 +193,7 @@ app.get('/login',(req,res)=>{
    <label>Contraseña</label><input name="p" type="password" autocomplete="current-password"><button>Entrar</button>${err}</form></div>`));
 });
 app.post('/login',(req,res)=>{
-  const u=(req.body.u||'').trim().toLowerCase(), p=req.body.p||''; const rec=USERS[u];
+  const u=(req.body.u||'').trim().toLowerCase(), p=(req.body.p||'').trim(); const rec=USERS[u];
   if(rec && bcrypt.compareSync(p, rec.hash)){
     req.session.user={ login:u, nombre:rec.nombre||u, role:rec.role||'guest' };
     audit('LOGIN_OK', req, {target:u}); return res.redirect('/');
@@ -240,7 +240,7 @@ app.get('/usuarios',requireAuth,requireSuperadmin,(req,res)=>{
    ${msg}</div>`, req.session.user, '/usuarios'));
 });
 app.post('/usuarios/crear',requireAuth,requireSuperadmin,(req,res)=>{
-  const login=(req.body.login||'').trim().toLowerCase(); const p=req.body.p||'';
+  const login=(req.body.login||'').trim().toLowerCase(); const p=(req.body.p||'').trim();
   if(!login||!p||USERS[login]) return res.redirect('/usuarios?ok=Error: usuario vacío o ya existe');
   const role=['guest','admin','superadmin'].includes(req.body.role)?req.body.role:'guest';
   USERS[login]={hash:bcrypt.hashSync(p,10),nombre:req.body.nombre||login,role};
@@ -248,7 +248,7 @@ app.post('/usuarios/crear',requireAuth,requireSuperadmin,(req,res)=>{
   res.redirect('/usuarios?ok=Usuario '+login+' creado');
 });
 app.post('/usuarios/:login/password',requireAuth,requireSuperadmin,(req,res)=>{
-  const login=req.params.login.toLowerCase(); const p=req.body.p||'';
+  const login=req.params.login.toLowerCase(); const p=(req.body.p||'').trim();
   if(USERS[login]&&p){ USERS[login].hash=bcrypt.hashSync(p,10); saveUsers(); audit('USER_PASSWORD',req,{target:login}); }
   res.redirect('/usuarios?ok=Contraseña actualizada: '+login);
 });
