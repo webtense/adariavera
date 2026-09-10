@@ -152,6 +152,9 @@ const layout = (title, body, user, path0='') => `<!DOCTYPE html><html lang="es">
 .card:hover{transform:translateY(-3px);box-shadow:0 12px 22px rgba(0,0,0,.12)}.card .ic{font-size:34px}.card .nm{font-weight:700;color:var(--od);margin-top:10px;font-size:16px}
 .card .st{font-size:11px;margin-top:8px;display:inline-block;padding:2px 9px;border-radius:999px}.st.ok{background:#e8f8ef;color:#27ae60}.st.soon{background:#fef5e7;color:#b9770e}.st.test{background:#eaf6ff;color:#1b5e75}.card.soon{opacity:.72}
 .card .ver{font-size:10px;margin-left:6px;color:#999;font-weight:600}
+.top .b-wrap{display:flex;flex-direction:column;line-height:1.25}
+.top .b-wrap #adaria-header-version{font-size:11px;font-weight:400;opacity:.75}
+.foot{color:#999;font-size:12px;text-align:center;margin-top:36px;padding:18px}
 table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.06);font-size:14px}
 th{background:var(--od);color:#fff;text-align:left;padding:9px 12px;font-size:13px}td{border-bottom:1px solid #eee;padding:9px 12px}
 .btn{background:var(--od);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:13px;cursor:pointer}.btn:hover{background:var(--om)}
@@ -167,13 +170,13 @@ input,select{padding:8px 11px;border:1px solid #cfdde3;border-radius:8px;font-si
 .err{background:#fdecea;color:#c0392b;padding:9px 12px;border-radius:8px;font-size:13px;margin-top:14px;text-align:center}
 .ok{background:#e8f8ef;color:#1e8449;padding:9px 12px;border-radius:8px;font-size:13px;margin-bottom:14px}
 
-</style></head><body>${user?topbar(user,path0):''}${body}<script src="/version-badge.js"></script></body></html>`;
+</style></head><body>${user?topbar(user,path0):''}${body}<div class="foot">Hotel Adaria Vera · Módulo Gestión <span id="adaria-footer-version"></span></div><script src="/version-badge.js"></script></body></html>`;
 
 function topbar(u, p){
   const sup = u.role==='superadmin';
   const link=(href,txt)=>`<a href="${href}" class="${p===href?'active':''}">${txt}</a>`;
   const pillCls = sup?'a':'u';
-  return `<div class="top"><div class="b"><span>🌊</span>Adaria Vera · Gestión</div>
+  return `<div class="top"><div class="b-wrap"><div class="b"><span>🌊</span>Hotel Adaria Vera · Gestión</div><div id="adaria-header-version"></div></div>
    <nav>${link('/','Inicio')}${link('/qr','QR')}${sup?link('/usuarios','Usuarios')+link('/auditoria','Auditoría'):''}</nav>
    <div class="r">👤 ${esc(u.nombre)} <span class="pill ${pillCls}">${esc(u.role||'guest')}</span><a href="/logout">Salir</a></div></div>`;
 }

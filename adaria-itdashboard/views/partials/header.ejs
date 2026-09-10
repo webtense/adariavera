@@ -9,7 +9,12 @@
 <body>
   <header class="topbar">
     <div class="topbar-in">
-      <div class="brand"><span style="font-size:24px">🌊</span> Adaria Vera · IT</div>
+      <div class="brand"><span style="font-size:24px">🌊</span>
+        <div class="brand-txt">
+          <div>Hotel Adaria Vera · IT</div>
+          <div class="brand-version" id="adaria-header-version">v<%= appVersion %></div>
+        </div>
+      </div>
       <nav class="nav">
         <a href="/" class="<%= path==='/'?'active':'' %>">Dashboard</a>
         <a href="/servidores" class="<%= path.startsWith('/servidores')?'active':'' %>">Servidores</a>

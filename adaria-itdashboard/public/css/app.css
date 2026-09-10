@@ -15,6 +15,8 @@ a{color:var(--ocean-mid);text-decoration:none}a:hover{text-decoration:underline}
 .topbar-in{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:12px 24px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:18px}
 .brand img{height:34px;width:auto;border-radius:6px;background:#fff;padding:2px}
+.brand-txt{display:flex;flex-direction:column;line-height:1.25}
+.brand-version{font-size:11px;font-weight:400;opacity:.75}
 .nav{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;align-items:center}
 .nav a{color:#eaf6fb;padding:8px 14px;border-radius:8px;font-size:14px;font-weight:500}
 .nav a:hover{background:rgba(255,255,255,.15);text-decoration:none}
