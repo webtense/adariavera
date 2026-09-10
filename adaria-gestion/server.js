@@ -76,6 +76,38 @@ const CARDS = [
   { key:'qr', nombre:'Gestor de QR', icono:'🔳', url:'/qr', ready:true },
 ];
 
+// ─── Versión de cada módulo, mostrada en su card (10/09/2026: sin esto,
+// una card puede seguir apuntando a una versión vieja sin que nadie lo note
+// desde el portal — ya pasó con parking). Se consulta en caliente al propio
+// módulo (mismo puerto interno que usa el ProxyPass del edge) y se cachea;
+// si un módulo no responde a tiempo, la card se queda sin badge de versión
+// en vez de romper el portal.
+const MODULE_VERSION_SOURCES = {
+  welcome: 'http://192.168.1.82:3000/api/version',
+  parking: 'http://127.0.0.1:3091/api/version',
+  ine: 'http://127.0.0.1:3092/health',
+  guest: 'http://127.0.0.1:3500/api/version',
+  estadisticas: 'http://127.0.0.1:3101/api/version',
+  precheckin: 'http://127.0.0.1:3095/api/version',
+  manuales: 'http://127.0.0.1:3102/VERSION/version.json',
+  personal: 'http://127.0.0.1:3096/api/version',
+  it: 'http://192.168.1.113:3000/api/version',
+};
+let moduleVersions = {};
+async function refreshModuleVersions(){
+  await Promise.all(Object.entries(MODULE_VERSION_SOURCES).map(async ([key,url])=>{
+    try{
+      const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),2500);
+      const r=await fetch(url,{signal:ctrl.signal}); clearTimeout(t);
+      if(!r.ok) return;
+      const j=await r.json();
+      if(j&&j.version) moduleVersions[key]=j.version;
+    }catch(e){ /* se queda con el último valor cacheado, si lo había */ }
+  }));
+}
+refreshModuleVersions();
+setInterval(refreshModuleVersions,60000);
+
 // Roles: guest (recepción, mínimo) < admin (todas las cards, sin auditoría/usuarios) < superadmin (todo).
 const ROLE_RANK = { guest:0, admin:1, superadmin:2 };
 const isSuperadmin = u => !!u && u.role === 'superadmin';
@@ -119,6 +151,7 @@ const layout = (title, body, user, path0='') => `<!DOCTYPE html><html lang="es">
 .card{background:#fff;border-radius:14px;box-shadow:0 4px 10px rgba(0,0,0,.07);padding:22px;text-decoration:none;color:var(--ch);transition:.15s;border:1px solid #eef3f5;display:block}
 .card:hover{transform:translateY(-3px);box-shadow:0 12px 22px rgba(0,0,0,.12)}.card .ic{font-size:34px}.card .nm{font-weight:700;color:var(--od);margin-top:10px;font-size:16px}
 .card .st{font-size:11px;margin-top:8px;display:inline-block;padding:2px 9px;border-radius:999px}.st.ok{background:#e8f8ef;color:#27ae60}.st.soon{background:#fef5e7;color:#b9770e}.st.test{background:#eaf6ff;color:#1b5e75}.card.soon{opacity:.72}
+.card .ver{font-size:10px;margin-left:6px;color:#999;font-weight:600}
 table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.06);font-size:14px}
 th{background:var(--od);color:#fff;text-align:left;padding:9px 12px;font-size:13px}td{border-bottom:1px solid #eee;padding:9px 12px}
 .btn{background:var(--od);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:13px;cursor:pointer}.btn:hover{background:var(--om)}
@@ -176,8 +209,9 @@ app.get('/',requireAuth,(req,res)=>{
     .filter(c=>!c.usuarios||c.usuarios.includes(loginActual))
     .map(c=>{
     const st=c.ready?`<span class="st ${c.estadoClase||'ok'}">${esc(c.estadoTexto||'Disponible')}</span>`:'<span class="st soon">En preparación</span>';
+    const ver=moduleVersions[c.key]?`<span class="ver">v${esc(moduleVersions[c.key])}</span>`:'';
     const href=c.ready&&c.url!=='#'?c.url:'#'; const tgt=c.ready&&c.url!=='#'?' target="_blank"':'';
-    return `<a class="card ${c.ready?'':'soon'}" href="${href}"${tgt}><div class="ic">${c.icono}</div><div class="nm">${esc(c.nombre)}</div><div>${st}</div></a>`;
+    return `<a class="card ${c.ready?'':'soon'}" href="${href}"${tgt}><div class="ic">${c.icono}</div><div class="nm">${esc(c.nombre)}</div><div>${st}${ver}</div></a>`;
   }).join('');
   res.send(layout('Gestión',`<div class="wrap"><h1>Panel de gestión</h1><p class="muted">Accesos a los módulos operativos del hotel.</p><div class="grid">${cards}</div></div>`, req.session.user, '/'));
 });
