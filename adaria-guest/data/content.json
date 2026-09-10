@@ -1,0 +1,582 @@
+{
+  "_meta": {
+    "hotel": "Hotel Adaria Vera",
+    "version": "2.1.0",
+    "generated": "2026-08-13",
+    "instructions_es": "Estructura editable por recepción. Los campos con valor null son datos [PENDIENTE confirmar recepción] y NO se muestran en la web hasta rellenarlos. Rellena el mismo campo en es/en/fr. Para publicarlos, sustituye null por el texto real y reinicia el servicio (systemctl restart adaria-guest) si no se refleja al momento.",
+    "instructions_en": "Structure editable by hotel reception. Fields with value null are [PENDING confirmation] and are NOT shown on the site until filled in. Fill in the same field in es/en/fr. To publish them, replace null with the real text and restart the service (systemctl restart adaria-guest) if it doesn't refresh immediately.",
+    "instructions_fr": "Structure modifiable par la réception. Les champs avec la valeur null sont des données [EN ATTENTE de confirmation] et ne sont PAS affichés sur le site tant qu'ils ne sont pas complétés. Renseignez le même champ en es/en/fr. Pour les publier, remplacez null par le texte réel et redémarrez le service (systemctl restart adaria-guest) si nécessaire.",
+    "source_note_es": "Todo el contenido con valor proviene del dossier informativo oficial del Hotel Adaria Vera (el mismo que se entrega hoy en las habitaciones) o, cuando así se indica en el campo 'source' de cada sección, de la web oficial hoteladariavera.com. Nada ha sido inventado.",
+    "source_note_en": "All content with a value comes from the hotel's official in-room information dossier (the same one currently placed in the rooms) or, where the 'source' field of each section indicates so, from the official website hoteladariavera.com. Nothing has been invented.",
+    "source_note_fr": "Tout le contenu renseigné provient du dossier d'information officiel remis dans les chambres de l'Hôtel Adaria Vera ou, lorsque le champ 'source' de chaque section l'indique, du site officiel hoteladariavera.com. Rien n'a été inventé."
+  },
+
+  "hotel": {
+    "name": "Hotel Adaria Vera",
+    "address": "C/ Sotavento 7, 04621 Vera Playa (Almería)",
+    "registro_turistico": "H/AL/00825",
+    "phone": "+34 950 617 078",
+    "email": "info@hoteladariavera.com",
+    "website": "https://www.hoteladariavera.com/"
+  },
+
+  "services": {
+    "es": {
+      "title": "Servicios del hotel",
+      "subtitle": "Habitaciones, piscinas, gimnasio y más",
+      "items": [
+        "Hotel de 4 estrellas construido en 2011, 75 habitaciones distribuidas en tres plantas",
+        "Acceso mediante dos ascensores y/o escaleras",
+        "Habitaciones dobles: 20 m², 3ª planta, dos camas de 105 cm",
+        "Habitaciones triples: 25 m², 2ª planta, una cama de 150 cm y un sofá cama de 120 cm",
+        "Habitaciones cuádruples: 30 m², 1ª planta, dos camas de 150 cm",
+        "Todas las habitaciones tienen terraza, aire acondicionado en temporada, secador de pelo y amenities",
+        "Limpieza diaria de habitaciones, cambio de sábanas cada 5 días y toallas a demanda",
+        "Caja fuerte gratuita en la habitación",
+        "Recepción 24 horas",
+        "WiFi gratuito en todo el hotel",
+        "Parking cubierto (garaje)",
+        "Piscina de adultos y piscina infantil, con hamacas de uso libre",
+        "Restaurante tipo buffet o menú a elegir según temporada",
+        "Cafetería con salón de juegos: billar, futbolín y juegos de mesa (naipes, dominó, ajedrez) de uso gratuito",
+        "Miniclub para niños de 5 a 11 años (temporada de verano)",
+        "Business corner frente a recepción",
+        "Gimnasio gratuito, con reserva previa en recepción"
+      ]
+    },
+    "en": {
+      "title": "Hotel services",
+      "subtitle": "Rooms, pools, gym and more",
+      "items": [
+        "4-star hotel built in 2011, 75 rooms spread over three floors",
+        "Access via two lifts and/or stairs",
+        "Double rooms: 20 m², 3rd floor, two 105 cm beds",
+        "Triple rooms: 25 m², 2nd floor, one 150 cm bed plus a 120 cm sofa bed",
+        "Quadruple rooms: 30 m², 1st floor, two 150 cm beds",
+        "All rooms have a terrace, seasonal air conditioning, hairdryer and amenities",
+        "Daily room cleaning, bed linen changed every 5 days and towels on request",
+        "Free in-room safe",
+        "24-hour reception",
+        "Free WiFi throughout the hotel",
+        "Covered parking (garage)",
+        "Adults' pool and children's pool, with free-use sun loungers",
+        "Buffet or set-menu restaurant depending on the season",
+        "Café with games room: free billiards, table football and board games (cards, dominoes, chess)",
+        "Miniclub for children aged 5 to 11 (summer season)",
+        "Business corner opposite reception",
+        "Free gym, advance booking at reception required"
+      ]
+    },
+    "fr": {
+      "title": "Services de l'hôtel",
+      "subtitle": "Chambres, piscines, salle de sport et plus",
+      "items": [
+        "Hôtel 4 étoiles construit en 2011, 75 chambres réparties sur trois étages",
+        "Accès par deux ascenseurs et/ou escaliers",
+        "Chambres doubles : 20 m², 3e étage, deux lits de 105 cm",
+        "Chambres triples : 25 m², 2e étage, un lit de 150 cm et un canapé-lit de 120 cm",
+        "Chambres quadruples : 30 m², 1er étage, deux lits de 150 cm",
+        "Toutes les chambres disposent d'une terrasse, de la climatisation en saison, d'un sèche-cheveux et de produits de toilette",
+        "Ménage quotidien, changement des draps tous les 5 jours et serviettes sur demande",
+        "Coffre-fort gratuit dans la chambre",
+        "Réception ouverte 24h/24",
+        "WiFi gratuit dans tout l'hôtel",
+        "Parking couvert (garage)",
+        "Piscine pour adultes et piscine pour enfants, avec transats en libre accès",
+        "Restaurant type buffet ou menu au choix selon la saison",
+        "Cafétéria avec salle de jeux : billard, babyfoot et jeux de société (cartes, dominos, échecs) gratuits",
+        "Miniclub pour les enfants de 5 à 11 ans (saison d'été)",
+        "Business corner en face de la réception",
+        "Salle de sport gratuite, réservation préalable à la réception"
+      ]
+    },
+    "source": "Dossier informativo oficial del Hotel Adaria Vera"
+  },
+
+  "pools": {
+    "es": {
+      "title": "Piscinas",
+      "subtitle": "Dos piscinas de adultos y una infantil",
+      "items": [
+        "Dos piscinas de agua dulce para adultos y una piscina infantil",
+        "Hamacas de uso libre para los clientes, no es posible reservarlas",
+        "No está permitido el uso de las piscinas fuera del horario establecido"
+      ],
+      "hours": "Horario: 10:30h – 20:00h. Piscinas abiertas de junio a septiembre.",
+      "heated_indoor": null
+    },
+    "en": {
+      "title": "Swimming pools",
+      "subtitle": "Two adult pools and one children's pool",
+      "items": [
+        "Two freshwater adult swimming pools and one children's pool",
+        "Free-use sun loungers for guests; loungers cannot be reserved",
+        "Pool use outside the set opening hours is not permitted"
+      ],
+      "hours": "Opening hours: 10:30 – 20:00. Pools open from June to September.",
+      "heated_indoor": null
+    },
+    "fr": {
+      "title": "Piscines",
+      "subtitle": "Deux piscines pour adultes et une pour enfants",
+      "items": [
+        "Deux piscines d'eau douce pour adultes et une piscine pour enfants",
+        "Transats en libre accès pour les clients ; ils ne peuvent pas être réservés",
+        "L'utilisation des piscines en dehors des horaires établis n'est pas autorisée"
+      ],
+      "hours": "Horaires : 10h30 – 20h00. Piscines ouvertes de juin à septembre.",
+      "heated_indoor": null
+    },
+    "source": "Dossier informativo oficial del Hotel Adaria Vera"
+  },
+
+  "dining": {
+    "es": {
+      "title": "Restauración",
+      "subtitle": "Restaurante buffet y cafetería",
+      "items": [
+        "Restaurante con servicio de buffet o menú a elegir dependiendo de la temporada (bebidas no incluidas)",
+        "No está permitido sacar comida del restaurante",
+        "Se debe llevar la tarjeta de restaurante para acceder",
+        "Por la noche se recomienda vestimenta formal",
+        "Cafetería Adaria: 09:00h–23:00h (horario invierno, 1/10–31/05) y 09:00h–24:00h (horario verano, 1/06–30/09)",
+        "Servicio de pic-nic para sustituir el almuerzo o la cena: solicítelo en recepción antes de las 19:00h del día anterior",
+        "Pic-nic extra (9€): 2 sándwiches, 1 refresco, 1 agua, 1 fruta y un snack, con reserva en recepción el día antes de las 19:00h",
+        "Minibar bajo suplemento: pack Familiar 25€ (4 aguas, 4 Coca-Colas, 4 Aquarius o Nestea) y pack Mini 12€ (2 aguas, 2 Coca-Colas, 2 Aquarius o Nestea), hielo incluido — contrátelo en recepción (ext. 500)"
+      ],
+      "board_basis": "Las pensiones alimenticias se ofrecen en todos los regímenes posibles, desde solo alojamiento hasta pensión completa.",
+      "meal_hours": "Desayuno: 08:30h–10:30h · Almuerzo: 13:30h–15:30h · Cena: 20:00h–22:00h"
+    },
+    "en": {
+      "title": "Dining",
+      "subtitle": "Buffet restaurant and café",
+      "items": [
+        "Restaurant with buffet service or set menu depending on the season (drinks not included)",
+        "Taking food out of the restaurant is not allowed",
+        "The restaurant card must be shown to enter",
+        "Formal attire is recommended for dinner",
+        "Café Adaria: 09:00–23:00 (winter schedule, 1 Oct–31 May) and 09:00–24:00 (summer schedule, 1 Jun–30 Sep)",
+        "Picnic service to replace lunch or dinner: request it at reception before 19:00 the day before",
+        "Extra picnic (€9): 2 sandwiches, 1 soft drink, 1 water, 1 piece of fruit and a snack; book at reception the day before, before 19:00",
+        "Minibar packs (extra charge): Family pack €25 (4 waters, 4 Coca-Colas, 4 Aquarius or Nestea) and Mini pack €12 (2 waters, 2 Coca-Colas, 2 Aquarius or Nestea), ice included — arrange at reception (ext. 500)"
+      ],
+      "board_basis": "All meal plans are available, from room only to full board.",
+      "meal_hours": "Breakfast: 08:30–10:30 · Lunch: 13:30–15:30 · Dinner: 20:00–22:00"
+    },
+    "fr": {
+      "title": "Restauration",
+      "subtitle": "Restaurant buffet et cafétéria",
+      "items": [
+        "Restaurant avec service buffet ou menu au choix selon la saison (boissons non comprises)",
+        "Il n'est pas permis d'emporter de la nourriture du restaurant",
+        "La carte du restaurant doit être présentée pour y accéder",
+        "Le soir, une tenue formelle est recommandée",
+        "Cafétéria Adaria : 09h00–23h00 (horaire hiver, du 1/10 au 31/05) et 09h00–24h00 (horaire été, du 1/06 au 30/09)",
+        "Service de pique-nique pour remplacer le déjeuner ou le dîner : à demander à la réception avant 19h00 la veille",
+        "Pique-nique supplémentaire (9€) : 2 sandwichs, 1 boisson, 1 eau, 1 fruit et un snack, réservation à la réception la veille avant 19h00",
+        "Forfaits minibar avec supplément : pack Familial 25€ (4 eaux, 4 Coca-Cola, 4 Aquarius ou Nestea) et pack Mini 12€ (2 eaux, 2 Coca-Cola, 2 Aquarius ou Nestea), glace incluse — à réserver à la réception (poste 500)"
+      ],
+      "board_basis": "Toutes les formules de pension sont proposées, du logement seul à la pension complète.",
+      "meal_hours": "Petit-déjeuner : 08h30–10h30 · Déjeuner : 13h30–15h30 · Dîner : 20h00–22h00"
+    },
+    "source": "Dossier informativo oficial del Hotel Adaria Vera"
+  },
+
+  "wifi": {
+    "es": {
+      "title": "WiFi",
+      "subtitle": "Gratis en todo el hotel",
+      "items": ["WiFi gratuito en todo el hotel"],
+      "ssid": "HOTEL ADARIA",
+      "password": "hoteladariavera",
+      "note": "Estos datos también están disponibles en la habitación y en recepción."
+    },
+    "en": {
+      "title": "WiFi",
+      "subtitle": "Free throughout the hotel",
+      "items": ["Free WiFi throughout the hotel"],
+      "ssid": "HOTEL ADARIA",
+      "password": "hoteladariavera",
+      "note": "This information is also available in your room and at reception."
+    },
+    "fr": {
+      "title": "WiFi",
+      "subtitle": "Gratuit dans tout l'hôtel",
+      "items": ["WiFi gratuit dans tout l'hôtel"],
+      "ssid": "HOTEL ADARIA",
+      "password": "hoteladariavera",
+      "note": "Ces informations sont également disponibles dans votre chambre et à la réception."
+    },
+    "source": "Dossier informativo oficial del Hotel Adaria Vera"
+  },
+
+  "parking": {
+    "es": {
+      "title": "Parking",
+      "subtitle": "Garaje cubierto",
+      "items": [
+        "Parking cubierto (garaje) para los clientes",
+        "El establecimiento no se hace responsable de robos o daños causados por otros vehículos"
+      ],
+      "price": "Tarifa: 10 €/día",
+      "spaces": "61 plazas",
+      "max_height": null
+    },
+    "en": {
+      "title": "Parking",
+      "subtitle": "Covered garage",
+      "items": [
+        "Covered parking (garage) for guests",
+        "The hotel is not liable for theft or damage caused by other vehicles"
+      ],
+      "price": "Rate: €10/day",
+      "spaces": "61 spaces",
+      "max_height": null
+    },
+    "fr": {
+      "title": "Parking",
+      "subtitle": "Garage couvert",
+      "items": [
+        "Parking couvert (garage) pour les clients",
+        "L'établissement n'est pas responsable des vols ou dommages causés par d'autres véhicules"
+      ],
+      "price": "Tarif : 10 €/jour",
+      "spaces": "61 places",
+      "max_height": null
+    },
+    "source": "Dossier informativo oficial del Hotel Adaria Vera + nº de plazas confirmado por dirección del hotel (12/08/2026)"
+  },
+
+  "hours": {
+    "es": {
+      "title": "Horarios",
+      "subtitle": "Recepción, restaurante y piscinas",
+      "items": [
+        "Recepción: 24 horas",
+        "Aire acondicionado en temporada",
+        "Calefacción disponible",
+        "Piscinas abiertas de junio a septiembre"
+      ],
+      "checkin": "Entrada (check-in): a partir de las 14:00",
+      "checkout": "Salida (check-out): hasta las 12:00",
+      "pool_hours": "Piscinas: 10:30h–20:00h",
+      "restaurant_hours": "Restaurante: desayuno 08:30h–10:30h · almuerzo 13:30h–15:30h · cena 20:00h–22:00h. Cafetería: 09:00h–23:00h (invierno) / 09:00h–24:00h (verano)",
+      "gym_hours": null
+    },
+    "en": {
+      "title": "Opening hours & schedules",
+      "subtitle": "Reception, restaurant and pools",
+      "items": [
+        "Reception: 24 hours",
+        "Seasonal air conditioning",
+        "Heating available",
+        "Pools open from June to September"
+      ],
+      "checkin": "Check-in: from 14:00",
+      "checkout": "Check-out: until 12:00",
+      "pool_hours": "Pools: 10:30–20:00",
+      "restaurant_hours": "Restaurant: breakfast 08:30–10:30 · lunch 13:30–15:30 · dinner 20:00–22:00. Café: 09:00–23:00 (winter) / 09:00–24:00 (summer)",
+      "gym_hours": null
+    },
+    "fr": {
+      "title": "Horaires",
+      "subtitle": "Réception, restaurant et piscines",
+      "items": [
+        "Réception : 24h/24",
+        "Climatisation en saison",
+        "Chauffage disponible",
+        "Piscines ouvertes de juin à septembre"
+      ],
+      "checkin": "Arrivée (check-in) : à partir de 14h00",
+      "checkout": "Départ (check-out) : jusqu'à 12h00",
+      "pool_hours": "Piscines : 10h30–20h00",
+      "restaurant_hours": "Restaurant : petit-déjeuner 08h30–10h30 · déjeuner 13h30–15h30 · dîner 20h00–22h00. Cafétéria : 09h00–23h00 (hiver) / 09h00–24h00 (été)",
+      "gym_hours": null
+    },
+    "source": "Dossier informativo oficial del Hotel Adaria Vera"
+  },
+
+  "phones": {
+    "es": {
+      "title": "Teléfonos útiles",
+      "subtitle": "Hotel y servicios de interés en Vera",
+      "items": [
+        { "label": "Hotel Adaria Vera (Recepción)", "value": "+34 950 617 078" },
+        { "label": "Email del hotel", "value": "info@hoteladariavera.com" },
+        { "label": "Emergencias", "value": "112" },
+        { "label": "Ayuntamiento", "value": "950 393 016" },
+        { "label": "Guardia Civil", "value": "950 617 079" },
+        { "label": "Central Taxis", "value": "950 392 100" },
+        { "label": "Consultorio / Urgencias médicas", "value": "950 451 524" },
+        { "label": "Oficina de Consumo", "value": "950 391 647" },
+        { "label": "Renfe", "value": "912 320 320" },
+        { "label": "Correos", "value": "950 390 859" },
+        { "label": "Oficina de Turismo", "value": "950 393 142" },
+        { "label": "Cruz Roja", "value": "950 393 757" },
+        { "label": "Farmacia Elisa", "value": "950 393 343" },
+        { "label": "Farmacia Veracentro", "value": "950 390 136" },
+        { "label": "Policía Local", "value": "950 393 141" },
+        { "label": "UTAM del Levante", "value": "950 391 096" }
+      ]
+    },
+    "en": {
+      "title": "Useful phone numbers",
+      "subtitle": "Hotel and useful services in Vera",
+      "items": [
+        { "label": "Hotel Adaria Vera (Reception)", "value": "+34 950 617 078" },
+        { "label": "Hotel email", "value": "info@hoteladariavera.com" },
+        { "label": "Emergencies", "value": "112" },
+        { "label": "Town Hall", "value": "950 393 016" },
+        { "label": "Civil Guard", "value": "950 617 079" },
+        { "label": "Central Taxis", "value": "950 392 100" },
+        { "label": "Doctor's office / Medical emergencies", "value": "950 451 524" },
+        { "label": "Consumer Affairs Office", "value": "950 391 647" },
+        { "label": "Renfe (railway)", "value": "912 320 320" },
+        { "label": "Post office", "value": "950 390 859" },
+        { "label": "Tourist Office", "value": "950 393 142" },
+        { "label": "Red Cross", "value": "950 393 757" },
+        { "label": "Farmacia Elisa (pharmacy)", "value": "950 393 343" },
+        { "label": "Farmacia Veracentro (pharmacy)", "value": "950 390 136" },
+        { "label": "Local Police", "value": "950 393 141" },
+        { "label": "UTAM del Levante", "value": "950 391 096" }
+      ]
+    },
+    "fr": {
+      "title": "Numéros utiles",
+      "subtitle": "Hôtel et services utiles à Vera",
+      "items": [
+        { "label": "Hôtel Adaria Vera (Réception)", "value": "+34 950 617 078" },
+        { "label": "E-mail de l'hôtel", "value": "info@hoteladariavera.com" },
+        { "label": "Urgences", "value": "112" },
+        { "label": "Mairie", "value": "950 393 016" },
+        { "label": "Guardia Civil", "value": "950 617 079" },
+        { "label": "Centrale de taxis", "value": "950 392 100" },
+        { "label": "Cabinet médical / Urgences médicales", "value": "950 451 524" },
+        { "label": "Bureau de la consommation", "value": "950 391 647" },
+        { "label": "Renfe (train)", "value": "912 320 320" },
+        { "label": "Bureau de poste", "value": "950 390 859" },
+        { "label": "Office de tourisme", "value": "950 393 142" },
+        { "label": "Croix-Rouge", "value": "950 393 757" },
+        { "label": "Pharmacie Elisa", "value": "950 393 343" },
+        { "label": "Pharmacie Veracentro", "value": "950 390 136" },
+        { "label": "Police locale", "value": "950 393 141" },
+        { "label": "UTAM del Levante", "value": "950 391 096" }
+      ]
+    },
+    "source": "Dossier informativo oficial del Hotel Adaria Vera"
+  },
+
+  "activities": {
+    "es": {
+      "title": "Qué hacer en Vera",
+      "subtitle": "Playas, monumentos, gastronomía y fiestas",
+      "groups": [
+        {
+          "heading": "Vera y sus playas",
+          "items": [
+            "Vera pueblo se encuentra a unos 7 km del hotel: un tranquilo municipio de corte andaluz, ideal para un paseo tranquilo",
+            "Las playas de Vera son de bandera azul, con aguas cristalinas"
+          ]
+        },
+        {
+          "heading": "Qué visitar en el casco antiguo",
+          "items": [
+            "Iglesia de Nuestra Señora de la Encarnación (s. XVI), construida como fortaleza dentro de la muralla de la villa",
+            "Ayuntamiento (s. XIX), que alberga el Archivo Histórico y el Museo Etnográfico y Arqueológico",
+            "Convento de los Mínimos, con su iglesia fortaleza",
+            "Iglesia de San Agustín (s. XVI), construida por orden de Carlos V",
+            "Ermita de la Virgen de las Angustias, patrona del municipio",
+            "Ermita de San Ramón (s. XVIII)",
+            "Ermita de la Virgen de las Huertas, a las afueras del casco urbano, donde se celebra la romería anual, junto al yacimiento romano de El Roceipón",
+            "Cerro del Espíritu Santo, con restos romanos y musulmanes y una amplia panorámica de Vera",
+            "Plaza de Toros (s. XIX) y Fuente de los Cuatro Caños (s. XVII)"
+          ]
+        },
+        {
+          "heading": "Gastronomía",
+          "items": [
+            "Platos tradicionales: ajo colorao, guiso de pelotas a la veratense, olla de trigo, gurullos con conejo y tortas de avío",
+            "Repostería típica: tortas de pellizcos, torticas reales, pastasfloras y deditos de Jesús"
+          ]
+        },
+        {
+          "heading": "Ocio en los alrededores",
+          "items": [
+            "Parque acuático de Vera, a solo 1 km del hotel",
+            "Karting de Garrucha, abierto todo el año",
+            "Varios campos de golf en la zona",
+            "Parque temático Oasys en el desierto de Tabernas (a menos de una hora en coche): poblado del oeste, escenario de películas como 'El bueno, el feo y el malo' o 'Los siete magníficos', y reserva zoológica con más de 170 especies",
+            "Aquarium de Roquetas de Mar",
+            "Deportes de aventura en la zona: kitesurf, montañismo, marcha a caballo, buceo y snorkel"
+          ]
+        },
+        {
+          "heading": "No deje de visitar",
+          "items": [
+            "Cabo de Gata-Níjar, primer Parque Natural Marino de Andalucía, con idílicas bahías y playas inexploradas (algunas solo accesibles a pie)",
+            "Paraje Natural Karst en Yesos de Sorbas: cuevas, cañones y geodas formados por la acción del agua sobre roca de yeso"
+          ]
+        },
+        {
+          "heading": "Fiestas y eventos",
+          "items": [
+            "Carnavales, a principios de febrero",
+            "Día de la Vieja, el jueves de mitad de Cuaresma",
+            "Semana Santa de Vera",
+            "Veractiva, Feria de Muestras del Mediterráneo, en la segunda semana de agosto",
+            "Romería de la Virgen de las Huertas, el primer domingo de septiembre",
+            "Fiestas de San Cleofás, patrón de Vera, en la última semana de septiembre"
+          ]
+        }
+      ],
+      "links": [
+        { "label": "Hotel Adaria Vera", "url": "https://www.hoteladariavera.com/" },
+        { "label": "Turismo de Vera", "url": "https://www.vera.es/turismo/" }
+      ]
+    },
+    "en": {
+      "title": "What to do in Vera",
+      "subtitle": "Beaches, monuments, gastronomy and festivals",
+      "groups": [
+        {
+          "heading": "Vera and its beaches",
+          "items": [
+            "Vera town is about 7 km from the hotel: a quiet Andalusian-style town, ideal for a relaxed stroll",
+            "Vera's beaches hold the Blue Flag, with crystal-clear waters"
+          ]
+        },
+        {
+          "heading": "What to see in the old town",
+          "items": [
+            "Church of Nuestra Señora de la Encarnación (16th c.), built as a fortress within the town walls",
+            "Town Hall (19th c.), home to the Historical Archive and the Ethnographic and Archaeological Museum",
+            "Convento de los Mínimos, with its fortress church",
+            "Church of San Agustín (16th c.), built by order of Emperor Charles V",
+            "Ermita de la Virgen de las Angustias, patron saint of the town",
+            "Ermita de San Ramón (18th c.)",
+            "Ermita de la Virgen de las Huertas, on the outskirts of town, site of the annual pilgrimage and next to the Roman archaeological site of El Roceipón",
+            "Cerro del Espíritu Santo, with Roman and Moorish remains and wide panoramic views of Vera",
+            "Bullring (19th c.) and the Fountain of the Four Spouts (17th c.)"
+          ]
+        },
+        {
+          "heading": "Gastronomy",
+          "items": [
+            "Traditional dishes: ajo colorao, guiso de pelotas a la veratense, olla de trigo, gurullos con conejo and tortas de avío",
+            "Local pastries: tortas de pellizcos, torticas reales, pastasfloras and deditos de Jesús"
+          ]
+        },
+        {
+          "heading": "Leisure nearby",
+          "items": [
+            "Vera water park, just 1 km from the hotel",
+            "Garrucha karting track, open all year round",
+            "Several golf courses in the area",
+            "Oasys theme park in the Tabernas desert (under an hour by car): a western-style set used in films such as 'The Good, the Bad and the Ugly' or 'The Magnificent Seven', plus a zoo reserve with over 170 species",
+            "Roquetas de Mar Aquarium",
+            "Adventure sports in the area: kitesurfing, hiking, horse riding, diving and snorkelling"
+          ]
+        },
+        {
+          "heading": "Not to be missed",
+          "items": [
+            "Cabo de Gata-Níjar, Andalusia's first Marine Nature Reserve, with idyllic bays and unspoilt beaches (some accessible only on foot)",
+            "Karst Natural Site of Yesos de Sorbas: caves, canyons and geodes shaped by water erosion on gypsum rock"
+          ]
+        },
+        {
+          "heading": "Festivals and events",
+          "items": [
+            "Carnival, in early February",
+            "Día de la Vieja, on the Thursday marking the middle of Lent",
+            "Holy Week (Semana Santa) in Vera",
+            "Veractiva, the Mediterranean Trade Fair, in the second week of August",
+            "Pilgrimage of the Virgen de las Huertas, on the first Sunday of September",
+            "Festivities of San Cleofás, patron saint of Vera, in the last week of September"
+          ]
+        }
+      ],
+      "links": [
+        { "label": "Hotel Adaria Vera", "url": "https://www.hoteladariavera.com/" },
+        { "label": "Vera Tourism", "url": "https://www.vera.es/turismo/" }
+      ]
+    },
+    "fr": {
+      "title": "Que faire à Vera",
+      "subtitle": "Plages, monuments, gastronomie et fêtes",
+      "groups": [
+        {
+          "heading": "Vera et ses plages",
+          "items": [
+            "Le village de Vera se trouve à environ 7 km de l'hôtel : une commune tranquille de style andalou, idéale pour une promenade paisible",
+            "Les plages de Vera sont classées pavillon bleu, avec des eaux cristallines"
+          ]
+        },
+        {
+          "heading": "Que visiter dans le centre historique",
+          "items": [
+            "Église de Nuestra Señora de la Encarnación (XVIe s.), construite comme forteresse dans l'enceinte fortifiée de la ville",
+            "Mairie (XIXe s.), qui abrite les Archives historiques et le Musée ethnographique et archéologique",
+            "Couvent des Mínimos, avec son église-forteresse",
+            "Église de San Agustín (XVIe s.), construite sur ordre de Charles Quint",
+            "Ermitage de la Virgen de las Angustias, patronne de la commune",
+            "Ermitage de San Ramón (XVIIIe s.)",
+            "Ermitage de la Virgen de las Huertas, à la périphérie de la ville, lieu du pèlerinage annuel et proche du site archéologique romain d'El Roceipón",
+            "Cerro del Espíritu Santo, avec des vestiges romains et musulmans et une large vue panoramique sur Vera",
+            "Arènes (XIXe s.) et Fontaine aux Quatre Bouches (XVIIe s.)"
+          ]
+        },
+        {
+          "heading": "Gastronomie",
+          "items": [
+            "Plats traditionnels : ajo colorao, guiso de pelotas a la veratense, olla de trigo, gurullos con conejo et tortas de avío",
+            "Pâtisseries locales : tortas de pellizcos, torticas reales, pastasfloras et deditos de Jesús"
+          ]
+        },
+        {
+          "heading": "Loisirs aux alentours",
+          "items": [
+            "Parc aquatique de Vera, à seulement 1 km de l'hôtel",
+            "Piste de karting de Garrucha, ouverte toute l'année",
+            "Plusieurs terrains de golf dans la région",
+            "Parc à thème Oasys dans le désert de Tabernas (à moins d'une heure en voiture) : décor de western utilisé dans des films comme 'Le Bon, la Brute et le Truand' ou 'Les Sept Mercenaires', et réserve zoologique avec plus de 170 espèces",
+            "Aquarium de Roquetas de Mar",
+            "Sports d'aventure dans la région : kitesurf, randonnée, équitation, plongée et snorkeling"
+          ]
+        },
+        {
+          "heading": "À ne pas manquer",
+          "items": [
+            "Cabo de Gata-Níjar, première réserve naturelle marine d'Andalousie, avec des baies idylliques et des plages inexplorées (certaines accessibles seulement à pied)",
+            "Site naturel karstique de Yesos de Sorbas : grottes, canyons et géodes façonnés par l'érosion de l'eau sur la roche de gypse"
+          ]
+        },
+        {
+          "heading": "Fêtes et événements",
+          "items": [
+            "Carnaval, début février",
+            "Día de la Vieja, le jeudi du milieu du Carême",
+            "Semaine Sainte de Vera",
+            "Veractiva, Foire-exposition de la Méditerranée, la deuxième semaine d'août",
+            "Pèlerinage de la Virgen de las Huertas, le premier dimanche de septembre",
+            "Fêtes de San Cleofás, patron de Vera, la dernière semaine de septembre"
+          ]
+        }
+      ],
+      "links": [
+        { "label": "Hôtel Adaria Vera", "url": "https://www.hoteladariavera.com/" },
+        { "label": "Office de tourisme de Vera", "url": "https://www.vera.es/turismo/" }
+      ]
+    },
+    "source": "Dossier informativo oficial del Hotel Adaria Vera (apartado 'Vera y alrededores')"
+  },
+
+  "_pending_recepcion": [
+    "RESUELTO 2026-08-13 (dossier oficial en habitaciones, contenido volcado íntegro): wifi.ssid/password (HOTEL ADARIA / hoteladariavera); dining.meal_hours + horarios cafetería; pools.hours; hours.pool_hours/restaurant_hours; phones (lista oficial del dossier, sustituye la anterior); activities 'Vera y alrededores' (resumen fiel del dossier); services (tipos de habitación, salón de juegos, miniclub, business corner, limpieza/toallas, caja fuerte).",
+    "AÚN PENDIENTE (sin dato fiable en el dossier, se mantiene oculto = null):",
+    "  - hours.gym_hours (el dossier solo indica 'gratuito, reservar en recepción', sin horario concreto)",
+    "  - parking.max_height",
+    "  - pools.heated_indoor: CONFIRMADO que NO existe (no hay spa ni piscina climatizada) — permanece oculto (null) a propósito, NO publicar ninguna mención de spa/climatizada.",
+    "Nota: cada campo tiene es/en/fr — rellenar los tres idiomas al confirmar cualquier dato nuevo."
+  ]
+}

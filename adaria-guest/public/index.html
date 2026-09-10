@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+<title>Hotel Adaria Vera · Guest Portal</title>
+<meta name="description" content="Portal del huésped del Hotel Adaria Vera — servicios, horarios y qué hacer en Vera-Playa.">
+<meta name="theme-color" content="#1b5e75">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Saltar al contenido / Skip to content / Aller au contenu</a>
+
+<header class="topbar" id="topbar">
+  <div class="topbar-row">
+    <button type="button" class="back-btn" id="back-btn" hidden aria-label="Volver">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span data-i18n="back">Volver</span>
+    </button>
+
+    <div class="brand" id="brand-block">
+      <span class="brand-name">Hotel Adaria Vera</span>
+      <span class="brand-sub">Vera-Playa · Almería</span>
+    </div>
+
+    <h1 class="header-title" id="header-title" hidden></h1>
+
+    <div class="lang-switch" role="group" aria-label="Idioma / Language / Langue">
+      <button type="button" class="lang-btn active" data-lang="es" aria-pressed="true">ES</button>
+      <button type="button" class="lang-btn" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" class="lang-btn" data-lang="fr" aria-pressed="false">FR</button>
+    </div>
+  </div>
+</header>
+
+<main id="main-content">
+  <div class="hero" id="hero">
+    <p class="hero-greeting" id="hero-greeting">Bienvenido</p>
+    <p class="hero-sub" id="hero-sub">Toda la información de tu estancia, en un solo lugar.</p>
+  </div>
+
+  <nav class="module-grid" id="module-grid" aria-label="Secciones del hotel"></nav>
+
+  <section id="content-area" class="content-area" hidden>
+    <div id="content-body"></div>
+  </section>
+
+  <div id="loading" class="loading-msg">
+    <span class="spinner" aria-hidden="true"></span>
+    <span id="loading-text">Cargando…</span>
+  </div>
+</main>
+
+<footer class="app-footer">
+  <span>Hotel Adaria Vera · Nº Reg. H/AL/00825</span>
+  <span class="ver">v2.0.0</span>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

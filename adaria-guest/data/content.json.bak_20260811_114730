@@ -1,0 +1,313 @@
+{
+  "_meta": {
+    "hotel": "Hotel Adaria Vera",
+    "version": "1.0.0",
+    "generated": "2026-08-11",
+    "instructions_es": "Estructura editable por recepción. Los campos con valor null son datos [PENDIENTE confirmar recepción] y NO se muestran en la web hasta rellenarlos. Para publicarlos, sustituye null por el texto real (en ES y EN) y reinicia el servicio (systemctl restart adaria-guest) si no se refleja al momento.",
+    "instructions_en": "Structure editable by hotel reception. Fields with value null are [PENDING confirmation] and are NOT shown on the site until filled in. To publish them, replace null with the real text (in ES and EN) and restart the service (systemctl restart adaria-guest) if it doesn't refresh immediately.",
+    "source_note_es": "Todo el contenido con valor proviene de la web oficial hoteladariavera.com o de fuentes públicas verificadas (ver campo 'source' de cada sección). Nada ha sido inventado.",
+    "source_note_en": "All content with a value comes from the official website hoteladariavera.com or verified public sources (see the 'source' field of each section). Nothing has been invented."
+  },
+
+  "hotel": {
+    "name": "Hotel Adaria Vera",
+    "address": "C/ Sotavento 7 esq. Avda del Descubrimiento, 04621 Vera-Playa (Almería)",
+    "registro_turistico": "H/AL/00825",
+    "phone": "+34 950 617 078",
+    "email": "info@hoteladariavera.com",
+    "website": "https://www.hoteladariavera.com/"
+  },
+
+  "services": {
+    "es": {
+      "title": "Servicios del hotel",
+      "items": [
+        "75 habitaciones de diseño moderno, aprox. 30 m², todas con terraza",
+        "Habitaciones familiares disponibles",
+        "Vistas al mar en la mayoría de habitaciones (con suplemento y según disponibilidad)",
+        "Recepción 24 horas",
+        "Ascensor (hotel accesible)",
+        "Aire acondicionado operativo del 1 de junio al 20 de septiembre",
+        "Gimnasio (requiere reserva previa)",
+        "Sala de TV",
+        "WiFi gratuito en todo el establecimiento",
+        "Parking privado subterráneo",
+        "Tres piscinas exteriores",
+        "Restaurante y bar/cafetería",
+        "Descuento del 5% reservando por la web oficial, sin gastos de gestión y con cancelación flexible (según condiciones)"
+      ]
+    },
+    "en": {
+      "title": "Hotel services",
+      "items": [
+        "75 modern-design rooms, approx. 30 m², all with terrace",
+        "Family rooms available",
+        "Sea views in most rooms (supplement applies, subject to availability)",
+        "24-hour reception",
+        "Lift / elevator (accessible hotel)",
+        "Air conditioning running 1 June – 20 September",
+        "Gym (advance booking required)",
+        "TV lounge",
+        "Free WiFi throughout the property",
+        "Private underground parking",
+        "Three outdoor swimming pools",
+        "Restaurant and bar/cafeteria",
+        "5% discount when booking on the official website, no booking fees, flexible cancellation (terms apply)"
+      ]
+    },
+    "source": "Web oficial hoteladariavera.com"
+  },
+
+  "pools": {
+    "es": {
+      "title": "Piscinas",
+      "items": ["Tres piscinas exteriores"],
+      "hours": null,
+      "heated_indoor": null
+    },
+    "en": {
+      "title": "Swimming pools",
+      "items": ["Three outdoor swimming pools"],
+      "hours": null,
+      "heated_indoor": null
+    },
+    "source": "Web oficial hoteladariavera.com"
+  },
+
+  "dining": {
+    "es": {
+      "title": "Restauración",
+      "items": [
+        "Restaurante con servicio de buffet y bar/cafetería",
+        "Desayuno temprano de 06:00 a 08:00, disponible de octubre a mayo con reserva previa"
+      ],
+      "board_basis": null,
+      "meal_hours": null
+    },
+    "en": {
+      "title": "Dining",
+      "items": [
+        "Restaurant with buffet service and a bar/cafeteria",
+        "Early breakfast 06:00–08:00, available October–May with advance booking"
+      ],
+      "board_basis": null,
+      "meal_hours": null
+    },
+    "source": "Web oficial hoteladariavera.com"
+  },
+
+  "wifi": {
+    "es": {
+      "title": "WiFi",
+      "items": ["WiFi gratuito en todo el hotel"],
+      "ssid": null,
+      "password": null,
+      "note": "El nombre de red y la contraseña se facilitan en recepción / en la habitación."
+    },
+    "en": {
+      "title": "WiFi",
+      "items": ["Free WiFi throughout the hotel"],
+      "ssid": null,
+      "password": null,
+      "note": "Network name and password are provided at reception / in your room."
+    },
+    "source": "Web oficial hoteladariavera.com"
+  },
+
+  "parking": {
+    "es": {
+      "title": "Parking",
+      "items": ["Parking privado subterráneo"],
+      "price": null,
+      "spaces": null,
+      "max_height": null
+    },
+    "en": {
+      "title": "Parking",
+      "items": ["Private underground parking"],
+      "price": null,
+      "spaces": null,
+      "max_height": null
+    },
+    "source": "Web oficial hoteladariavera.com"
+  },
+
+  "hours": {
+    "es": {
+      "title": "Horarios",
+      "items": [
+        "Recepción: 24 horas",
+        "Aire acondicionado: 1 de junio – 20 de septiembre",
+        "Desayuno temprano: 06:00–08:00 (octubre–mayo, con reserva previa)"
+      ],
+      "checkin": null,
+      "checkout": null,
+      "pool_hours": null,
+      "restaurant_hours": null,
+      "gym_hours": null
+    },
+    "en": {
+      "title": "Opening hours & schedules",
+      "items": [
+        "Reception: 24 hours",
+        "Air conditioning: 1 June – 20 September",
+        "Early breakfast: 06:00–08:00 (October–May, advance booking)"
+      ],
+      "checkin": null,
+      "checkout": null,
+      "pool_hours": null,
+      "restaurant_hours": null,
+      "gym_hours": null
+    },
+    "source": "Web oficial hoteladariavera.com"
+  },
+
+  "phones": {
+    "es": {
+      "title": "Teléfonos útiles",
+      "items": [
+        { "label": "Hotel Adaria Vera", "value": "+34 950 617 078" },
+        { "label": "Email del hotel", "value": "info@hoteladariavera.com" },
+        { "label": "Emergencias generales (24 h)", "value": "112" }
+      ],
+      "local_services": null
+    },
+    "en": {
+      "title": "Useful phone numbers",
+      "items": [
+        { "label": "Hotel Adaria Vera", "value": "+34 950 617 078" },
+        { "label": "Hotel email", "value": "info@hoteladariavera.com" },
+        { "label": "General emergencies (24h)", "value": "112" }
+      ],
+      "local_services": null
+    },
+    "source": "Web oficial hoteladariavera.com + 112 (número único europeo de emergencias)"
+  },
+
+  "activities": {
+    "es": {
+      "title": "Qué hacer en Vera",
+      "groups": [
+        {
+          "heading": "Playas / Naturaleza",
+          "items": [
+            "El Playazo de Vera — playa naturista de más de 2 km de arena dorada, zona equipada, vigilancia, accesos adaptados, duchas y parking.",
+            "Playa de Los Nardos — una de las playas más vírgenes de la zona."
+          ]
+        },
+        {
+          "heading": "Parque acuático / Ocio activo",
+          "items": [
+            "AQUAVERA (parque acuático) — Avda. Ciudad de Valencia 2b · Tel. 950 467 337",
+            "Escuela Náutica Over Limits — Avda. Descubrimiento s/n · Tel. 667 233 580 (windsurf, kitesurf, catamarán, optimist)",
+            "Piscina Cubierta Mariana Pineda — Tel. 610 321 168 (cursos de natación y aquagym)"
+          ]
+        },
+        {
+          "heading": "Golf",
+          "items": [
+            "Valle del Este Golf Resort (con Club de Pádel, 4 pistas de competición · Tel. 662 120 798)",
+            "Desert Springs Golf Club (campo de golf cercano)"
+          ]
+        },
+        {
+          "heading": "Hípica / Deportes",
+          "items": [
+            "Club Hípico Titu — Real Bajo · Tel. 610 725 095",
+            "Club Hípico Vera — Cortijo La Media Legua · Tel. 687 484 115",
+            "Aeroclub ULM Vera (vuelo ultraligero) · Tel. 607 316 553",
+            "Gimnasio Kook (+1.000 m², 3 salas) · Tel. 950 390 902",
+            "Gimnasio Montechico (karate, boxeo…) · Tel. 605 665 668",
+            "Club de Tiro Olímpico Vera · Tel. 950 393 343"
+          ]
+        },
+        {
+          "heading": "Cultura / Casco histórico de Vera Pueblo",
+          "items": [
+            "Plaza Mayor y Fuente de los Cuatro Caños, corazón del pueblo",
+            "Plaza de Toros de Vera (s. XIX), una de las más antiguas conservadas de España",
+            "Yacimiento arqueológico de Bayra, monumentos y museos; rutas históricas y visitas guiadas en verano; mercado artesanal en Vera Playa"
+          ]
+        },
+        {
+          "heading": "Excursiones por la zona (Almería)",
+          "items": ["Catálogo general de excursiones y actividades — ver enlace"],
+          "link": { "label": "GetYourGuide Almería", "url": "https://www.getyourguide.com/es-es/-l160269/" }
+        }
+      ],
+      "links": [
+        { "label": "Hotel Adaria Vera", "url": "https://www.hoteladariavera.com/" },
+        { "label": "Turismo de Vera", "url": "https://www.vera.es/turismo/" },
+        { "label": "Ocio en Vera (directorio)", "url": "https://www.vera.es/turismo/index.php?page=ocio" },
+        { "label": "Excursiones Almería (GetYourGuide)", "url": "https://www.getyourguide.com/es-es/-l160269/" }
+      ]
+    },
+    "en": {
+      "title": "What to do in Vera",
+      "groups": [
+        {
+          "heading": "Beaches / Nature",
+          "items": [
+            "El Playazo de Vera — naturist beach, 2+ km of golden sand, equipped area, lifeguards, accessible entries, showers and parking.",
+            "Los Nardos beach — one of the most unspoilt beaches in the area."
+          ]
+        },
+        {
+          "heading": "Water park / Active leisure",
+          "items": [
+            "AQUAVERA water park — Avda. Ciudad de Valencia 2b · Tel. +34 950 467 337",
+            "Over Limits Sailing School — Avda. Descubrimiento s/n · Tel. +34 667 233 580 (windsurf, kitesurf, catamaran, optimist)",
+            "Mariana Pineda Indoor Pool — Tel. +34 610 321 168 (swimming lessons and aqua gym)"
+          ]
+        },
+        {
+          "heading": "Golf",
+          "items": [
+            "Valle del Este Golf Resort (with a padel club, 4 competition courts · Tel. +34 662 120 798)",
+            "Desert Springs Golf Club (nearby golf course)"
+          ]
+        },
+        {
+          "heading": "Horse riding / Sports",
+          "items": [
+            "Club Hípico Titu — Real Bajo · Tel. +34 610 725 095",
+            "Club Hípico Vera — Cortijo La Media Legua · Tel. +34 687 484 115",
+            "Aeroclub ULM Vera (ultralight flights) · Tel. +34 607 316 553",
+            "Gimnasio Kook (1,000+ m², 3 rooms) · Tel. +34 950 390 902",
+            "Gimnasio Montechico (karate, boxing…) · Tel. +34 605 665 668",
+            "Vera Olympic Shooting Club · Tel. +34 950 393 343"
+          ]
+        },
+        {
+          "heading": "Culture / Vera old town",
+          "items": [
+            "Plaza Mayor and the Fountain of the Four Spouts, heart of the town",
+            "Vera Bullring (19th c.), one of the oldest preserved in Spain",
+            "Bayra archaeological site, monuments and museums; historical routes and summer guided tours; artisan market at Vera Playa"
+          ]
+        },
+        {
+          "heading": "Day trips in the area (Almería)",
+          "items": ["General catalogue of tours & activities — see link"],
+          "link": { "label": "GetYourGuide Almería", "url": "https://www.getyourguide.com/es-es/-l160269/" }
+        }
+      ],
+      "links": [
+        { "label": "Hotel Adaria Vera", "url": "https://www.hoteladariavera.com/" },
+        { "label": "Vera Tourism", "url": "https://www.vera.es/turismo/" },
+        { "label": "Leisure in Vera (directory)", "url": "https://www.vera.es/turismo/index.php?page=ocio" },
+        { "label": "Almería day trips (GetYourGuide)", "url": "https://www.getyourguide.com/es-es/-l160269/" }
+      ]
+    },
+    "source": "Web oficial hoteladariavera.com + vera.es/turismo (ayuntamiento)"
+  },
+
+  "_pending_recepcion": [
+    "pools.hours / pools.heated_indoor",
+    "dining.board_basis / dining.meal_hours (régimen MP/PC/TI y horarios exactos de buffet en temporada alta)",
+    "wifi.ssid / wifi.password",
+    "parking.price / parking.spaces / parking.max_height",
+    "hours.checkin / hours.checkout / hours.pool_hours / hours.restaurant_hours / hours.gym_hours",
+    "phones.local_services (taxi, farmacia de guardia, Centro de Salud de Vera, Policía Local, Guardia Civil)"
+  ]
+}
