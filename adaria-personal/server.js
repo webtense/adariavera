@@ -194,6 +194,8 @@ function ensureSuperadmin(req, res, next) {
 }
 
 // ─── Salud (pública, sin auth, para systemd/monitorización) ───
+app.get('/api/version', (req, res) => res.json({ version: require('./package.json').version }));
+
 app.get('/health', (req, res) => res.json({ ok: true, app: 'adaria-personal', v: APP_VERSION, property: PROPERTY_ID }));
 
 // ─── Login (único admin, definido en .env; preparado para SSO futuro) ───
