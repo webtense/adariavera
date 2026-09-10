@@ -9,10 +9,29 @@
 // ─────────────────────────────────────────────────────────────────
 
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+
+// Credenciales compartidas del staff (10/09/2026): mismo usuario/contraseña
+// que adaria-gestion y adaria-personal, para no pedir un login distinto por
+// módulo. Fuente única: users.json de adaria-gestion (mismo contenedor
+// CT111) — si cambia ahí (alta, reset), aquí se refleja sola. Se usa como
+// fallback SOLO si el username no existe (o no coincide) en la tabla propia
+// `usuario`, así que las cuentas creadas directamente en parking (p.ej. el
+// admin semilla) siguen funcionando igual.
+const GESTION_USERS_FILE = '/opt/adaria-gestion/users.json';
+function checkGestionSharedCreds(username, password) {
+  try {
+    const users = JSON.parse(fs.readFileSync(GESTION_USERS_FILE, 'utf8'));
+    const rec = users[username];
+    if (rec && bcrypt.compareSync(password, rec.hash)) return rec;
+  } catch (e) { /* fichero no accesible (p.ej. en local): se ignora */ }
+  return null;
+}
 
 /**
- * Valida username+password contra la tabla `usuario`.
- * @returns {Promise<{ok:boolean, user?:{id:number,username:string,rol:string}}>}
+ * Valida username+password contra la tabla `usuario`; si no hay match ahí,
+ * contra las credenciales compartidas de adaria-gestion.
+ * @returns {Promise<{ok:boolean, user?:{id:number|null,username:string,rol:string}}>}
  */
 async function authenticate(pool, username, password) {
   const u = String(username || '').trim().toLowerCase();
@@ -22,10 +41,16 @@ async function authenticate(pool, username, password) {
     [u]
   );
   const row = rows[0];
-  if (!row || !row.activo) return { ok: false };
-  const ok = await bcrypt.compare(password, row.password_hash);
-  if (!ok) return { ok: false };
-  return { ok: true, user: { id: row.id, username: row.username, rol: row.rol } };
+  if (row && row.activo) {
+    const ok = await bcrypt.compare(password, row.password_hash);
+    if (ok) return { ok: true, user: { id: row.id, username: row.username, rol: row.rol } };
+  }
+  const shared = checkGestionSharedCreds(u, password);
+  if (shared) {
+    const rol = (shared.role === 'superadmin' || shared.role === 'admin') ? 'admin' : 'operador';
+    return { ok: true, user: { id: null, username: u, rol } };
+  }
+  return { ok: false };
 }
 
 /**

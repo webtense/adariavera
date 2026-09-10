@@ -225,9 +225,24 @@ app.get('/login', (req, res) => {
   if (req.session.user) return res.redirect(BASE_PATH + '/');
   res.send(loginPage(!!req.query.e));
 });
+// Credenciales compartidas del staff (10/09/2026): mismo usuario/contraseña
+// que adaria-gestion y adaria-parking, para no obligar a recordar un login
+// distinto por módulo. Fuente única: users.json de adaria-gestion (mismo
+// contenedor CT111) — si cambia ahí (alta, reset de contraseña), aquí se
+// refleja sola, sin sincronizar nada a mano.
+const GESTION_USERS_FILE = '/opt/adaria-gestion/users.json';
+function checkGestionSharedCreds(u, p) {
+  try {
+    const users = JSON.parse(fs.readFileSync(GESTION_USERS_FILE, 'utf8'));
+    const rec = users[u];
+    if (rec && bcrypt.compareSync(p, rec.hash)) return rec;
+  } catch (e) { /* fichero no accesible (p.ej. en local sin ese path): se ignora */ }
+  return null;
+}
+
 app.post('/login', (req, res) => {
   const u = (req.body.u || '').trim().toLowerCase();
-  const p = req.body.p || '';
+  const p = (req.body.p || '').trim();
 
   // Si hay sesión SSO válida, redireccionar (ya está autenticado)
   if (req.ssoUser) {
@@ -237,6 +252,14 @@ app.post('/login', (req, res) => {
   // Validar contra login local (fallback)
   if (u && ADMIN_USER && u === ADMIN_USER && ADMIN_PASSWORD_HASH && bcrypt.compareSync(p, ADMIN_PASSWORD_HASH)) {
     req.session.user = { login: u, rol: 'superadmin', source: 'local' };
+    return res.redirect(BASE_PATH + '/');
+  }
+
+  // Validar contra las credenciales compartidas del staff (gestion)
+  const shared = checkGestionSharedCreds(u, p);
+  if (shared) {
+    const rol = (shared.role === 'superadmin' || shared.role === 'admin') ? 'superadmin' : 'usuario';
+    req.session.user = { login: u, rol, source: 'gestion' };
     return res.redirect(BASE_PATH + '/');
   }
 
