@@ -1,0 +1,14 @@
+# btr-mrz — dependencias del microservicio de lectura de MRZ
+# Todo local: ninguna librería hace llamadas de red.
+#
+# Nota: NO se usa pytesseract a propósito. Escribe ficheros temporales en disco
+# y el requisito es que la imagen del documento no se persista nunca. Se invoca
+# el binario tesseract por tubería desde mrz_reader.py.
+#
+# Dependencia de sistema (apt):  tesseract-ocr
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+opencv-python-headless==4.10.0.84
+numpy==2.2.1
