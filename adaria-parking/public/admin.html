@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🅿️</text></svg>">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>Hotel Adaria Vera · Parking · Admin</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* ── Admin específico ───────────────────────────── */
+  #admin-layout {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px;
+  }
+  .admin-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--azul);
+    margin-bottom: 24px;
+  }
+  .admin-tab {
+    padding: 9px 22px;
+    border: none;
+    background: transparent;
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--texto-suave);
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    transition: background .15s, color .15s;
+  }
+  .admin-tab.active { background: var(--azul); color: #fff; }
+  .admin-tab:hover:not(.active) { background: #eef4f6; color: var(--azul); }
+  .admin-pane { display: none; }
+  .admin-pane.active { display: block; }
+
+  /* ── Tabla usuarios / auditoría ─────────────────── */
+  .adm-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .88rem;
+    background: var(--panel);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  }
+  .adm-table th {
+    background: var(--azul);
+    color: #fff;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .adm-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--borde);
+    vertical-align: middle;
+  }
+  .adm-table tr:last-child td { border-bottom: none; }
+  .adm-table tr:hover td { background: #f4f8f9; }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: .76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .badge-admin    { background: #eef4f6; color: var(--azul-oscuro); }
+  .badge-operador { background: #f6e2d8; color: var(--terracota-oscuro); }
+  .badge-activo   { background: #dbe9e0; color: var(--verde-oscuro); }
+  .badge-inactivo { background: #fbe6e6; color: #a00; }
+
+  /* ── Formulario nuevo usuario ────────────────────── */
+  .adm-card {
+    background: var(--panel);
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+  .adm-card h3 {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--azul-oscuro);
+    margin-bottom: 16px;
+  }
+  .adm-form-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .adm-form-row .fg {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 140px;
+  }
+  .adm-form-row .fg label {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--texto-suave);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  .adm-form-row input,
+  .adm-form-row select {
+    padding: 7px 10px;
+    border: 1px solid var(--borde);
+    border-radius: 5px;
+    font-size: .88rem;
+    height: 34px;
+  }
+  .adm-form-row input:focus,
+  .adm-form-row select:focus {
+    outline: none;
+    border-color: var(--azul);
+    box-shadow: 0 0 0 2px rgba(27,94,117,.15);
+  }
+  .adm-form-row button[type="submit"] {
+    background: var(--azul);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    height: 34px;
+    padding: 0 18px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .adm-form-row button[type="submit"]:hover { background: var(--azul-oscuro); }
+
+  /* ── Acciones fila usuario ───────────────────────── */
+  .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn-xs {
+    padding: 3px 10px;
+    font-size: .76rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity .15s;
+  }
+  .btn-xs:hover { opacity: .82; }
+  .btn-xs.danger   { background: #fbe6e6; color: #a00; }
+  .btn-xs.success  { background: #dbe9e0; color: var(--verde-oscuro); }
+  .btn-xs.warning  { background: #fdecd8; color: #8a5a1a; }
+  .btn-xs.info     { background: #eef4f6; color: var(--azul-oscuro); }
+
+  /* ── Auditoría ───────────────────────────────────── */
+  .audit-filters {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 16px;
+  }
+  .audit-filters .fg { display: flex; flex-direction: column; gap: 4px; }
+  .audit-filters .fg label { font-size: .76rem; font-weight: 600; color: var(--texto-suave); }
+  .audit-filters input,
+  .audit-filters select {
+    padding: 6px 10px;
+    border: 1px solid var(--borde);
+    border-radius: 5px;
+    font-size: .84rem;
+    height: 32px;
+    min-width: 130px;
+  }
+  .audit-filters button {
+    background: var(--azul);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    height: 32px;
+    padding: 0 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .audit-filters button:hover { background: var(--azul-oscuro); }
+  .audit-info {
+    font-size: .8rem;
+    color: var(--texto-suave);
+    margin-bottom: 10px;
+  }
+  .audit-paginacion {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+    font-size: .84rem;
+  }
+  .audit-paginacion button {
+    background: #e7ecee;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 14px;
+    cursor: pointer;
+  }
+  .audit-paginacion button:disabled { opacity: .5; cursor: default; }
+  .adm-table .accion-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: .74rem;
+    font-family: monospace;
+    background: #eef1f2;
+    color: var(--texto);
+  }
+  .adm-table .accion-badge.login       { background: #dbe9e0; color: var(--verde-oscuro); }
+  .adm-table .accion-badge.logout      { background: #eef1f2; color: #555; }
+  .adm-table .accion-badge.asignar     { background: #eef4f6; color: var(--azul-oscuro); }
+  .adm-table .accion-badge.liberar     { background: #f6e2d8; color: var(--terracota-oscuro); }
+  .adm-table .accion-badge.bloquear    { background: #fbe6e6; color: #a00; }
+  .adm-table .accion-badge.desbloquear { background: #dbe9e0; color: var(--verde-oscuro); }
+  .adm-table .accion-badge.cobro       { background: #fdecd8; color: #8a5a1a; }
+  .adm-table .accion-badge.usuario     { background: #eef4f6; color: var(--azul-oscuro); }
+
+  /* ── Spinner ─────────────────────────────────────── */
+  .spinner {
+    text-align: center;
+    padding: 32px;
+    color: var(--texto-suave);
+    font-size: .9rem;
+  }
+
+  /* ── Modal reset contraseña ──────────────────────── */
+  #pwd-modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(18,30,36,.55);
+    z-index: 900;
+    align-items: center; justify-content: center;
+  }
+  #pwd-modal-overlay.visible { display: flex; }
+  #pwd-modal {
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 28px 32px;
+    min-width: 340px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  }
+  #pwd-modal h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--azul-oscuro);
+    margin-bottom: 18px;
+  }
+  #pwd-modal .fg { margin-bottom: 14px; }
+  #pwd-modal .fg label {
+    display: block;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--texto-suave);
+    margin-bottom: 4px;
+  }
+  #pwd-modal input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    font-size: .9rem;
+  }
+  #pwd-modal .pwd-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    justify-content: flex-end;
+  }
+  #pwd-modal .pwd-actions button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #pwd-cancelar { background: #e7ecee; color: var(--texto); }
+  #pwd-guardar { background: var(--azul); color: #fff; }
+  #pwd-guardar:hover { background: var(--azul-oscuro); }
+
+  /* ── Toasts ──────────────────────────────────────── */
+  #toast-container {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    background: var(--panel);
+    border-left: 4px solid var(--azul);
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: .85rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15);
+    color: var(--texto);
+  }
+  .toast.error { border-left-color: #a00; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div>
+    <h1>Hotel Adaria Vera · Parking — Administración</h1>
+    <div class="sub">Usuarios y auditoría de cambios</div>
+  </div>
+  <div class="top-actions">
+    <span id="user-label" style="opacity:.85;"></span>
+    <button onclick="window.location.href='/'" style="background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;">Volver al tablero</button>
+    <button id="btn-logout" style="background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;">Salir</button>
+  </div>
+</header>
+
+<div id="admin-layout">
+
+  <!-- Pestañas -->
+  <div class="admin-tabs">
+    <button class="admin-tab active" data-tab="usuarios">Gestión de usuarios</button>
+    <button class="admin-tab" data-tab="auditoria">Auditoría de cambios</button>
+  </div>
+
+  <!-- ══ PESTAÑA USUARIOS ══════════════════════════════════════ -->
+  <div class="admin-pane active" id="pane-usuarios">
+
+    <!-- Crear nuevo usuario -->
+    <div class="adm-card">
+      <h3>Nuevo usuario</h3>
+      <form id="form-nuevo-usuario">
+        <div class="adm-form-row">
+          <div class="fg">
+            <label>Usuario</label>
+            <input type="text" id="nu-username" placeholder="nombre.usuario" autocomplete="off" required>
+          </div>
+          <div class="fg">
+            <label>Contraseña</label>
+            <input type="password" id="nu-password" placeholder="min. 6 caracteres" autocomplete="new-password" required>
+          </div>
+          <div class="fg">
+            <label>Rol</label>
+            <select id="nu-rol">
+              <option value="operador">Operador</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>&nbsp;</label>
+            <button type="submit">Crear usuario</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tabla usuarios -->
+    <div class="adm-card">
+      <h3>Usuarios registrados</h3>
+      <div id="tabla-usuarios-container">
+        <div class="spinner">Cargando usuarios…</div>
+      </div>
+    </div>
+
+  </div>
+  <!-- /pane-usuarios -->
+
+  <!-- ══ PESTAÑA AUDITORÍA ══════════════════════════════════════ -->
+  <div class="admin-pane" id="pane-auditoria">
+
+    <div class="adm-card">
+      <h3>Filtros</h3>
+      <div class="audit-filters">
+        <div class="fg">
+          <label>Desde</label>
+          <input type="date" id="aud-desde">
+        </div>
+        <div class="fg">
+          <label>Hasta</label>
+          <input type="date" id="aud-hasta">
+        </div>
+        <div class="fg">
+          <label>Usuario</label>
+          <input type="text" id="aud-usuario" placeholder="Filtrar por usuario">
+        </div>
+        <div class="fg">
+          <label>Acción</label>
+          <select id="aud-accion">
+            <option value="">— Todas —</option>
+            <option value="login">login</option>
+            <option value="logout">logout</option>
+            <option value="login_fallido">login_fallido</option>
+            <option value="asignar">asignar</option>
+            <option value="liberar">liberar</option>
+            <option value="bloquear">bloquear</option>
+            <option value="desbloquear">desbloquear</option>
+            <option value="mover">mover</option>
+            <option value="cobro">cobro</option>
+            <option value="usuario_">usuario_*</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>&nbsp;</label>
+          <button id="btn-aud-filtrar">Buscar</button>
+        </div>
+      </div>
+      <div class="audit-info" id="aud-info">—</div>
+    </div>
+
+    <div class="adm-card" style="padding:0; overflow:hidden;">
+      <div id="tabla-audit-container">
+        <div class="spinner">Cargando auditoría…</div>
+      </div>
+    </div>
+
+    <div class="audit-paginacion" id="aud-paginacion" style="display:none;">
+      <button id="aud-prev">← Anterior</button>
+      <span id="aud-page-info"></span>
+      <button id="aud-next">Siguiente →</button>
+    </div>
+
+  </div>
+  <!-- /pane-auditoria -->
+
+</div>
+<!-- /admin-layout -->
+
+<!-- ── Modal reset contraseña ─────────────────────────────── -->
+<div id="pwd-modal-overlay">
+  <div id="pwd-modal">
+    <h3>Cambiar contraseña</h3>
+    <input type="hidden" id="pwd-user-id">
+    <div class="fg">
+      <label>Usuario: <strong id="pwd-username-label"></strong></label>
+    </div>
+    <div class="fg">
+      <label>Nueva contraseña</label>
+      <input type="password" id="pwd-nueva" placeholder="min. 6 caracteres" autocomplete="new-password">
+    </div>
+    <div class="fg">
+      <label>Confirmar contraseña</label>
+      <input type="password" id="pwd-confirmar" autocomplete="new-password">
+    </div>
+    <div class="pwd-actions">
+      <button id="pwd-cancelar">Cancelar</button>
+      <button id="pwd-guardar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>

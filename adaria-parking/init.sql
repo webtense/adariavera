@@ -15,12 +15,14 @@ CREATE TABLE IF NOT EXISTS asignaciones (
   noches INTEGER NOT NULL,
   tarifa_dia NUMERIC(10,2) NOT NULL,
   importe_total NUMERIC(10,2) NOT NULL,
-  estado VARCHAR(20) NOT NULL DEFAULT 'activa',   -- activa | liberada
+  estado VARCHAR(20) NOT NULL DEFAULT 'activa',   -- activa | bloqueada | liberada
   cobrado BOOLEAN NOT NULL DEFAULT false,
+  metodo_pago VARCHAR(20),   -- efectivo | tarjeta | cuenta | bonificado (calcado de btr_parking_siente)
   origen VARCHAR(20) NOT NULL DEFAULT 'manual',   -- manual | aci
   notas TEXT,
   creado_en TIMESTAMP NOT NULL DEFAULT now(),
-  liberado_en TIMESTAMP
+  liberado_en TIMESTAMP,
+  motivo_bloqueo VARCHAR(200)   -- solo relevante cuando estado = 'bloqueada'
 );
 
 CREATE INDEX IF NOT EXISTS idx_asignaciones_plaza_estado ON asignaciones(plaza_numero, estado);
@@ -37,3 +39,36 @@ ON CONFLICT (numero) DO NOTHING;
 
 INSERT INTO ajustes(clave, valor) VALUES ('tarifa_dia_eur', '10')
 ON CONFLICT (clave) DO NOTHING;
+
+-- ─────────────────────────────────────────────
+-- Autenticación local (bcrypt puro, sin SSO/Odoo) + auditoría.
+-- Ver db/migracion_20260910_usuarios_auditoria.sql para aplicar esto solo
+-- (idempotente) sobre una BD que ya tenía plazas/asignaciones/ajustes.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS usuario (
+  id            SERIAL       PRIMARY KEY,
+  username      VARCHAR(50)  NOT NULL UNIQUE,
+  password_hash TEXT         NOT NULL,
+  rol           VARCHAR(20)  NOT NULL DEFAULT 'operador'
+                    CHECK (rol IN ('admin','operador')),
+  activo        BOOLEAN      NOT NULL DEFAULT TRUE,
+  creado_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  creado_por    VARCHAR(50)  NOT NULL DEFAULT 'sistema'
+);
+
+CREATE INDEX IF NOT EXISTS idx_usuario_username ON usuario(username);
+CREATE INDEX IF NOT EXISTS idx_usuario_activo   ON usuario(activo);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id           BIGSERIAL    PRIMARY KEY,
+  usuario      VARCHAR(50)  NOT NULL,
+  accion       VARCHAR(50)  NOT NULL,     -- 'login' | 'asignar' | 'liberar' | 'cobro' | 'usuario_crear' | ...
+  plaza_id     INTEGER,                   -- referencia lógica a plazas.numero (sin FK, ver nota BTR)
+  ocupacion_id INTEGER,                   -- referencia lógica a asignaciones.id
+  detalle      JSONB,
+  ip           VARCHAR(45),
+  creado_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_plaza ON audit_log(plaza_id);
+CREATE INDEX IF NOT EXISTS idx_audit_at    ON audit_log(creado_at DESC);

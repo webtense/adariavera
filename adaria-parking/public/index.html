@@ -15,10 +15,13 @@
     <div style="font-size: 0.85rem; opacity: 0.9; margin-top: 4px;" id="adaria-header-version"></div>
   </div>
   <div class="top-actions">
+    <span id="user-label" style="font-size:.85rem;opacity:.85;"></span>
     <div class="tarifa-chip">
       <span id="tarifa-texto">Tarifa: 10 €/día</span>
       <button id="btn-editar-tarifa">editar</button>
     </div>
+    <button id="btn-admin" style="display:none;background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;">Admin</button>
+    <button id="btn-logout" title="Cerrar sesión" style="background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;">Salir</button>
   </div>
 </header>
 
@@ -33,6 +36,10 @@
       <div class="label">Ocupadas</div>
     </div>
     <div class="tarjeta">
+      <div class="num" id="num-bloqueadas">-</div>
+      <div class="label">Bloqueadas</div>
+    </div>
+    <div class="tarjeta">
       <div class="num" id="num-total">61</div>
       <div class="label">Total plazas</div>
     </div>
@@ -41,9 +48,24 @@
   <div class="leyenda">
     <span><span class="box libre"></span> Libre</span>
     <span><span class="box ocupada"></span> Ocupada</span>
+    <span><span class="box bloqueada"></span> Bloqueada</span>
   </div>
 
   <div class="tablero" id="tablero"></div>
+
+  <section class="panel-recaudacion">
+    <div class="panel-header">
+      <h2>Recaudación</h2>
+      <div class="filtro-fechas">
+        <input type="date" id="recaud-desde" title="Desde (fecha de entrada)">
+        <span>—</span>
+        <input type="date" id="recaud-hasta" title="Hasta (fecha de entrada)">
+        <button class="btn secundario chico" id="btn-filtrar-recaudacion">Filtrar</button>
+      </div>
+    </div>
+    <div class="recaud-resumen" id="recaud-resumen"></div>
+    <div class="historico-lista" id="historico-lista"></div>
+  </section>
 </main>
 
 <footer>Hotel Adaria Vera · Parking <span id="adaria-footer-version"></span></footer>

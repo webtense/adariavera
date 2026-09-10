@@ -118,6 +118,21 @@ main {
 .leyenda .box { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
 .leyenda .box.libre { background: var(--verde); }
 .leyenda .box.ocupada { background: var(--terracota); }
+.leyenda .box.bloqueada { background: #7c8792; }
+
+.acciones-modal.vertical { flex-direction: column; }
+.enlace-secundario {
+  background: none;
+  border: none;
+  color: var(--azul);
+  font-size: 0.82rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 8px 0 0;
+  text-align: center;
+  width: 100%;
+}
+.enlace-secundario:hover { color: var(--azul-oscuro); }
 
 .tablero {
   display: grid;
@@ -147,6 +162,8 @@ main {
 .plaza.libre:hover { background: var(--verde-oscuro); }
 .plaza.ocupada { background: var(--terracota); }
 .plaza.ocupada:hover { background: var(--terracota-oscuro); }
+.plaza.bloqueada { background: #7c8792; }
+.plaza.bloqueada:hover { background: #626b73; }
 
 .plaza .hab {
   font-size: 0.65rem;
@@ -286,6 +303,104 @@ main {
 }
 
 .modal { position: relative; }
+
+/* Panel de recaudación + histórico */
+.panel-recaudacion {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-top: 24px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--azul-oscuro);
+}
+
+.filtro-fechas {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+.filtro-fechas input[type="date"] {
+  padding: 6px 8px;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.btn.chico { flex: none; padding: 6px 14px; font-size: 0.82rem; }
+
+.recaud-resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.recaud-fila {
+  background: #eef4f6;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.recaud-fila .rl { display: block; font-size: 0.75rem; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.3px; }
+.recaud-fila .rv { display: block; font-size: 1.15rem; font-weight: 700; color: var(--azul-oscuro); margin-top: 2px; }
+.recaud-fila.verde .rv { color: var(--verde-oscuro); }
+.recaud-fila.naranja .rv { color: var(--terracota-oscuro); }
+
+.historico-lista { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow-y: auto; }
+.historico-vacio { color: var(--texto-suave); font-size: 0.85rem; padding: 8px 0; }
+
+.historico-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  background: #fff;
+}
+.historico-item:hover { background: #f4f8f9; border-color: var(--azul); }
+.historico-item .hi-principal { display: flex; flex-direction: column; gap: 2px; }
+.historico-item .hi-nombre { font-weight: 600; color: var(--texto); }
+.historico-item .hi-sub { color: var(--texto-suave); font-size: 0.78rem; }
+.historico-item .hi-cobro { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.historico-item .hi-estado {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #e7ecee;
+  color: var(--texto-suave);
+}
+.historico-item .hi-estado.liberada { background: #dbe9e0; color: var(--verde-oscuro); }
+.historico-item .hi-estado.activa { background: #f6e2d8; color: var(--terracota-oscuro); }
+.historico-item .hi-pagado { color: var(--verde-oscuro); font-weight: 600; }
+.historico-item .hi-pendiente { color: var(--terracota-oscuro); font-weight: 600; }
+
+/* Bloque de cobro (asignar / editar) */
+.cobro-bloque {
+  border-top: 1px dashed var(--borde);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+.cobro-bloque .campo.deshabilitado input { opacity: 0.6; background: #f4f6f7; }
 
 footer {
   text-align: center;
