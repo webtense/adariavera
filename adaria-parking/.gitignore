@@ -1,0 +1,14 @@
+.env
+.env.*
+node_modules/
+venv/
+__pycache__/
+*.bak-*
+*.bak.*
+*.log
+logs/
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+backups_bd/

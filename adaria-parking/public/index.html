@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🅿️</text></svg>">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hotel Adaria Vera · Parking</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div>
+    <h1>Hotel Adaria Vera · Parking</h1>
+    <div class="sub">Tablero de plazas en tiempo real</div>
+  </div>
+  <div class="top-actions">
+    <div class="tarifa-chip">
+      <span id="tarifa-texto">Tarifa: 10 €/día</span>
+      <button id="btn-editar-tarifa">editar</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="resumen">
+    <div class="tarjeta libres">
+      <div class="num" id="num-libres">-</div>
+      <div class="label">Libres</div>
+    </div>
+    <div class="tarjeta ocupadas">
+      <div class="num" id="num-ocupadas">-</div>
+      <div class="label">Ocupadas</div>
+    </div>
+    <div class="tarjeta">
+      <div class="num" id="num-total">61</div>
+      <div class="label">Total plazas</div>
+    </div>
+  </div>
+
+  <div class="leyenda">
+    <span><span class="box libre"></span> Libre</span>
+    <span><span class="box ocupada"></span> Ocupada</span>
+  </div>
+
+  <div class="tablero" id="tablero"></div>
+</main>
+
+<footer>Hotel Adaria Vera · Parking v1.0.0</footer>
+
+<!-- Modal plaza -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="cerrar" id="btn-cerrar">&times;</button>
+    <div id="modal-contenido"></div>
+  </div>
+</div>
+
+<!-- Modal tarifa -->
+<div class="overlay" id="overlay-tarifa">
+  <div class="modal">
+    <button class="cerrar" id="btn-cerrar-tarifa">&times;</button>
+    <h2>Tarifa del parking</h2>
+    <div class="campo">
+      <label>Precio por día (€)</label>
+      <input type="number" id="input-tarifa" min="0" step="0.5">
+    </div>
+    <div class="acciones-modal">
+      <button class="btn primario" id="btn-guardar-tarifa">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
