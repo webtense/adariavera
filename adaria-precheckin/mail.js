@@ -2,29 +2,51 @@
 
 // Notificaciones por email — NUNCA WhatsApp.
 //
-// Gate: PRECHECKIN_EMAIL_ENABLED (.env), false de fábrica. Con el gate
-// apagado, notify() SIEMPRE cae al log (logs/mail-test.log) pase lo que pase
-// en SEND_MODE/SMTP_*: ese es el comportamiento de "reserva del gate" que
-// pide FASE 3 (PRECHECKIN_EMAIL_ENABLED=false), y hoy además refleja lo que
-// YA pasaba de hecho — SEND_MODE en el .env de producción está en "live" pero
-// este módulo solo trataba como activo el valor "real" ('live' caía al
-// mismo sitio que 'test' sin que nadie lo hubiera decidido así a propósito).
-// Con el gate explícito, ese comportamiento queda documentado en vez de ser
-// un desajuste de nombres.
+// SEND_MODE=live: envío real vía SMTP_* con el TO real (destinatario del
+// llamador, o NOTIFY_EMAIL si no se pasa uno explícito).
+// Cualquier otro valor (incluido el default 'test') redirige el TO al buzón
+// de pruebas fijo TEST_MAILBOX, para poder verificar remitente/plantilla sin
+// arriesgar avisos a recepción real. Confirmado por Andrés 28/08/2026:
+// mantener esta redirección hasta que se decida pasar a SEND_MODE=live en
+// producción.
 //
-// Con el gate encendido y SEND_MODE=real + SMTP_HOST configurado: envío real
-// (no implementado todavía — falta añadir nodemailer como dependencia; ver
-// TODO más abajo). Mientras tanto cae a log igualmente, para no perder el
-// aviso.
+// En AMBOS modos se añade BCC a TEST_MAILBOX como copia de auditoría: queda
+// constancia de cada envío real (modo live) igual que en modo test.
+//
+// Si SMTP no está configurado (falta SMTP_HOST/SMTP_USER), o si el envío
+// falla, se cae a un log local (logs/mail.log) para no perder el aviso.
 
 const fs = require('fs');
 const path = require('path');
+const nodemailer = require('nodemailer');
 
-const EMAIL_ENABLED = String(process.env.PRECHECKIN_EMAIL_ENABLED ?? 'false').toLowerCase() === 'true';
 const SEND_MODE = (process.env.SEND_MODE || 'test').toLowerCase();
+const IS_LIVE = SEND_MODE === 'live';
+
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || '';
+
+// Buzón de pruebas/auditoría — fijo a propósito, no viene de .env: es un
+// valor de implementación (redirección en test + BCC de auditoría en
+// ambos modos), no config de despliegue. Confirmado por Andrés 28/08/2026.
+const TEST_MAILBOX = 'prechkinvera@boitaullresort.com';
+
 const LOG_DIR = path.join(__dirname, 'logs');
-const LOG_FILE = path.join(LOG_DIR, 'mail-test.log');
+const LOG_FILE = path.join(LOG_DIR, 'mail.log');
+
+let transporter = null;
+function getTransporter() {
+  if (transporter) return transporter;
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+  return transporter;
+}
 
 function ensureLogDir() {
   try {
@@ -38,34 +60,55 @@ function ensureLogDir() {
 function appendLog(entry) {
   ensureLogDir();
   const line = JSON.stringify({ ts: new Date().toISOString(), ...entry }) + '\n';
-  fs.appendFileSync(LOG_FILE, line);
+  try {
+    fs.appendFileSync(LOG_FILE, line);
+  } catch (e) {
+    console.error('[adaria-precheckin] No se pudo escribir el log de mail:', e.message);
+  }
 }
 
 /**
- * Registra (y, si algún día SEND_MODE=real + SMTP_HOST configurado, enviaría)
- * una notificación. Devuelve { enviado: boolean, modo: string, motivo: string }.
- * `motivo` es el código estable que usan precheckin_notificacion_log y el
- * cron de reintentos para explicar por qué no se envió (o por qué sí).
+ * Envía (o simula, según SEND_MODE) una notificación por email.
+ * Devuelve { enviado, modo, to, messageId?, error? }.
  */
 async function notify({ asunto, cuerpo, destinatario }) {
-  const to = destinatario || NOTIFY_EMAIL;
+  const realTo = destinatario || NOTIFY_EMAIL;
+  const to = IS_LIVE ? realTo : TEST_MAILBOX;
+  const modo = IS_LIVE ? 'live' : 'test';
 
-  if (!EMAIL_ENABLED) {
-    appendLog({ modo: 'gate_desactivado', to, asunto, cuerpo });
-    return { enviado: false, modo: 'gate_desactivado', motivo: 'gate_desactivado' };
+  if (!to) {
+    appendLog({ modo: 'sin_destinatario', asunto, cuerpo });
+    return { enviado: false, modo: 'sin_destinatario' };
   }
 
-  if (SEND_MODE === 'real' && process.env.SMTP_HOST) {
-    // TODO(Fase 4): envío real con nodemailer. No implementado a propósito
-    // hasta confirmar el SMTP con Fase A (Tarea A del plan orchestrated) y
-    // añadir la dependencia. Hasta entonces, aunque el gate esté encendido,
-    // cae a log — así el aviso no se pierde y queda constancia del intento.
-    appendLog({ modo: 'real_no_implementado', to, asunto, cuerpo });
-    return { enviado: false, modo: 'real_no_implementado', motivo: 'smtp_no_implementado' };
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) {
+    appendLog({ modo: 'sin_smtp', to, asunto, cuerpo });
+    return { enviado: false, modo: 'sin_smtp', to };
   }
 
-  appendLog({ modo: 'test', to, asunto, cuerpo });
-  return { enviado: false, modo: 'test', motivo: 'send_mode_test' };
+  const subject = modo === 'test' && realTo !== TEST_MAILBOX
+    ? `[TEST -> ${realTo}] ${asunto}`
+    : asunto;
+
+  try {
+    const info = await getTransporter().sendMail({
+      from: process.env.SMTP_FROM_NAME
+        ? `"${process.env.SMTP_FROM_NAME}" <${process.env.SMTP_FROM}>`
+        : process.env.SMTP_FROM,
+      to,
+      bcc: TEST_MAILBOX,
+      subject,
+      text: cuerpo,
+    });
+    appendLog({
+      modo, to, bcc: TEST_MAILBOX, destinatarioReal: realTo, asunto,
+      messageId: info.messageId,
+    });
+    return { enviado: true, modo, to, messageId: info.messageId };
+  } catch (err) {
+    appendLog({ modo: 'error', to, asunto, error: err.message });
+    return { enviado: false, modo: 'error', to, error: err.message };
+  }
 }
 
-module.exports = { notify, LOG_FILE, EMAIL_ENABLED };
+module.exports = { notify, LOG_FILE };

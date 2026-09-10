@@ -18,7 +18,7 @@ const { pool } = require('./db');
 const aci = require('./aci');
 const mail = require('./mail');
 
-const VERSION = '1.2.0';
+const VERSION = '1.0';
 const PORT = parseInt(process.env.PORT || '3095', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'cambia-esto-precheckin';
@@ -26,107 +26,6 @@ const ADMIN_USER = (process.env.ADMIN_USER || '').trim().toLowerCase();
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || '';
 
 const TIPOS_DOCUMENTO = ['DNI', 'NIE', 'PASAPORTE', 'OTRO'];
-
-// ─── FASE 3 — Gates, todos apagados de fábrica ─────────────────────────────
-//
-// PRECHECKIN_EMAIL_ENABLED  aviso a recepción por email al recibir un pre
-//                           check-in (ver mail.js). Con el gate apagado,
-//                           notify() siempre cae a logs/mail-test.log.
-//
-// PRECHECKIN_WRITE / PRECHECKIN_ALTA  se dejan aquí, DESACTIVADOS y SIN
-//                           CABLEAR a ningún código, por continuidad de
-//                           nombre con btr_gestion_portal/app/precheckin.js
-//                           (mismo patrón de gates que el resto del
-//                           ecosistema). NO equivalen todavía a una
-//                           capacidad real: esta app sigue siendo SOLO
-//                           LECTURA contra ACI (ver REGLA DE ORO en aci.js).
-//                           La Tarea E (conector ACI de escritura) sigue
-//                           bloqueada — no existe usuario SQL adaria_rw ni
-//                           un esquema de escritura verificado contra
-//                           AdariaVeraHotel. Ponerlos a "true" hoy no activa
-//                           nada: no hay ninguna ruta que los consulte.
-const EMAIL_ENABLED = String(process.env.PRECHECKIN_EMAIL_ENABLED ?? 'false').toLowerCase() === 'true';
-const PRECHECKIN_WRITE = String(process.env.PRECHECKIN_WRITE ?? 'false').toLowerCase() === 'true'; // reservado, sin implementación — ver nota arriba
-const PRECHECKIN_ALTA = String(process.env.PRECHECKIN_ALTA ?? 'false').toLowerCase() === 'true'; // reservado, sin implementación — ver nota arriba
-
-// ─── Filtrado por propiedad ─────────────────────────────────────────────────
-// Hoy solo hay una propiedad conectada (Vera Adaria, BD ACI AdariaVeraHotel).
-// Se deja el mapa y el middleware ya montados para cuando entre la segunda
-// (Monasterio de Poblet, prevista sep-2026): las reservas ya se guardan con
-// su `property` (ver migración 002) y las rutas de admin ya filtran, así que
-// activar una propiedad nueva no exige tocar las rutas, solo el mapa y la
-// sesión del usuario que la vaya a ver.
-const PROPERTY_MAP = {
-  adaria: 'Hotel Adaria Vera',
-  // poblet: 'Monasterio de Poblet',  // reservado — sin conector ACI todavía (Tarea E)
-};
-
-/**
- * Propiedades a las que puede acceder el usuario de la sesión. Con un único
- * login (`recepcion`) y una única propiedad operativa, hoy siempre es
- * ['adaria']; en cuanto haya más de un usuario/propiedad esto pasa a leerse
- * de la ficha del usuario en vez de asumirse.
- */
-function propiedadesDeUsuario(user) {
-  if (user && Array.isArray(user.properties) && user.properties.length) return user.properties;
-  return ['adaria'];
-}
-
-/**
- * Middleware: exige que la sesión tenga acceso a al menos una de las
- * propiedades indicadas. Inyecta `req.properties` (SIEMPRE desde la sesión,
- * nunca desde el body/query) con la intersección para que las consultas
- * filtren por `property = ANY($1)`.
- */
-function requireProperty(allowed) {
-  return (req, res, next) => {
-    if (!req.session || !req.session.user) return res.status(401).json({ error: 'no_autenticado' });
-    const propias = propiedadesDeUsuario(req.session.user);
-    const interseccion = propias.filter((p) => allowed.includes(p));
-    if (!interseccion.length) {
-      return res.status(403).json({ error: 'sin_acceso_a_propiedad' });
-    }
-    req.properties = interseccion;
-    next();
-  };
-}
-
-// ─── Notificaciones con traza (para el cron de reintentos y el panel) ──────
-// Registra el intento en precheckin_notificacion_log ANTES de intentar
-// enviar (así una caída del proceso entre el intento y el registro no deja
-// un envío fantasma sin traza) y actualiza el resultado después. Un mismo
-// `tipo` por reserva es idempotente (UNIQUE reserva_id,tipo): reenviar el
-// mismo pre check-in solo actualiza el intento, no duplica filas.
-async function registrarYNotificar(reservaId, tipo, { asunto, cuerpo }) {
-  await pool.query(
-    `INSERT INTO precheckin_notificacion_log (reserva_id, tipo, intentos, estado, ultimo_intento_en)
-     VALUES ($1, $2, 1, 'pendiente', now())
-     ON CONFLICT (reserva_id, tipo) DO UPDATE SET
-       intentos = precheckin_notificacion_log.intentos + 1,
-       estado = 'pendiente',
-       ultimo_intento_en = now()`,
-    [reservaId, tipo]
-  );
-  let resultado;
-  try {
-    resultado = await mail.notify({ asunto, cuerpo });
-  } catch (err) {
-    resultado = { enviado: false, motivo: 'excepcion', modo: 'excepcion' };
-    await pool.query(
-      `UPDATE precheckin_notificacion_log SET estado = 'error', motivo = $2, detalle = $3
-       WHERE reserva_id = $1 AND tipo = $4`,
-      [reservaId, 'excepcion', String(err.message || err), tipo]
-    );
-    throw err;
-  }
-  const estado = resultado.enviado ? 'enviado' : (resultado.motivo === 'gate_desactivado' ? 'omitido' : 'error');
-  await pool.query(
-    `UPDATE precheckin_notificacion_log SET estado = $2, motivo = $3
-     WHERE reserva_id = $1 AND tipo = $4`,
-    [reservaId, estado, resultado.motivo || null, tipo]
-  );
-  return resultado;
-}
 
 const app = express();
 app.disable('x-powered-by');
@@ -281,8 +180,8 @@ app.post('/api/precheckin', async (req, res) => {
       `INSERT INTO precheckin_reserva
          (res_guid, codigo, apellido_busqueda, titular_nombre, titular_apellido,
           habitacion, fecha_entrada, fecha_salida, pax, email, telefono,
-          hora_llegada_estimada, observaciones, idioma, property, actualizado_en)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now())
+          hora_llegada_estimada, observaciones, idioma, actualizado_en)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, now())
        ON CONFLICT (codigo) DO UPDATE SET
           apellido_busqueda = EXCLUDED.apellido_busqueda,
           titular_nombre = EXCLUDED.titular_nombre,
@@ -296,12 +195,11 @@ app.post('/api/precheckin', async (req, res) => {
           hora_llegada_estimada = EXCLUDED.hora_llegada_estimada,
           observaciones = EXCLUDED.observaciones,
           idioma = EXCLUDED.idioma,
-          property = EXCLUDED.property,
           actualizado_en = now()
        RETURNING id`,
       [reserva.resGuid, codigoFinal, apellidoBusqueda, reserva.titularNombre, reserva.titularApellido,
        reserva.habitacion, reserva.entrada, reserva.salida, reserva.pax, email, telefono,
-       horaLlegada, observaciones, idioma, 'adaria']
+       horaLlegada, observaciones, idioma]
     );
     const reservaId = r.rows[0].id;
 
@@ -318,7 +216,7 @@ app.post('/api/precheckin', async (req, res) => {
     }
     await client.query('COMMIT');
 
-    registrarYNotificar(reservaId, 'confirmacion_recepcion', {
+    mail.notify({
       asunto: `Pre check-in recibido — reserva ${codigoFinal} — Adaria Vera`,
       cuerpo: `Reserva ${codigoFinal}\nHabitación: ${reserva.habitacion || '-'}\n` +
         `Entrada: ${reserva.entrada || '-'} · Salida: ${reserva.salida || '-'}\n` +
@@ -326,9 +224,6 @@ app.post('/api/precheckin', async (req, res) => {
         `Hora estimada de llegada: ${horaLlegada || 'no indicada'}\n` +
         `Observaciones: ${observaciones || '-'}`,
     }).catch((e) => console.error('[adaria-precheckin] Error notificando:', e.message));
-    // El fallo aquí no impide guardar el pre check-in (ya hizo COMMIT arriba):
-    // registrarYNotificar deja constancia en precheckin_notificacion_log y el
-    // cron de FASE 3 (cron_precheckin_mejoras.js) la recoge para reintentar.
 
     res.json({ ok: true, reservaId, codigo: codigoFinal });
   } catch (err) {
@@ -364,7 +259,7 @@ app.post('/admin/login', (req, res) => {
   const p = String(req.body.p || '');
   const ok = ADMIN_USER && ADMIN_PASSWORD_HASH && u === ADMIN_USER && bcrypt.compareSync(p, ADMIN_PASSWORD_HASH);
   if (ok) {
-    req.session.user = { login: u, properties: ['adaria'] };
+    req.session.user = { login: u };
     return res.redirect('/admin');
   }
   res.redirect('/admin/login?e=1');
@@ -374,14 +269,12 @@ app.get('/admin/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/admin/login'));
 });
 
-app.get('/admin', requireAuth, requireProperty(['adaria']), async (req, res) => {
+app.get('/admin', requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT id, codigo, titular_nombre, titular_apellido, habitacion,
               fecha_entrada, fecha_salida, pax, procesado, creado_en
-       FROM precheckin_reserva WHERE property = ANY($1)
-       ORDER BY fecha_entrada ASC NULLS LAST, creado_en DESC LIMIT 200`,
-      [req.properties]
+       FROM precheckin_reserva ORDER BY fecha_entrada ASC NULLS LAST, creado_en DESC LIMIT 200`
     );
     const filas = rows.map((r) => `<tr>
         <td><b>${esc(r.codigo)}</b></td>
@@ -394,7 +287,7 @@ app.get('/admin', requireAuth, requireProperty(['adaria']), async (req, res) => 
         <td><a class="btn" href="/admin/${r.id}">Ver</a></td>
       </tr>`).join('');
     res.send(layout('Pre check-ins', `<div class="wrap"><h1>Pre check-ins recibidos</h1>
-      <p class="muted">Últimos 200 registros, ordenados por fecha de entrada. · <a href="/admin/errores">⚠️ Panel de errores</a></p>
+      <p class="muted">Últimos 200 registros, ordenados por fecha de entrada.</p>
       <table><tr><th>Localizador</th><th>Titular</th><th>Hab.</th><th>Entrada</th><th>Salida</th><th>Pax</th><th>Estado</th><th></th></tr>
       ${filas || '<tr><td colspan="8">Sin pre check-ins todavía</td></tr>'}</table></div>`, req.session.user));
   } catch (err) {
@@ -403,84 +296,11 @@ app.get('/admin', requireAuth, requireProperty(['adaria']), async (req, res) => 
   }
 });
 
-// Panel de errores — FASE 3. Muestra lo que el cron de reintentos
-// (cron_precheckin_mejoras.js) va dejando: notificaciones que no salieron
-// (con motivo diferenciado), reservas con check-in a la vuelta de la esquina
-// que nadie ha marcado como procesadas todavía, y el resumen de la última
-// ejecución del cron (para saber que corre, no solo que existe el script).
-app.get('/admin/errores', requireAuth, requireProperty(['adaria']), async (req, res) => {
-  try {
-    const { rows: notifs } = await pool.query(
-      `SELECT n.id, n.tipo, n.intentos, n.estado, n.motivo, n.ultimo_intento_en,
-              r.codigo, r.titular_nombre, r.titular_apellido
-       FROM precheckin_notificacion_log n
-       JOIN precheckin_reserva r ON r.id = n.reserva_id
-       WHERE n.estado IN ('error','agotado','pendiente') AND r.property = ANY($1)
-       ORDER BY n.ultimo_intento_en DESC NULLS LAST LIMIT 100`,
-      [req.properties]
-    );
-    const { rows: proximas } = await pool.query(
-      `SELECT id, codigo, titular_nombre, titular_apellido, habitacion, fecha_entrada
-       FROM precheckin_reserva
-       WHERE property = ANY($1) AND procesado = false
-         AND fecha_entrada IS NOT NULL AND fecha_entrada <= (CURRENT_DATE + INTERVAL '2 days')
-       ORDER BY fecha_entrada ASC LIMIT 100`,
-      [req.properties]
-    );
-    const { rows: cronRuns } = await pool.query(
-      `SELECT ejecutado_at, candidatos, reintentados, enviados, errores, agotados, proximas_sin_procesar, duracion_ms
-       FROM precheckin_cron_log ORDER BY id DESC LIMIT 10`
-    );
-    const filasNotif = notifs.map((n) => `<tr>
-        <td><b>${esc(n.codigo)}</b></td>
-        <td>${esc(n.titular_nombre)} ${esc(n.titular_apellido)}</td>
-        <td>${esc(n.tipo)}</td>
-        <td>${n.intentos}</td>
-        <td><span class="pill ${n.estado === 'error' ? 'pend' : ''}">${esc(n.estado)}</span></td>
-        <td>${esc(n.motivo) || '-'}</td>
-        <td>${n.ultimo_intento_en ? String(n.ultimo_intento_en).slice(0, 16).replace('T', ' ') : '-'}</td>
-      </tr>`).join('');
-    const filasProximas = proximas.map((r) => `<tr>
-        <td><b>${esc(r.codigo)}</b></td>
-        <td>${esc(r.titular_nombre)} ${esc(r.titular_apellido)}</td>
-        <td>${esc(r.habitacion)}</td>
-        <td>${r.fecha_entrada ? String(r.fecha_entrada).slice(0, 10) : '-'}</td>
-        <td><a class="btn" href="/admin/${r.id}">Ver</a></td>
-      </tr>`).join('');
-    const filasCron = cronRuns.map((c) => `<tr>
-        <td>${String(c.ejecutado_at).slice(0, 16).replace('T', ' ')}</td>
-        <td>${c.candidatos}</td><td>${c.reintentados}</td><td>${c.enviados}</td>
-        <td>${c.errores}</td><td>${c.agotados}</td><td>${c.proximas_sin_procesar}</td>
-        <td>${c.duracion_ms != null ? c.duracion_ms + ' ms' : '-'}</td>
-      </tr>`).join('');
-    res.send(layout('Panel de errores', `<div class="wrap">
-      <h1>⚠️ Panel de errores — Pre check-in</h1>
-      <p class="muted">Gates: PRECHECKIN_EMAIL_ENABLED=${EMAIL_ENABLED} · PRECHECKIN_WRITE=${PRECHECKIN_WRITE} (reservado, sin implementación) · PRECHECKIN_ALTA=${PRECHECKIN_ALTA} (reservado, sin implementación) · <a href="/admin">← Volver al listado</a></p>
-
-      <div class="box"><h3 style="margin-bottom:8px">Notificaciones pendientes / con error</h3>
-      <table><tr><th>Localizador</th><th>Titular</th><th>Tipo</th><th>Intentos</th><th>Estado</th><th>Motivo</th><th>Último intento</th></tr>
-      ${filasNotif || '<tr><td colspan="7">Sin incidencias de notificación</td></tr>'}</table></div>
-
-      <div class="box"><h3 style="margin-bottom:8px">Check-in en ≤2 días sin marcar como procesado</h3>
-      <table><tr><th>Localizador</th><th>Titular</th><th>Hab.</th><th>Entrada</th><th></th></tr>
-      ${filasProximas || '<tr><td colspan="5">Nada pendiente a la vista</td></tr>'}</table></div>
-
-      <div class="box"><h3 style="margin-bottom:8px">Últimas ejecuciones del cron</h3>
-      <table><tr><th>Ejecutado</th><th>Candidatos</th><th>Reintentados</th><th>Enviados</th><th>Errores</th><th>Agotados</th><th>Próx. sin procesar</th><th>Duración</th></tr>
-      ${filasCron || '<tr><td colspan="8">El cron todavía no se ha ejecutado (cron_precheckin_mejoras.js)</td></tr>'}</table></div>
-      </div>`, req.session.user));
-  } catch (err) {
-    console.error('[adaria-precheckin] Error panel de errores:', err.message);
-    res.status(500).send('Error consultando la base de datos');
-  }
-});
-
-app.get('/admin/:id', requireAuth, requireProperty(['adaria']), async (req, res) => {
+app.get('/admin/:id', requireAuth, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id)) return res.status(404).send('No encontrado');
   try {
-    const { rows } = await pool.query(
-      'SELECT * FROM precheckin_reserva WHERE id = $1 AND property = ANY($2)', [id, req.properties]);
+    const { rows } = await pool.query('SELECT * FROM precheckin_reserva WHERE id = $1', [id]);
     if (!rows.length) return res.status(404).send('No encontrado');
     const r = rows[0];
     const { rows: personas } = await pool.query(
@@ -514,14 +334,14 @@ app.get('/admin/:id', requireAuth, requireProperty(['adaria']), async (req, res)
   }
 });
 
-app.post('/admin/:id/procesar', requireAuth, requireProperty(['adaria']), async (req, res) => {
+app.post('/admin/:id/procesar', requireAuth, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id)) return res.status(404).send('No encontrado');
   try {
     await pool.query(
       `UPDATE precheckin_reserva SET procesado = true, procesado_por = $2, procesado_en = now()
-       WHERE id = $1 AND procesado = false AND property = ANY($3)`,
-      [id, req.session.user.login, req.properties]
+       WHERE id = $1 AND procesado = false`,
+      [id, req.session.user.login]
     );
     res.redirect('/admin/' + id);
   } catch (err) {
