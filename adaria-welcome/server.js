@@ -21,6 +21,8 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' })); // firma PNG base64 puede pesar varios cientos de KB
 app.use(express.urlencoded({ extended: true }));
 
+app.get('/api/version', (req, res) => res.json({ version: require('./package.json').version }));
+
 app.use('/api', apiRoutes);
 app.use(express.static(path.join(__dirname, 'public')));
 
