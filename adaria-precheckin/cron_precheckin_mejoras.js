@@ -20,8 +20,8 @@ catch (e) { /* dotenv no instalado: asumimos que el entorno ya trae las vars */ 
  * 1. Reintenta las notificaciones de precheckin_notificacion_log en estado
  *    'pendiente' o 'error' con menos de 3 intentos y con el último intento a
  *    más de 24h — 3 intentos en 3 días, igual que btr_gestion_portal. Motivo
- *    diferenciado por fila (gate_desactivado, smtp_no_implementado,
- *    send_mode_test, excepcion...), no un genérico "fallo".
+ *    diferenciado por fila, tomado de mail.js real (test|live|sin_smtp|
+ *    sin_destinatario|error|excepcion), no un genérico "fallo".
  * 2. Las que llegan a 3 intentos sin éxito pasan a 'agotado': dejan de
  *    reintentarse solas y quedan visibles en el panel de errores para que
  *    recepción decida (normalmente: avisar al huésped por otro canal).
@@ -31,10 +31,14 @@ catch (e) { /* dotenv no instalado: asumimos que el entorno ya trae las vars */ 
  * 4. Registra un resumen de la ejecución en precheckin_cron_log, para que el
  *    panel de errores pueda mostrar que el cron corre de verdad.
  *
- * Nada de esto envía un correo real hoy: mientras PRECHECKIN_EMAIL_ENABLED
- * esté en false (gate de fábrica), mail.notify() siempre cae a
- * logs/mail-test.log — el reintento deja traza igualmente, solo que con
- * motivo 'gate_desactivado' en vez de 'ok'.
+ * Adaptado al mail.js REAL de producción (SMTP con nodemailer, SEND_MODE
+ * test/live + redirección a buzón de pruebas + BCC de auditoría), no al
+ * mail.js simplificado que tenía el diseño original de FASE 3 (que solo
+ * escribía a log). mail.notify() aquí devuelve { enviado, modo, to,
+ * messageId?, error? } — sin campo `motivo` — así que se usa `modo` (o
+ * `error`) como motivo para la traza. En SEND_MODE=test (el que hay hoy en
+ * producción) el reintento SÍ manda un correo real, pero redirigido al
+ * buzón de pruebas de auditoría, nunca al destinatario real.
  */
 
 const { pool } = require('./db');
@@ -78,13 +82,14 @@ async function ejecutar() {
             `Observaciones: ${c.observaciones || '-'}`,
         });
       } catch (err) {
-        resultado = { enviado: false, motivo: 'excepcion' };
+        resultado = { enviado: false, modo: 'excepcion', error: String(err.message || err) };
         console.error(`[cron-precheckin] Excepción notificando reserva ${c.codigo}:`, err.message);
       }
 
       stats.reintentados++;
       const agotado = !resultado.enviado && nuevoIntento >= MAX_INTENTOS;
       const estado = resultado.enviado ? 'enviado' : (agotado ? 'agotado' : 'error');
+      const motivo = resultado.modo || resultado.error || null;
       if (resultado.enviado) stats.enviados++;
       else if (agotado) stats.agotados++;
       else stats.errores++;
@@ -93,9 +98,9 @@ async function ejecutar() {
         `UPDATE precheckin_notificacion_log
          SET intentos = $2, estado = $3, motivo = $4, ultimo_intento_en = now()
          WHERE id = $1`,
-        [c.id, nuevoIntento, estado, resultado.motivo || null]
+        [c.id, nuevoIntento, estado, motivo]
       );
-      stats.detalle.push({ codigo: c.codigo, tipo: c.tipo, intento: nuevoIntento, estado, motivo: resultado.motivo || null });
+      stats.detalle.push({ codigo: c.codigo, tipo: c.tipo, intento: nuevoIntento, estado, motivo });
     }
 
     // 2) Reservas con check-in próximo sin procesar (solo se cuentan/avisan,
