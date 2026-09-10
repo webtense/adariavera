@@ -1,0 +1,23 @@
+<%- include('partials/header', { title: 'Switches — Adaria Vera' }) %>
+<h1>Switches</h1>
+<p class="sub"><%= sws.length %> switches de red.</p>
+<% if(user&&user.role==='admin'){ %><p><a class="btn btn-sm" href="/editar/switches">✏️ Editar datos</a></p><% } %>
+<div class="table-wrap"><table>
+  <thead><tr><th>Switch</th><th>Modelo</th><th>IP</th><th>Nº serie</th><th>Puertos</th><th>PoE</th><th>Usuario</th><th>Ubicación</th></tr></thead>
+  <tbody>
+  <% sws.forEach(function(s){ %>
+    <tr>
+      <td><strong><%= s.nombre %></strong></td>
+      <td><%= s.modelo||'' %></td>
+      <td class="mono"><% if(s.ip){ %><a href="http://<%= s.ip %>" target="_blank" rel="noopener"><%= s.ip %></a><% } else { %>—<% } %></td>
+      <td class="mono" style="font-size:12px"><%= s.serie||'' %></td>
+      <td><%= s.puertos||'' %></td>
+      <td><%= s.poe||'' %></td>
+      <td class="mono"><%= s.usuario||'' %></td>
+      <td><%= s.ubicacion||'' %></td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table></div>
+<p class="muted">Las contraseñas de los switches están en <a href="/credenciales">Usuarios y Contraseñas</a>.</p>
+<%- include('partials/footer') %>

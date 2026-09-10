@@ -1,0 +1,184 @@
+<%- include('partials/header', { title: 'Telefonía — Adaria Vera' }) %>
+<h1>Telefonía</h1>
+<p class="muted">Estado a 10/08/2026. Arquitectura híbrida: <b>Setera (nube)</b> = telefonía en uso · equipo local Grandstream/Vega = probablemente <b>legacy sin uso</b> (a confirmar).</p>
+
+  <h2 class="tel-t">📞 Teléfonos operativos por habitación <span style="font-size:12px;color:#5b6c74;font-weight:400">· parte recepción 14/08/2026</span></h2>
+  <p class="muted">Verde = funciona · rojo = no funciona. Toca una habitación para marcarla como arreglada (se guarda en este navegador).</p>
+
+  <div class="habwrap">
+    <div class="habstats">
+      <div class="habstat ok"><div class="k">Operativos</div><div class="v" id="habOk">0</div></div>
+      <div class="habstat no"><div class="k">Averiados</div><div class="v" id="habNo">0</div></div>
+      <div class="habstat"><div class="k">% operativo</div><div class="v" id="habPct">0%</div><div class="habbar"><i id="habBar"></i></div></div>
+      <div class="habstat"><div class="k">Habitaciones</div><div class="v" id="habTot">0</div></div>
+    </div>
+    <div class="habtools">
+      <button type="button" class="habbtn" id="habSolo" aria-pressed="false">Solo averiados</button>
+      <button type="button" class="habbtn" id="habReset">Reiniciar</button>
+    </div>
+    <div id="habFloors"></div>
+    <div class="habnote">🔧 <b>Planta 2 caída al completo</b> → apunta a un fallo del <b>gateway de esa planta</b> (revisar con Setesur), no habitación por habitación.</div>
+  </div>
+
+  <style>
+  .habwrap{margin:6px 0 10px}
+  .habstats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 12px}
+  .habstat{background:#fff;border:1px solid #e3eef3;border-radius:12px;padding:12px 14px;box-shadow:0 2px 4px rgba(0,0,0,.06)}
+  .habstat .k{font-size:11px;color:#5b6c74;text-transform:uppercase;letter-spacing:.05em}
+  .habstat .v{font-size:26px;font-weight:700;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums}
+  .habstat.ok .v{color:#128a52}.habstat.no .v{color:#c8382f}
+  .habbar{height:6px;border-radius:99px;background:#e7edf0;overflow:hidden;margin-top:8px}
+  .habbar>i{display:block;height:100%;background:#128a52}
+  .habtools{display:flex;gap:8px;margin:0 0 12px}
+  .habbtn{font:inherit;background:#fff;border:1px solid #d3dde2;border-radius:9px;padding:7px 12px;font-size:13px;cursor:pointer}
+  .habbtn[aria-pressed="true"]{border-color:#1b5e75;color:#1b5e75;background:#eaf6ff}
+  .habfloor{background:#fff;border:1px solid #e3eef3;border-radius:12px;padding:12px 14px 14px;margin-bottom:12px;box-shadow:0 2px 4px rgba(0,0,0,.06)}
+  .habfloor .fh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .habfloor .fh h3{margin:0;font-size:14px;color:#1b5e75}
+  .habfloor .fh .fbar{flex:0 0 110px;height:6px;border-radius:99px;background:#e7edf0;overflow:hidden}
+  .habfloor .fh .fbar>i{display:block;height:100%;background:#128a52}
+  .habfloor .fh .meta{margin-left:auto;font-size:12px;color:#5b6c74;font-variant-numeric:tabular-nums}
+  .habgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px}
+  .habr{border-radius:10px;border:1px solid #d3dde2;background:#eef2f4;padding:8px 4px 6px;text-align:center;cursor:pointer;font:inherit}
+  .habr .n{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;color:#15242b}
+  .habr .s{font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin-top:2px}
+  .habr.ok{background:#e4f4ea;border-color:#9ad6b6}.habr.ok .s{color:#128a52}
+  .habr.no{background:#fbe6e4;border-color:#eeaba5}.habr.no .s{color:#c8382f}
+  .habnote{background:#fdf6ec;border-left:4px solid #f39c12;border-radius:10px;padding:11px 14px;font-size:13px;color:#7a5b1e;margin-top:4px}
+  @media(max-width:620px){.habstats{grid-template-columns:repeat(2,1fr)}}
+  </style>
+
+  <script>
+  (function(){
+    var BASE={1:{101:1,102:0,103:1,104:1,105:1,106:0,107:1,108:1,109:1,110:1,111:1,112:0,114:1,115:0,116:1,117:1,118:0,119:1,120:1,121:0,122:0,123:1,124:0,125:1,126:1},
+      2:{},3:{301:1,302:1,303:0,304:0,305:1,306:0,307:0,308:0,309:1,310:1,311:1,312:1,314:1,315:0,316:1,317:1,318:1,319:1,320:1,321:1,322:1,323:1,324:1,325:1,326:1}};
+    for(var n=201;n<=226;n++){ if(n!==213) BASE[2][n]=0; }
+    var KEY="adaria-tel-dash-v1";
+    function clone(o){return JSON.parse(JSON.stringify(o));}
+    var state; try{ state=JSON.parse(localStorage.getItem(KEY))||clone(BASE);}catch(e){ state=clone(BASE);}
+    function save(){ try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){} }
+    var solo=false;
+    var floorsEl=document.getElementById("habFloors");
+    function render(){
+      floorsEl.innerHTML=""; var tOk=0,tNo=0;
+      [1,2,3].forEach(function(f){
+        var rooms=state[f]; var nums=Object.keys(rooms).map(Number).sort(function(a,b){return a-b;});
+        var ok=0; nums.forEach(function(n){ if(rooms[n])ok++; }); var tot=nums.length; tOk+=ok; tNo+=(tot-ok);
+        var pct=tot?Math.round(ok/tot*100):0;
+        var sec=document.createElement("div"); sec.className="habfloor";
+        var head=document.createElement("div"); head.className="fh";
+        head.innerHTML='<h3>Planta '+f+'</h3><div class="fbar"><i style="width:'+pct+'%"></i></div><span class="meta">'+ok+'/'+tot+' operativos</span>';
+        sec.appendChild(head);
+        var grid=document.createElement("div"); grid.className="habgrid";
+        nums.forEach(function(n){
+          var okv=!!rooms[n]; if(solo&&okv) return;
+          var b=document.createElement("button"); b.type="button"; b.className="habr "+(okv?"ok":"no");
+          b.setAttribute("aria-pressed",okv?"true":"false");
+          b.setAttribute("aria-label","Habitación "+n+", "+(okv?"funciona":"no funciona")+", tocar para cambiar");
+          b.innerHTML='<div class="n">'+n+'</div><div class="s">'+(okv?"OK":"NO")+'</div>';
+          b.addEventListener("click",function(){ state[f][n]=okv?0:1; save(); render(); });
+          grid.appendChild(b);
+        });
+        if(!grid.children.length){ var p=document.createElement("div"); p.style.cssText="color:#5b6c74;font-size:13px"; p.textContent="Sin averías en esta planta."; grid.appendChild(p); }
+        sec.appendChild(grid); floorsEl.appendChild(sec);
+      });
+      var tot=tOk+tNo, pct=tot?Math.round(tOk/tot*100):0;
+      document.getElementById("habOk").textContent=tOk;
+      document.getElementById("habNo").textContent=tNo;
+      document.getElementById("habTot").textContent=tot;
+      document.getElementById("habPct").textContent=pct+"%";
+      document.getElementById("habBar").style.width=pct+"%";
+    }
+    document.getElementById("habSolo").addEventListener("click",function(){ solo=!solo; this.setAttribute("aria-pressed",solo?"true":"false"); render(); });
+    document.getElementById("habReset").addEventListener("click",function(){ state=clone(BASE); save(); solo=false; document.getElementById("habSolo").setAttribute("aria-pressed","false"); render(); });
+    render();
+  })();
+  </script>
+
+
+<div class="tel">
+
+  <div class="tel-arch">
+    <div class="tel-box tel-live">
+      <div class="tel-h">☁️ SETERA — Centralita en la nube <span class="tel-badge ok">EN USO</span></div>
+      <p>Teléfonos IP de recepción/oficinas. Es la telefonía real del hotel. Contrato del <b>grupo</b>.</p>
+    </div>
+    <div class="tel-box tel-legacy">
+      <div class="tel-h">🖥️ LOCAL (Grandstream/Vega) <span class="tel-badge warn">LEGACY ?</span></div>
+      <p>Equipo físico en el rack. Sin credenciales (proveedor saliente no las entregó). Probablemente en desuso desde que entró Setera. <b>A confirmar si las habitaciones tienen teléfono.</b></p>
+    </div>
+  </div>
+
+  <h2 class="tel-t">☁️ Servicio Setera (nube)</h2>
+  <table class="tel-tbl">
+    <tr><th>Operador</th><td>Setera Spain SLU · NIF B87907788 · soporte@setera.com · +34 910 482 376</td></tr>
+    <tr><th>Cuenta</th><td><b>SUBES976</b> (ref. SUBES976-SOES1358)</td></tr>
+    <tr><th>Titular / facturación</th><td>Activos Turísticos Vera S.L. · NIF B27667542 (dirección del grupo, Reus)</td></tr>
+    <tr><th>Cuota</th><td><b>86,50 €/mes</b> (última factura 314 € = may+jun+jul 2026)</td></tr>
+    <tr><th>Incluye</th><td>5× Licencia Basic (5 extensiones IP) · 4× Canal Enterprise SIP-Trunk (troncal salida, 4 simultáneas) · Bono 1.000 min</td></tr>
+    <tr><th>Dominio SIP</th><td><b>hotel-adaria.com</b> (con guion; ≠ hoteladariavera.com)</td></tr>
+    <tr><th>Servidores SIP</th><td>edgea.prod.setera.com:5061 · backup edgeb.prod.setera.com:5061 · TLS · registro 3600s</td></tr>
+    <tr><th>Gestión</th><td>⚠️ Portal de administración Setera — <b>acceso pendiente</b> (pedir internamente, contrato del grupo)</td></tr>
+  </table>
+
+  <h2 class="tel-t">📞 Teléfonos IP (Mitel 6910 · Setera)</h2>
+  <p class="muted">Acceso web a los teléfonos: usuario <code>admin</code> / contraseña <code>11233455</code> (Basic auth). SIP TLS/SRTP.</p>
+  <table class="tel-tbl grid">
+    <thead><tr><th>IP</th><th>Modelo</th><th>Extensión</th><th>Nombre</th><th>Notas</th></tr></thead>
+    <tbody>
+      <tr><td>192.168.1.12</td><td>Mitel 6910</td><td>adaria.00</td><td>Recepción 500</td><td>Confirmado</td></tr>
+      <tr><td>192.168.1.16</td><td>Mitel 6910</td><td>—</td><td>—</td><td>Por mapear</td></tr>
+      <tr><td>192.168.1.17</td><td>Mitel 6910</td><td>—</td><td>—</td><td>Por mapear</td></tr>
+      <tr><td>192.168.1.41</td><td>Mitel 6910</td><td>—</td><td>—</td><td>Por mapear</td></tr>
+      <tr><td>192.168.1.202 / .203 / .223</td><td>Grandstream GXP (2013)</td><td>—</td><td>—</td><td>admin cambiado; ¿en uso?</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="tel-t">🖥️ Equipo local (legacy — sin credenciales)</h2>
+  <table class="tel-tbl grid">
+    <thead><tr><th>Equipo</th><th>IP</th><th>Rol</th><th>Acceso</th></tr></thead>
+    <tbody>
+      <tr><td>Grandstream UCM6202 (fw 1.0.20.49)</td><td>192.168.1.71</td><td>Centralita/PBX local</td><td>🔒 admin desconocido (⚠️ quedan 3 intentos antes de bloqueo)</td></tr>
+      <tr><td>Sangoma / VegaStream Vega 50</td><td>192.168.1.199</td><td>Gateway líneas externas</td><td>🔒 admin desconocido</td></tr>
+      <tr><td>2× Grandstream GXW4232 (32 FXS c/u)</td><td>50.50.1.247 (+1)</td><td>Gateways analógicos habitación (hasta 64 ext.)</td><td>Red 50.50 — no accesible por VPN. MACs 00:0B:82:4B:B4:04/05</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="tel-t">💶 Presupuesto alternativo — ICATEL</h2>
+  <table class="tel-tbl">
+    <tr><th>Proveedor</th><td>ICATEL NETWORK SL (B20927323, Girona) · comercial Francesc Rubio Muñoz · 900801224</td></tr>
+    <tr><th>Cuota (S540394)</th><td><b>82,77 €/mes</b> — numeración + troncal + bono 2.000 min + mantenimiento software Central IP "en server"</td></tr>
+    <tr><th>Puesta en marcha (S540395)</th><td><b>435,60 €</b> único</td></tr>
+    <tr><th>Propuesta</th><td>Montar una centralita IP propia que unifique recepción + habitaciones</td></tr>
+  </table>
+
+  <h2 class="tel-t">❓ Pendiente / a confirmar</h2>
+  <ul class="tel-pend">
+    <li><b>Acceso al portal de Setera</b> (interno del grupo, cuenta SUBES976) — prioritario.</li>
+    <li><b>¿Funcionan los teléfonos de las habitaciones?</b> (5 licencias Setera ≠ 75 habitaciones → comprobación física: descolgar un teléfono de habitación).</li>
+    <li>Mapear extensiones de los Mitel .16/.17/.41.</li>
+    <li>Decisión estratégica: mantener Setera vs consolidar con ICATEL (con portabilidad de numeración + re-registro de los GXW).</li>
+    <li>Retirar del rack el equipo local si se confirma que está sin uso.</li>
+  </ul>
+
+</div>
+
+<style>
+.tel .tel-arch{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0 8px}
+.tel .tel-box{flex:1;min-width:260px;border-radius:12px;padding:14px 16px;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.tel .tel-live{background:#eaf6ff;border-left:5px solid #1b5e75}
+.tel .tel-legacy{background:#fdf6ec;border-left:5px solid #f39c12}
+.tel .tel-h{font-weight:700;font-size:15px;margin-bottom:6px}
+.tel .tel-box p{margin:0;font-size:13px;color:#444}
+.tel .tel-badge{font-size:11px;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle}
+.tel .tel-badge.ok{background:#e8f8ef;color:#27ae60}
+.tel .tel-badge.warn{background:#fef5e7;color:#b9770e}
+.tel .tel-t{color:#1b5e75;margin:22px 0 8px;font-size:17px}
+.tel .tel-tbl{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,.06)}
+.tel .tel-tbl th{background:#d4e9f3;color:#1b5e75;text-align:left;padding:8px 12px;white-space:nowrap;vertical-align:top}
+.tel .tel-tbl td{border-bottom:1px solid #eee;padding:8px 12px}
+.tel .tel-tbl.grid thead th{background:#1b5e75;color:#fff}
+.tel .tel-pend{font-size:13px;line-height:1.7}
+.tel code{background:#d4e9f3;padding:1px 5px;border-radius:4px}
+</style>
+<%- include('partials/footer') %>

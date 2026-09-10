@@ -1,0 +1,100 @@
+<%- include('partials/header', { title: 'Estructura de red — Adaria Vera' }) %>
+<h1>Estructura de red</h1>
+<p class="muted">Inventario editable de toda la red (sondeo vía VPN). Los cambios se guardan en <b>este navegador</b>. Usa Exportar/Importar JSON para compartirlos.</p>
+
+<div class="estred">
+  <div class="er-bar">
+    <button class="er-b er-primary" onclick="erSave()">💾 Guardar</button>
+    <button class="er-b er-ghost" onclick="erExport()">⬇️ Exportar JSON</button>
+    <button class="er-b er-ghost" onclick="document.getElementById('erImp').click()">⬆️ Importar</button>
+    <input type="file" id="erImp" hidden accept="application/json" onchange="erImport(event)">
+    <button class="er-b er-ghost" onclick="window.print()">🖨️ Imprimir</button>
+    <button class="er-b er-accent" onclick="erReset()">↺ Restaurar</button>
+    <span class="er-status" id="erStatus"></span>
+  </div>
+  <div class="er-note"><b>⚠️</b> VPN (<code>adrariavera</code>=192.168.1.101) solo enruta <code>192.168.1.0/24</code>; la red <code>50.50.0.0/24</code> (WiFi/CCTV/tel. analógica) NO es accesible en remoto y es IP pública mal usada. Telefonía (UCM6202 + Vega 50 + teléfonos) con contraseñas cambiadas por el proveedor saliente y no entregadas.</div>
+  <div id="erApp"></div>
+</div>
+
+<style>
+.estred .er-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.estred .er-b{font-size:13px;border:none;border-radius:8px;padding:8px 14px;cursor:pointer}
+.estred .er-primary{background:#1b5e75;color:#fff}.estred .er-ghost{background:#d4e9f3;color:#1b5e75}.estred .er-accent{background:#c67c6f;color:#fff}
+.estred .er-status{font-size:12px;color:#a0a2a5;margin-left:auto}
+.estred .er-note{background:#fff;border-left:4px solid #f39c12;padding:10px 14px;border-radius:8px;margin-bottom:18px;font-size:13px}
+.estred .er-group{background:#fff;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,.08);margin-bottom:20px;overflow:hidden}
+.estred .er-group>h2{margin:0;padding:12px 18px;font-size:16px;color:#fff}
+.estred .g-acceso>h2{background:#4a9b8e}.estred .g-red>h2{background:#1b5e75}.estred .g-srv>h2{background:#2d8aa3}
+.estred .g-tel>h2{background:#c67c6f}.estred .g-fon>h2{background:#b06a5e}.estred .g-cctv>h2{background:#6a5acd}
+.estred .g-pc>h2{background:#5ba8c7}.estred .g-otros>h2{background:#d4b8a3;color:#333}
+.estred table{width:100%;border-collapse:collapse;font-size:13px}
+.estred th{background:#d4e9f3;color:#1b5e75;text-align:left;padding:8px 10px;font-size:12px}
+.estred td{border-bottom:1px solid #eee;padding:6px 10px;vertical-align:top}
+.estred td[contenteditable]:focus{outline:2px solid #5ba8c7;background:#fffef7}
+.estred .er-del{color:#e74c3c;cursor:pointer;font-weight:bold;padding:0 6px}
+.estred .er-add{width:100%;background:#f8f9fa;color:#1b5e75;border:none;border-top:1px dashed #5ba8c7;padding:8px;cursor:pointer}
+@media print{.estred .er-bar,.estred .er-add,.estred .er-del{display:none}}
+</style>
+
+<script>
+const ER_COLS=["IP / Dirección","Equipo","Marca / Modelo","Usuario","Contraseña","Estado / Notas"];
+const ER_DATA0={
+ "g-acceso|🔑 Acceso & VPN":[
+  ["100.87.96.117","Nodo Tailscale adrariavera","Tailscale (VM102 Proxmox)","—","—","Subnet router. LAN Vera=192.168.1.101. Enruta SOLO 192.168.1.0/24"]],
+ "g-red|🌐 Red / Gateway":[
+  ["192.168.1.1","Router fibra","Askey RTF8225VW (Movistar WiFi6)","—","QsFwgSf3","Gateway/fibra. ID DC08DA676DB0"],
+  ["192.168.1.0/24","Red STAFF","—","—","—","Red interna principal (privada)"],
+  ["50.50.0.0/24","Red WiFi/CCTV/Tel","—","—","—","⚠️ IP PÚBLICA mal usada. No accesible por VPN. Renumerar"],
+  ["192.168.1.14","Punto de acceso WiFi","Cudy AP3000 (WiFi6, LuCI/OpenWrt)","root/admin","(tu despliegue)","AP producción. /cgi-bin/luci/"],
+  ["—","Switch NETGEAR 'RED WIFI'","NETGEAR","admin","(def. password)","Alimenta APs"],
+  ["—","Switch NETGEAR ProSAFE","JGS516PE (16p,8 PoE)","admin","(def. password)","Rack Fonestar"],
+  ["—","Switch NETGEAR 'HOTEL'","NETGEAR","admin","(def. password)","Rack principal"]],
+ "g-srv|🖥️ Servidores":[
+  ["192.168.1.10","Proxmox VE 8.1.4 (host adariavera)","HP ProLiant","root","***REMOVED***","✅ ACCESIBLE. CTs: Frigate100, Tailscale102, Web103"],
+  ["—","iLO ProLiant","HP iLO","Administrator","C8Z58VRS","Etiqueta física. S/N CZ141300VR"],
+  ["192.168.1.30","Servidor web","nginx","—","—","Web 'Hotel Adaria Vera'"],
+  ["192.168.1.210","Servidor Windows","IIS","Administrador","Server25","Servidor BD PMS ACI Dali"]],
+ "g-tel|☎️ Telefonía — Centralita & Gateways":[
+  ["192.168.1.71","CENTRALITA / PBX","Grandstream UCM6202 (fw 1.0.20.49)","admin","🔒 DESCONOCIDA","Cerebro. MAC C0:74:AD:95:C0:FD. 2FXO+2FXS. https:8089. Pass cambiada por proveedor"],
+  ["192.168.1.199","Gateway líneas externas","Sangoma/VegaStream Vega 50","admin","🔒 DESCONOCIDA","VEGAEURO 13.02. Telnet/SSH/https. Líneas Movistar→SIP"],
+  ["50.50.1.247","Gateway ext. analóg. #1","Grandstream GXW4232 (32 FXS)","admin","(def. admin/admin)","No accesible (50.50). S/N ...BB404, MAC 00:0B:82:4B:B4:04"],
+  ["(50.50.x)","Gateway ext. analóg. #2","Grandstream GXW4232 (32 FXS)","admin","(def. admin/admin)","S/N ...BB405, MAC 00:0B:82:4B:B4:05. Hasta 64 ext."]],
+ "g-fon|📞 Teléfonos IP (7 confirmados)":[
+  ["192.168.1.12","Teléfono","Mitel 6910","admin","22222 (user 1234)","SIP"],
+  ["192.168.1.16","Teléfono","Mitel 6910","admin","22222 (user 1234)","SIP"],
+  ["192.168.1.17","Teléfono","Mitel 6910","admin","22222 (user 1234)","SIP"],
+  ["192.168.1.41","Teléfono","Mitel 6910","admin","22222 (user 1234)","SIP"],
+  ["192.168.1.202","Teléfono","Grandstream GXP (2013)","admin","🔒 (def. admin, cambiada)","SIP"],
+  ["192.168.1.203","Teléfono","Grandstream GXP (2013)","admin","🔒 (def. admin, cambiada)","SIP"],
+  ["192.168.1.223","Teléfono","Grandstream GXP (2013)","admin","🔒 (def. admin, cambiada)","SIP"],
+  ["192.168.1.40","Teléfono (posible 8º)","Mitel 6910 / PC Cafetería","—","—","Offline en el sondeo"]],
+ "g-cctv|📹 CCTV":[
+  ["192.168.1.80","Grabador DVR","IPTECNO","admin","admin","Legacy. Telnet+http"],
+  ["—","Frigate NVR","CT100 Proxmox","admin","***REMOVED***","frigate-va. Cámaras Tapo C210"],
+  ["50.50.0.131-151","Cámaras (6x)","TP-Link Tapo C210","asanchez","***REMOVED***","Red 50.50"]],
+ "g-pc|💻 PCs / Estaciones (datos proveedor)":[
+  ["192.168.1.34","W10 Lavandería","PC Windows","(admin)","—","WORKERGROUP"],
+  ["192.168.1.70","Dirección","PC Windows","Olga","—","WORKERGROUP"],
+  ["192.168.1.37","Recepción","PC Windows","Sergio","recepcion1","WORKERGROUP"],
+  ["192.168.1.38","Recepción Der.","PC Windows","—","—","WORKERGROUP"],
+  ["192.168.1.39","Comedor","PC Windows","—","2023.0","WORKERGROUP"],
+  ["192.168.1.40","Cafetería","PC Windows","—","2023.0","WORKERGROUP"],
+  ["192.168.1.41","Mantenimiento","PC Windows","Alex","manten2014","(IP ahora usada por teléfono Mitel)"]],
+ "g-otros|🖨️ Otros / Impresoras":[
+  ["192.168.1.13","Impresora","Canon","Administrador","1234567","CANON HTTP Server"]]
+};
+const erApp=document.getElementById('erApp');
+let ER=erLoad()||JSON.parse(JSON.stringify(ER_DATA0));
+function erEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function erRender(){erApp.innerHTML='';for(const k in ER){const[cls,title]=k.split('|');const g=document.createElement('div');g.className='er-group '+cls;const rows=ER[k].map((r,ri)=>'<tr>'+r.map((c,ci)=>'<td contenteditable oninput="erEdit(\''+k+'\','+ri+','+ci+',this)">'+erEsc(c)+'</td>').join('')+'<td class="er-del" onclick="erDel(\''+k+'\','+ri+')">✕</td></tr>').join('');g.innerHTML='<h2>'+title+'</h2><table><thead><tr>'+ER_COLS.map(c=>'<th>'+c+'</th>').join('')+'<th></th></tr></thead><tbody>'+rows+'</tbody></table><button class="er-add" onclick="erAdd(\''+k+'\')">+ añadir fila</button>';erApp.appendChild(g);}}
+function erEdit(k,ri,ci,el){ER[k][ri][ci]=el.innerText;erSave(true)}
+function erAdd(k){ER[k].push(["","","","","",""]);erRender();erSave(true)}
+function erDel(k,ri){if(confirm('¿Borrar fila?')){ER[k].splice(ri,1);erRender();erSave(true)}}
+function erSave(s){localStorage.setItem('estred_vera',JSON.stringify(ER));const e=document.getElementById('erStatus');e.textContent='Guardado '+new Date().toLocaleTimeString('es-ES')}
+function erLoad(){try{return JSON.parse(localStorage.getItem('estred_vera'))}catch(e){return null}}
+function erReset(){if(confirm('¿Restaurar original? Perderás tus ediciones.')){ER=JSON.parse(JSON.stringify(ER_DATA0));erRender();erSave()}}
+function erExport(){const b=new Blob([JSON.stringify(ER,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='estructura_red_vera.json';a.click()}
+function erImport(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{ER=JSON.parse(r.result);erRender();erSave()}catch(x){alert('JSON no válido')}};r.readAsText(f)}
+erRender();
+</script>
+<%- include('partials/footer') %>

@@ -1,0 +1,27 @@
+<%- include('partials/header', { title: 'Copias de seguridad — Adaria Vera' }) %>
+<h1>Copias de seguridad</h1>
+<p class="sub">Estrategia, trabajos programados, retención y procedimiento de restauración del Hotel Adaria Vera.</p>
+<% if(user&&user.role==='admin'){ %><p><a class="btn btn-sm" href="/editar/backup_jobs">✏️ Editar trabajos</a></p><% } %>
+
+<h2>Trabajos de copia</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Trabajo</th><th>Origen</th><th>Destino</th><th>Tipo</th><th>Frecuencia</th><th>Hora</th><th>Retención</th><th>Responsable</th><th>Estado</th></tr></thead>
+  <tbody>
+  <% jobs.forEach(function(j){ %>
+    <tr>
+      <td><strong><%= j.nombre %></strong><% if(j.notas){ %><br><span class="muted" style="font-size:12px"><%= j.notas %></span><% } %></td>
+      <td><%= j.origen||'' %></td>
+      <td class="mono" style="font-size:13px"><%= j.destino||'' %></td>
+      <td><%= j.tipo||'' %></td>
+      <td><%= j.frecuencia||'' %></td>
+      <td><%= j.hora||'' %></td>
+      <td style="font-size:13px"><%= j.retencion||'' %></td>
+      <td><%= j.responsable||'' %></td>
+      <td><% var e=(j.estado||'').toLowerCase(); var c=e.indexOf('pendiente')>-1?'b-off':(e.indexOf('operativo')>-1?'b-ok':'b-lector'); %><span class="badge <%= c %>"><%= j.estado||'' %></span></td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table></div>
+
+<div class="card hoja" style="margin-top:24px"><%- doc %></div>
+<%- include('partials/footer') %>

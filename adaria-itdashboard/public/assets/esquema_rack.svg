@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg">
+  <!-- Estilos -->
+  <defs>
+    <style>
+      .titulo { font-size: 28px; font-weight: bold; fill: #1a1a1a; font-family: Arial, sans-serif; }
+      .subtitulo { font-size: 16px; fill: #333; font-weight: bold; font-family: Arial, sans-serif; }
+      .etiqueta { font-size: 12px; fill: #333; font-family: Arial, sans-serif; font-weight: 600; }
+      .subtexto { font-size: 11px; fill: #666; font-family: Arial, sans-serif; }
+      .ip-mono { font-size: 10px; fill: #0d47a1; font-family: monospace; font-weight: bold; }
+      .rack-frame { fill: #1a1a1a; stroke: #666; stroke-width: 3; }
+      .unidad { fill: #f5f5f5; stroke: #999; stroke-width: 1; }
+      .servidor-color { fill: #c8e6c9; stroke: #2e7d32; stroke-width: 2; }
+      .red-color { fill: #bbdefb; stroke: #1565c0; stroke-width: 2; }
+      .energia-color { fill: #ffe0b2; stroke: #e65100; stroke-width: 2; }
+      .refrigeracion-color { fill: #f0f4c3; stroke: #9ccc65; stroke-width: 2; }
+      .etiq-u { font-size: 9px; fill: #999; font-weight: bold; }
+      .activo { fill: #4caf50; }
+      .inactivo { fill: #bdbdbd; }
+      .led { r: 4; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <!-- Fondo -->
+  <rect width="1400" height="1000" fill="#fafafa"/>
+
+  <!-- Título -->
+  <text x="700" y="40" text-anchor="middle" class="titulo">DIAGRAMA RACK 19" VeraAdaria</text>
+  <text x="700" y="65" text-anchor="middle" class="subtexto">Infraestructura física - 42U estándar</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- RACK IZQUIERDO: COLUMNA U ═════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Marco del rack -->
+  <rect x="100" y="100" width="80" height="850" class="rack-frame"/>
+  <rect x="105" y="105" width="70" height="840" fill="#333" stroke="none"/>
+
+  <!-- Líneas separadoras de unidades (42U) -->
+  <g id="rack-lines" stroke="#666" stroke-width="0.5">
+    <!-- Cada U mide ~20px de altura -->
+    <line x1="100" y1="120" x2="180" y2="120"/> <!-- U42 -->
+    <line x1="100" y1="140" x2="180" y2="140"/> <!-- U41 -->
+    <line x1="100" y1="160" x2="180" y2="160"/> <!-- U40 -->
+    <line x1="100" y1="180" x2="180" y2="180"/> <!-- U39 -->
+    <line x1="100" y1="200" x2="180" y2="200"/> <!-- U38 -->
+    <line x1="100" y1="220" x2="180" y2="220"/> <!-- U37 -->
+    <line x1="100" y1="240" x2="180" y2="240"/> <!-- U36 -->
+    <line x1="100" y1="260" x2="180" y2="260"/> <!-- U35 -->
+    <line x1="100" y1="280" x2="180" y2="280"/> <!-- U34 -->
+    <line x1="100" y1="300" x2="180" y2="300"/> <!-- U33 -->
+    <line x1="100" y1="320" x2="180" y2="320"/> <!-- U32 -->
+    <line x1="100" y1="340" x2="180" y2="340"/> <!-- U31 -->
+    <line x1="100" y1="360" x2="180" y2="360"/> <!-- U30 -->
+    <line x1="100" y1="380" x2="180" y2="380"/> <!-- U29 -->
+    <line x1="100" y1="400" x2="180" y2="400"/> <!-- U28 -->
+    <line x1="100" y1="420" x2="180" y2="420"/> <!-- U27 -->
+    <line x1="100" y1="440" x2="180" y2="440"/> <!-- U26 -->
+    <line x1="100" y1="460" x2="180" y2="460"/> <!-- U25 -->
+    <line x1="100" y1="480" x2="180" y2="480"/> <!-- U24 -->
+    <line x1="100" y1="500" x2="180" y2="500"/> <!-- U23 -->
+    <line x1="100" y1="520" x2="180" y2="520"/> <!-- U22 -->
+    <line x1="100" y1="540" x2="180" y2="540"/> <!-- U21 -->
+    <line x1="100" y1="560" x2="180" y2="560"/> <!-- U20 -->
+    <line x1="100" y1="580" x2="180" y2="580"/> <!-- U19 -->
+    <line x1="100" y1="600" x2="180" y2="600"/> <!-- U18 -->
+    <line x1="100" y1="620" x2="180" y2="620"/> <!-- U17 -->
+    <line x1="100" y1="640" x2="180" y2="640"/> <!-- U16 -->
+    <line x1="100" y1="660" x2="180" y2="660"/> <!-- U15 -->
+    <line x1="100" y1="680" x2="180" y2="680"/> <!-- U14 -->
+    <line x1="100" y1="700" x2="180" y2="700"/> <!-- U13 -->
+    <line x1="100" y1="720" x2="180" y2="720"/> <!-- U12 -->
+    <line x1="100" y1="740" x2="180" y2="740"/> <!-- U11 -->
+    <line x1="100" y1="760" x2="180" y2="760"/> <!-- U10 -->
+    <line x1="100" y1="780" x2="180" y2="780"/> <!-- U9 -->
+    <line x1="100" y1="800" x2="180" y2="800"/> <!-- U8 -->
+    <line x1="100" y1="820" x2="180" y2="820"/> <!-- U7 -->
+    <line x1="100" y1="840" x2="180" y2="840"/> <!-- U6 -->
+    <line x1="100" y1="860" x2="180" y2="860"/> <!-- U5 -->
+    <line x1="100" y1="880" x2="180" y2="880"/> <!-- U4 -->
+    <line x1="100" y1="900" x2="180" y2="900"/> <!-- U3 -->
+    <line x1="100" y1="920" x2="180" y2="920"/> <!-- U2 -->
+    <line x1="100" y1="940" x2="180" y2="940"/> <!-- U1 -->
+  </g>
+
+  <!-- Numeración U (lado izquierdo) -->
+  <text x="85" y="115" text-anchor="end" class="etiq-u">U42</text>
+  <text x="85" y="135" text-anchor="end" class="etiq-u">U41</text>
+  <text x="85" y="155" text-anchor="end" class="etiq-u">U40</text>
+  <text x="85" y="175" text-anchor="end" class="etiq-u">U39</text>
+  <text x="85" y="195" text-anchor="end" class="etiq-u">U38</text>
+  <text x="85" y="215" text-anchor="end" class="etiq-u">U37</text>
+  <text x="85" y="235" text-anchor="end" class="etiq-u">U36</text>
+  <text x="85" y="255" text-anchor="end" class="etiq-u">U35</text>
+  <text x="85" y="275" text-anchor="end" class="etiq-u">U34</text>
+  <text x="85" y="295" text-anchor="end" class="etiq-u">U33</text>
+  <text x="85" y="315" text-anchor="end" class="etiq-u">U32</text>
+  <text x="85" y="335" text-anchor="end" class="etiq-u">U31</text>
+  <text x="85" y="355" text-anchor="end" class="etiq-u">U30</text>
+  <text x="85" y="375" text-anchor="end" class="etiq-u">U29</text>
+  <text x="85" y="395" text-anchor="end" class="etiq-u">U28</text>
+  <text x="85" y="415" text-anchor="end" class="etiq-u">U27</text>
+  <text x="85" y="435" text-anchor="end" class="etiq-u">U26</text>
+  <text x="85" y="455" text-anchor="end" class="etiq-u">U25</text>
+  <text x="85" y="475" text-anchor="end" class="etiq-u">U24</text>
+  <text x="85" y="495" text-anchor="end" class="etiq-u">U23</text>
+  <text x="85" y="515" text-anchor="end" class="etiq-u">U22</text>
+  <text x="85" y="535" text-anchor="end" class="etiq-u">U21</text>
+  <text x="85" y="555" text-anchor="end" class="etiq-u">U20</text>
+  <text x="85" y="575" text-anchor="end" class="etiq-u">U19</text>
+  <text x="85" y="595" text-anchor="end" class="etiq-u">U18</text>
+  <text x="85" y="615" text-anchor="end" class="etiq-u">U17</text>
+  <text x="85" y="635" text-anchor="end" class="etiq-u">U16</text>
+  <text x="85" y="655" text-anchor="end" class="etiq-u">U15</text>
+  <text x="85" y="675" text-anchor="end" class="etiq-u">U14</text>
+  <text x="85" y="695" text-anchor="end" class="etiq-u">U13</text>
+  <text x="85" y="715" text-anchor="end" class="etiq-u">U12</text>
+  <text x="85" y="735" text-anchor="end" class="etiq-u">U11</text>
+  <text x="85" y="755" text-anchor="end" class="etiq-u">U10</text>
+  <text x="85" y="775" text-anchor="end" class="etiq-u">U9</text>
+  <text x="85" y="795" text-anchor="end" class="etiq-u">U8</text>
+  <text x="85" y="815" text-anchor="end" class="etiq-u">U7</text>
+  <text x="85" y="835" text-anchor="end" class="etiq-u">U6</text>
+  <text x="85" y="855" text-anchor="end" class="etiq-u">U5</text>
+  <text x="85" y="875" text-anchor="end" class="etiq-u">U4</text>
+  <text x="85" y="895" text-anchor="end" class="etiq-u">U3</text>
+  <text x="85" y="915" text-anchor="end" class="etiq-u">U2</text>
+  <text x="85" y="935" text-anchor="end" class="etiq-u">U1</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- EQUIPOS EN RACK ════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- U35-U33: Proxmox Host (3U) -->
+  <rect x="200" y="240" width="300" height="60" rx="3" class="servidor-color"/>
+  <text x="210" y="255" class="etiqueta" font-weight="bold">PROXMOX HOST</text>
+  <circle cx="510" cy="250" r="6" class="activo led"/>
+  <text x="210" y="272" class="subtexto">3U Server · SSD + 2× HDD 1TB</text>
+  <text x="210" y="288" class="ip-mono">192.168.1.10 · root/***REMOVED***</text>
+  <circle cx="510" cy="270" r="4" fill="#ff9800"/>
+  <circle cx="520" cy="270" r="4" fill="#4caf50"/>
+  <circle cx="530" cy="270" r="4" fill="#f44336"/>
+
+  <!-- U30-U29: Switch GS724TPv3 (2U) -->
+  <rect x="200" y="320" width="300" height="40" rx="3" class="red-color"/>
+  <text x="210" y="335" class="etiqueta" font-weight="bold">SWITCH CORE GS724TPv3</text>
+  <circle cx="510" cy="330" r="6" class="activo led"/>
+  <text x="210" y="353" class="ip-mono">192.168.1.1 (Gateway) · 24-Port PoE+</text>
+
+  <!-- U27-U26: Switch GS724TPv2 (2U) -->
+  <rect x="200" y="380" width="300" height="40" rx="3" class="red-color"/>
+  <text x="210" y="395" class="etiqueta" font-weight="bold">SWITCH GS724TPv2</text>
+  <circle cx="510" cy="390" r="6" class="activo led"/>
+  <text x="210" y="413" class="ip-mono">24-Port Smart PoE+ · 2021</text>
+
+  <!-- U24-U23: Switches JGS516PE #1 (2U) -->
+  <rect x="200" y="440" width="300" height="40" rx="3" class="red-color"/>
+  <text x="210" y="455" class="etiqueta" font-weight="bold">SWITCH JGS516PE #1</text>
+  <circle cx="510" cy="450" r="6" class="activo led"/>
+  <text x="210" y="473" class="ip-mono">16-Port ProSAFE PoE · Piso 1</text>
+
+  <!-- U21-U20: Switches JGS516PE #2 (2U) -->
+  <rect x="200" y="500" width="300" height="40" rx="3" class="red-color"/>
+  <text x="210" y="515" class="etiqueta" font-weight="bold">SWITCH JGS516PE #2</text>
+  <circle cx="510" cy="510" r="6" class="activo led"/>
+  <text x="210" y="533" class="ip-mono">16-Port ProSAFE PoE · Piso 2</text>
+
+  <!-- U18-U17: PDU Principal (2U) -->
+  <rect x="200" y="560" width="300" height="40" rx="3" class="energia-color"/>
+  <text x="210" y="575" class="etiqueta" font-weight="bold">PDU PRINCIPAL</text>
+  <circle cx="510" cy="570" r="6" class="activo led"/>
+  <text x="210" y="593" class="ip-mono">Smart PDU · 20 tomas · IP-SNMP</text>
+
+  <!-- U15-U14: UPS (2U) -->
+  <rect x="200" y="620" width="300" height="40" rx="3" class="energia-color"/>
+  <text x="210" y="635" class="etiqueta" font-weight="bold">UPS (Sin Especificar)</text>
+  <circle cx="510" cy="630" r="6" class="activo led"/>
+  <text x="210" y="653" class="ip-mono">Hasta 30 min autonomía recomendada</text>
+
+  <!-- U12-U11: Switch Refrigeración (2U) VACÍO -->
+  <rect x="200" y="680" width="300" height="40" rx="3" fill="#e0e0e0" stroke="#999" stroke-width="2" stroke-dasharray="3,3"/>
+  <text x="210" y="695" class="subtexto" fill="#999">U12-U11: VACÍO (Frigorífico ?) </text>
+  <text x="210" y="713" class="subtexto" fill="#999">Panel frontal para aire frío/caliente</text>
+
+  <!-- U8-U7: Fibra óptica conversor (2U) OPCIONAL -->
+  <rect x="200" y="760" width="300" height="40" rx="3" fill="#e8f5e9" stroke="#4caf50" stroke-width="2" stroke-dasharray="3,3"/>
+  <text x="210" y="775" class="etiqueta" font-weight="bold">MEDIA CONVERSOR (Opcional)</text>
+  <text x="210" y="793" class="ip-mono">SFP Fibra → Ethernet (futuro internet redundante)</text>
+
+  <!-- U5-U1: Piezas extras (5U) -->
+  <rect x="200" y="820" width="300" height="100" rx="3" fill="#fff9c4" stroke="#fbc02d" stroke-width="2" stroke-dasharray="3,3"/>
+  <text x="210" y="840" class="etiqueta" fill="#f57f17">ALMACENAMIENTO RACK</text>
+  <text x="210" y="860" class="subtexto">Cables · Adaptadores · Repuestos</text>
+  <text x="210" y="880" class="subtexto">Bandeja de cables · Guías de cables</text>
+  <text x="210" y="900" class="subtexto">Ventilador adicional · Filtro aire</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- PANEL DERECHO: DETALLES Y ESPECIFICACIONES ════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Resumen de equipos -->
+  <g id="resumen">
+    <rect x="550" y="100" width="400" height="200" fill="#f5f5f5" stroke="#999" stroke-width="2" rx="5"/>
+    <text x="750" y="125" text-anchor="middle" class="subtitulo">RESUMEN EQUIPOS</text>
+
+    <text x="570" y="155" class="etiqueta">Proxmox Host</text>
+    <text x="570" y="172" class="subtexto">• 3U Server · SSD + 2× HDD 1TB</text>
+    <text x="570" y="188" class="subtexto">• Frigate NVR (VM/CT)</text>
+    <text x="570" y="204" class="subtexto">• IP: 192.168.1.10</text>
+
+    <text x="570" y="230" class="etiqueta">Switches (5 unidades)</text>
+    <text x="570" y="247" class="subtexto">• 1× GS724TPv3 (Core, 24-Port)</text>
+    <text x="570" y="263" class="subtexto">• 1× GS724TPv2 (24-Port)</text>
+    <text x="570" y="279" class="subtexto">• 2× GS308EP (8-Port PoE cada)</text>
+
+    <text x="570" y="305" class="etiqueta">Energía y Refrigeración</text>
+    <text x="570" y="322" class="subtexto">• PDU Smart (20 tomas)</text>
+    <text x="570" y="338" class="subtexto">• UPS (autonomía 30 min)</text>
+  </g>
+
+  <!-- Tabla de puertos y conexiones -->
+  <g id="conexiones">
+    <rect x="550" y="320" width="400" height="200" fill="#f5f5f5" stroke="#999" stroke-width="2" rx="5"/>
+    <text x="750" y="345" text-anchor="middle" class="subtitulo">CONEXIONES PRINCIPALES</text>
+
+    <text x="570" y="375" class="etiqueta">Switch Core (U30-U29)</text>
+    <text x="570" y="392" class="subtexto">Puerto 1: Proxmox (Gigabit)</text>
+    <text x="570" y="408" class="subtexto">Puerto 2: Frigate NVR (Gigabit)</text>
+    <text x="570" y="424" class="subtexto">Puerto 3: Internet / Modem (Gigabit)</text>
+    <text x="570" y="440" class="subtexto">Puertos 4-6: Switches PoE</text>
+    <text x="570" y="456" class="subtexto">Puertos 7-24: Estaciones, WiFi AP</text>
+
+    <text x="570" y="482" class="etiqueta">Grandstream (Telefonía)</text>
+    <text x="570" y="499" class="subtexto">IP: 192.168.1.50 (Puerto dedicado)</text>
+    <text x="570" y="515" class="subtexto">Línea PSTN: Movostar → Puerto analógico</text>
+  </g>
+
+  <!-- Consumo y especificaciones técnicas -->
+  <g id="tech-specs">
+    <rect x="1000" y="100" width="350" height="420" fill="#f5f5f5" stroke="#999" stroke-width="2" rx="5"/>
+    <text x="1175" y="125" text-anchor="middle" class="subtitulo">ESPECIFICACIONES TÉCNICAS</text>
+
+    <text x="1020" y="155" class="etiqueta">FÍSICAS</text>
+    <text x="1020" y="172" class="subtexto">Altura: 42U estándar (2 m)</text>
+    <text x="1020" y="188" class="subtexto">Ancho: 19" (48.3 cm)</text>
+    <text x="1020" y="204" class="subtexto">Profundidad: 60-80 cm</text>
+    <text x="1020" y="220" class="subtexto">Peso total: ~200 kg (lleno)</text>
+
+    <text x="1020" y="250" class="etiqueta">ELECTRICIDAD</text>
+    <text x="1020" y="267" class="subtexto">Voltaje: 230V monofásico</text>
+    <text x="1020" y="283" class="subtexto">Consumo estimado: 2.5-3.5 kW</text>
+    <text x="1020" y="299" class="subtexto">PDU: 20 tomas C13 (16A)</text>
+    <text x="1020" y="315" class="subtexto">UPS: 30 min autonomía mín</text>
+
+    <text x="1020" y="345" class="etiqueta">REFRIGERACIÓN</text>
+    <text x="1020" y="362" class="subtexto">Temperatura: 18-27°C óptimo</text>
+    <text x="1020" y="378" class="subtexto">Humedad: 20-80% (sin condensación)</text>
+    <text x="1020" y="394" class="subtexto">Flujo aire: frontal (entrada) → dorsal (salida)</text>
+    <text x="1020" y="410" class="subtexto">Ventiladores: 2-3 frontal + 1-2 dorsal</text>
+
+    <text x="1020" y="440" class="etiqueta">RED CORE</text>
+    <text x="1020" y="457" class="subtexto">Ancho banda: Gigabit Ethernet (1 Gbps)</text>
+    <text x="1020" y="473" class="subtexto">PoE Budget: 375W (GS724TPv3)</text>
+    <text x="1020" y="489" class="subtexto">Redundancia: 2 switches + uplink SFP</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- NOTAS DE FLUJO DE AIRE ═════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+  <g id="air-flow">
+    <rect x="550" y="540" width="800" height="140" fill="#fff9c4" stroke="#fbc02d" stroke-width="2" rx="5"/>
+    <text x="950" y="565" text-anchor="middle" class="subtitulo">FLUJO DE AIRE Y UBICACIÓN RACK</text>
+
+    <text x="570" y="600" class="etiqueta">Posición del Rack:</text>
+    <text x="570" y="617" class="subtexto">• Sala técnica con acceso controlado (temperatura 18-27°C)</text>
+    <text x="570" y="633" class="subtexto">• Flujo frontal: entrada aire frío → procesamiento → salida aire caliente por dorso</text>
+    <text x="570" y="649" class="subtexto">• Distancia mínima paredes: 30-50 cm (ventilación cruzada)</text>
+
+    <text x="570" y="675" class="etiqueta">Puntos de Monitorización:</text>
+    <text x="570" y="692" class="subtexto">• Temp entrada/salida rack | Consumo watts PDU | Ocupación U disponibles</text>
+    <text x="570" y="708" class="subtexto">• Dashboard HA: `adariait.boitaullresort.com/rack` (futuro)</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- CÓDIGO COLORES LEYENDA ═════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+  <g id="leyenda-colores">
+    <rect x="100" y="950" width="1200" height="30" fill="#f0f0f0" stroke="#999" stroke-width="1" rx="3"/>
+
+    <rect x="115" y="957" width="20" height="16" class="servidor-color"/>
+    <text x="145" y="968" class="subtexto">Servidores/Computación</text>
+
+    <rect x="420" y="957" width="20" height="16" class="red-color"/>
+    <text x="450" y="968" class="subtexto">Equipos Red</text>
+
+    <rect x="650" y="957" width="20" height="16" class="energia-color"/>
+    <text x="680" y="968" class="subtexto">Energía/UPS/PDU</text>
+
+    <rect x="900" y="957" width="20" height="16" class="refrigeracion-color"/>
+    <text x="930" y="968" class="subtexto">Refrigeración (no en rack actual)</text>
+
+    <circle cx="1180" cy="965" r="5" class="activo led"/>
+    <text x="1195" y="968" class="subtexto">Activo</text>
+  </g>
+</svg>

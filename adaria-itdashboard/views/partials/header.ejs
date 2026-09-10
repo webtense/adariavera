@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title : 'Dashboard IT — Hotel Adaria Vera' %></title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-in">
+      <div class="brand"><span style="font-size:24px">🌊</span> Adaria Vera · IT</div>
+      <nav class="nav">
+        <a href="/" class="<%= path==='/'?'active':'' %>">Dashboard</a>
+        <a href="/servidores" class="<%= path.startsWith('/servidores')?'active':'' %>">Servidores</a>
+        <a href="/switches" class="<%= path.startsWith('/switches')?'active':'' %>">Switches</a>
+        <a href="/camaras" class="<%= path.startsWith('/camaras')?'active':'' %>">Cámaras</a>
+        <a href="/wifi" class="<%= path.startsWith('/wifi')?'active':'' %>">WiFi</a>
+        <a href="/esquema-red" class="<%= path.startsWith('/esquema')?'active':'' %>">Esquema de red</a>
+        <a href="/estructura-red" class="<%= path.startsWith('/estructura')?'active':'' %>">Estructura de red</a>
+        <a href="/telefonia" class="<%= path.startsWith('/telefonia')?'active':'' %>">Telefonía</a>
+        <a href="/directorio" class="<%= path.startsWith('/directorio')?'active':'' %>">Directorio</a>
+        <a href="/backups" class="<%= path.startsWith('/backups')?'active':'' %>">Copias de seguridad</a>
+        <a href="/credenciales" class="<%= path.startsWith('/credenciales')?'active':'' %>">Usuarios y Contraseñas</a>
+        <% if (user && user.role==='admin'){ %>
+          <a href="/usuarios" class="<%= path.startsWith('/usuarios')?'active':'' %>">Gestión usuarios</a>
+          <a href="/auditoria" class="<%= path.startsWith('/auditoria')?'active':'' %>">Auditoría</a>
+        <% } %>
+        <span class="who">👤 <%= user ? (user.nombre || user.username) : '' %></span>
+        <a href="/logout" class="logout">Salir</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Tab bar inferior estilo iOS (solo móvil) -->
+  <nav class="tabbar" aria-label="Navegación">
+    <a href="/" class="<%= path==='/'?'active':'' %>"><span class="ico">🏠</span><span>Inicio</span></a>
+    <a href="/camaras" class="<%= path.startsWith('/camaras')?'active':'' %>"><span class="ico">📷</span><span>Cámaras</span></a>
+    <a href="/wifi" class="<%= path.startsWith('/wifi')?'active':'' %>"><span class="ico">📶</span><span>WiFi</span></a>
+    <a href="/credenciales" class="<%= path.startsWith('/credenciales')?'active':'' %>"><span class="ico">🔑</span><span>Claves</span></a>
+    <button type="button" class="more-btn" onclick="document.getElementById('moresheet').classList.toggle('open')"><span class="ico">☰</span><span>Más</span></button>
+  </nav>
+
+  <!-- Hoja "Más" -->
+  <div class="moresheet-backdrop" id="moresheet" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="moresheet-panel">
+      <div class="moresheet-grip"></div>
+      <a href="/" class="<%= path==='/'?'active':'' %>">🏠 Dashboard</a>
+      <a href="/servidores" class="<%= path.startsWith('/servidores')?'active':'' %>">🖥️ Servidores</a>
+      <a href="/switches" class="<%= path.startsWith('/switches')?'active':'' %>">🔀 Switches</a>
+      <a href="/camaras" class="<%= path.startsWith('/camaras')?'active':'' %>">📷 Cámaras</a>
+      <a href="/wifi" class="<%= path.startsWith('/wifi')?'active':'' %>">📶 WiFi</a>
+      <a href="/esquema-red" class="<%= path.startsWith('/esquema')?'active':'' %>">🗺️ Esquema de red</a>
+      <a href="/estructura-red" class="<%= path.startsWith('/estructura')?'active':'' %>">🌐 Estructura de red</a>
+      <a href="/telefonia" class="<%= path.startsWith('/telefonia')?'active':'' %>">☎️ Telefonía</a>
+      <a href="/directorio" class="<%= path.startsWith('/directorio')?'active':'' %>">📇 Directorio</a>
+      <a href="/backups" class="<%= path.startsWith('/backups')?'active':'' %>">💾 Copias de seguridad</a>
+      <a href="/credenciales" class="<%= path.startsWith('/credenciales')?'active':'' %>">🔑 Usuarios y Contraseñas</a>
+      <% if (user && user.role==='admin'){ %>
+        <a href="/usuarios" class="<%= path.startsWith('/usuarios')?'active':'' %>">👥 Gestión usuarios</a>
+        <a href="/auditoria" class="<%= path.startsWith('/auditoria')?'active':'' %>">📋 Auditoría</a>
+      <% } %>
+      <a href="/logout" class="ms-logout">🚪 Salir</a>
+    </div>
+  </div>
+
+  <main class="wrap">

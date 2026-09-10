@@ -1,0 +1,23 @@
+<%- include('partials/header', { title: 'Credencial — Adaria Vera' }) %>
+<h1><%= cred ? 'Editar credencial' : 'Nueva credencial' %></h1>
+<p class="sub">La contraseña se guarda cifrada (AES-256-GCM).</p>
+<form class="card" method="post" action="/credenciales/guardar" style="max-width:680px">
+  <% if(cred){ %><input type="hidden" name="id" value="<%= cred.id %>"><% } %>
+  <div class="row">
+    <div><label>Categoría</label><input name="categoria" required value="<%= cred ? cred.categoria : '' %>" list="cats">
+      <datalist id="cats"><option>Infraestructura IT</option><option>Redes WiFi</option><option>Cámaras CCTV</option><option>Aplicaciones internas</option><option>Correo corporativo</option><option>Plataformas / Extranet</option></datalist></div>
+    <div><label>Nombre</label><input name="nombre" required value="<%= cred ? cred.nombre : '' %>"></div>
+  </div>
+  <div class="row">
+    <div><label>Usuario</label><input name="usuario" value="<%= cred ? cred.usuario : '' %>"></div>
+    <div><label>Contraseña <% if(cred){ %><span class="muted">(vacío = mantener actual)</span><% } %></label><input name="password" type="text" autocomplete="off">
+      <% if(cred){ %><input type="hidden" name="mantener" value="1"><% } %></div>
+  </div>
+  <label>URL</label><input name="url" value="<%= cred ? (cred.url||'') : '' %>">
+  <label>Notas</label><textarea name="notas" rows="2"><%= cred ? (cred.notas||'') : '' %></textarea>
+  <div style="margin-top:18px;display:flex;gap:10px">
+    <button class="btn" type="submit">Guardar</button>
+    <a class="btn btn-gray" href="/credenciales">Cancelar</a>
+  </div>
+</form>
+<%- include('partials/footer') %>

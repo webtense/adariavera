@@ -1,0 +1,53 @@
+<%- include('partials/header', { title: 'Dashboard IT — Adaria Vera' }) %>
+<h1>Infraestructura IT</h1>
+<p class="sub">Hotel Adaria Vera · datos <%= equipos.actualizacion ? equipos.actualizacion.slice(0,10) : '' %><% if(equipos.fuente){ %> · fuente: <%= equipos.fuente %><% } %></p>
+
+<div class="grid grid-3">
+  <div class="card"><h2 style="margin-top:0">🖥️ Estaciones</h2><div style="font-size:30px;font-weight:700;color:var(--ocean-dark)"><%= (equipos.estaciones_trabajo||[]).length %></div></div>
+  <div class="card"><h2 style="margin-top:0">🔀 Switches</h2><div style="font-size:30px;font-weight:700;color:var(--ocean-dark)"><%= (equipos.switches||[]).length %></div></div>
+  <div class="card"><h2 style="margin-top:0">📶 Redes WiFi</h2><div style="font-size:30px;font-weight:700;color:var(--ocean-dark)"><%= (equipos.wifi||[]).length %></div></div>
+</div>
+
+<% if((equipos.estaciones_trabajo||[]).length){ %>
+<h2>Estaciones de trabajo</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Nombre</th><th>Tipo</th><th>IP</th><th>Usuario</th><th>Ubicación</th><th>WiFi</th><th>Estado</th></tr></thead>
+  <tbody><% equipos.estaciones_trabajo.forEach(function(e){ %>
+    <tr><td><strong><%= e.nombre %></strong></td><td><%= e.tipo||'' %></td><td class="mono"><%= e.ip||'' %></td>
+    <td><%= e.usuario||'' %></td><td><%= e.ubicacion||'' %></td><td><%= e.wifi||'' %></td>
+    <td><span class="badge b-ok"><%= e.estado||'—' %></span></td></tr>
+  <% }) %></tbody>
+</table></div>
+<% } %>
+
+<% if((equipos.switches||[]).length){ %>
+<h2>Switches</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Modelo / Nombre</th><th>Puertos</th><th>S/N</th><th>Ubicación</th></tr></thead>
+  <tbody><% equipos.switches.forEach(function(s){ %>
+    <tr><td><strong><%= s.modelo||s.nombre||'' %></strong></td><td><%= s.puertos||'' %></td><td class="mono"><%= s.serie||s.sn||'' %></td><td><%= s.ubicacion||'' %></td></tr>
+  <% }) %></tbody>
+</table></div>
+<% } %>
+
+<% if((equipos.wifi||[]).length){ %>
+<h2>Redes WiFi</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>SSID</th><th>Banda</th><th>Seguridad</th><th>Ubicación</th></tr></thead>
+  <tbody><% equipos.wifi.forEach(function(w){ %>
+    <tr><td><strong><%= w.ssid||w.nombre||'' %></strong></td><td><%= w.banda||'' %></td><td><%= w.seguridad||'' %></td><td><%= w.ubicacion||'' %></td></tr>
+  <% }) %></tbody>
+</table></div>
+<p class="muted">🔒 Las contraseñas WiFi y de todos los equipos están en <a href="/credenciales">Usuarios y Contraseñas</a> (cifradas y auditadas).</p>
+<% } %>
+
+<% if((equipos.sistemas||[]).length){ %>
+<h2>Sistemas</h2>
+<div class="grid grid-2"><% equipos.sistemas.forEach(function(s){ %>
+  <div class="card"><h3 style="margin-top:0;color:var(--ocean-dark)"><%= s.nombre||'' %></h3>
+  <p class="muted" style="margin:0"><%= s.descripcion||s.notas||'' %></p>
+  <% if(s.ip){ %><p class="mono" style="margin:6px 0 0"><%= s.ip %></p><% } %></div>
+<% }) %></div>
+<% } %>
+
+<%- include('partials/footer') %>

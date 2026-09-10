@@ -1,0 +1,30 @@
+<%- include('partials/header', { title: 'Cámaras — Adaria Vera' }) %>
+<h1>Cámaras CCTV</h1>
+<p class="sub"><%= cams.length %> cámaras. Las contraseñas se muestran al pulsar «Ver» y quedan auditadas.</p>
+<% if(user&&user.role==='admin'){ %><p><a class="btn btn-sm" href="/editar/cameras">✏️ Editar datos</a></p><% } %>
+<div class="table-wrap"><table>
+  <thead><tr><th>Cámara</th><th>Modelo</th><th>IP</th><th>Usuario</th><th>Contraseña</th><th>Ubicación</th><th>Estado</th><th>Notas</th></tr></thead>
+  <tbody>
+  <% cams.forEach(function(c){ %>
+    <tr>
+      <td><strong><%= c.nombre %></strong></td>
+      <td><%= c.modelo || '' %></td>
+      <td class="mono"><% if(c.ip){ %><a href="http://<%= c.ip %>" target="_blank" rel="noopener"><%= c.ip %></a><% } else { %>—<% } %></td>
+      <td class="mono"><%= c.usuario || '—' %></td>
+      <td>
+        <span class="pw" id="pw-<%= c.id %>">••••••••</span>
+        <button class="btn btn-sm btn-out reveal" data-t="cameras" data-id="<%= c.id %>" type="button">👁 Ver</button>
+      </td>
+      <td><%= c.ubicacion || '' %></td>
+      <td>
+        <% var col = c.estado==='online'?'b-ok':(c.estado==='offline'?'b-off':'b-lector'); %>
+        <span class="badge <%= col %>"><%= c.estado==='online'?'🟢 online':(c.estado==='offline'?'🔴 offline':'⚪ sin datos') %></span>
+        <% if(c.last_check){ %><br><span class="muted" style="font-size:11px">últ. <%= c.last_check %></span><% } %>
+      </td>
+      <td class="muted"><%= c.notas || '' %></td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table></div>
+<%- include('partials/reveal_script') %>
+<%- include('partials/footer') %>

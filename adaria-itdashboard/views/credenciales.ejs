@@ -1,0 +1,57 @@
+<%- include('partials/header', { title: 'Usuarios y Contraseñas — Adaria Vera' }) %>
+<div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px">
+  <div><h1 style="margin-bottom:0">Usuarios y Contraseñas</h1>
+  <p class="sub">Credenciales de infraestructura — cifradas AES-256. Cada visualización queda registrada en la auditoría.</p></div>
+  <% if (user && user.role==='admin'){ %><a class="btn" href="/credenciales/nueva" style="margin-left:auto">+ Nueva credencial</a><% } %>
+</div>
+
+<% Object.keys(cats).forEach(function(cat){ %>
+  <div class="cat-h"><%= cat %> <span class="muted" style="font-weight:400">(<%= cats[cat].length %>)</span></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th style="width:24%">Nombre</th><th style="width:18%">Usuario</th><th style="width:24%">Contraseña</th><th>Notas / URL</th><% if(user&&user.role==='admin'){ %><th style="width:120px">Acciones</th><% } %></tr></thead>
+    <tbody>
+    <% cats[cat].forEach(function(c){ %>
+      <tr>
+        <td><strong><%= c.nombre %></strong></td>
+        <td class="mono"><%= c.usuario || '—' %></td>
+        <td>
+          <span class="pw" id="pw-<%= c.id %>">••••••••</span>
+          <button class="btn btn-sm btn-out reveal" data-id="<%= c.id %>" type="button">👁 Ver</button>
+        </td>
+        <td>
+          <% if(c.url){ %><a href="<%= c.url %>" target="_blank" rel="noopener" class="mono"><%= c.url %></a><br><% } %>
+          <span class="muted"><%= c.notas || '' %></span>
+        </td>
+        <% if(user&&user.role==='admin'){ %>
+        <td style="white-space:nowrap">
+          <a class="btn btn-sm btn-gray" href="/credenciales/<%= c.id %>/editar">Editar</a>
+          <form class="inline" method="post" action="/credenciales/<%= c.id %>/borrar" onsubmit="return confirm('¿Borrar esta credencial?')">
+            <button class="btn btn-sm btn-danger" type="submit">✕</button>
+          </form>
+        </td>
+        <% } %>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+<% }) %>
+
+<script>
+document.querySelectorAll('.reveal').forEach(function(btn){
+  btn.addEventListener('click', async function(){
+    var id = btn.dataset.id, span = document.getElementById('pw-'+id);
+    if (btn.dataset.shown === '1'){ span.textContent='••••••••'; btn.dataset.shown='0'; btn.textContent='👁 Ver'; return; }
+    btn.disabled=true;
+    try{
+      var r = await fetch('/api/credenciales/'+id+'/reveal',{method:'POST',headers:{'Content-Type':'application/json'}});
+      var d = await r.json();
+      span.textContent = d.password || '';
+      btn.dataset.shown='1'; btn.textContent='🙈 Ocultar';
+      span.style.cursor='pointer'; span.title='Clic para copiar';
+      span.onclick=function(){ navigator.clipboard.writeText(d.password||''); btn.textContent='✓ Copiado'; setTimeout(function(){btn.textContent='🙈 Ocultar'},1200); };
+    }catch(e){ span.textContent='error'; }
+    btn.disabled=false;
+  });
+});
+</script>
+<%- include('partials/footer') %>

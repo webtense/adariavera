@@ -1,0 +1,296 @@
+{
+  "actualizacion": "2026-06-11T00:00:00Z",
+  "fuente": "ADARIA.pdf, RPO 1.13 Contraseñas.xlsx, Contraseña RED WIFI HOTEL.docx",
+  "estaciones_trabajo": [
+    {
+      "nombre": "W10 LAVANDERIA",
+      "tipo": "PC",
+      "ip": "192.168.1.34",
+      "usuario": "WORKERGROUP",
+      "ubicacion": "Lavandería",
+      "grupo_trabajo": "WORKERGROUP",
+      "wifi": "HOTEL ADARIA",
+      "estado": "Operativa"
+    },
+    {
+      "nombre": "DIRECCION",
+      "tipo": "PC",
+      "ip": "192.168.1.70",
+      "usuario": "DIRECCION",
+      "ubicacion": "Dirección",
+      "grupo_trabajo": "DIRECCION",
+      "wifi": "Oficina Adaria",
+      "estado": "Operativa"
+    },
+    {
+      "nombre": "RECEPCION",
+      "tipo": "PC",
+      "ip": "192.168.1.37",
+      "usuario": "recepcion1",
+      "ubicacion": "Recepción",
+      "grupo_trabajo": "RECEPCION",
+      "wifi": "Oficina Adaria",
+      "estado": "Operativa"
+    },
+    {
+      "nombre": "RECEPCION DERC",
+      "tipo": "PC",
+      "ip": "192.168.1.38",
+      "usuario": "RECEPCION1",
+      "ubicacion": "Recepción Derc",
+      "grupo_trabajo": "RECEPCION",
+      "wifi": "Oficina Adaria",
+      "estado": "Operativa"
+    },
+    {
+      "nombre": "CAMARAS (ALEX)",
+      "tipo": "PC",
+      "ip": "192.168.0.43",
+      "usuario": "recepcion1",
+      "ubicacion": "Vigilancia/Cámaras",
+      "grupo_trabajo": "CAMARAS",
+      "wifi": "HOTEL ADARIA",
+      "estado": "Operativa"
+    },
+    {
+      "nombre": "MANTENIMIENTO (ALEX)",
+      "tipo": "PC",
+      "ip": "192.168.1.41",
+      "usuario": "manten2014",
+      "ubicacion": "Mantenimiento",
+      "grupo_trabajo": "MANTEN",
+      "wifi": "Oficina Adaria",
+      "estado": "Operativa"
+    },
+    {
+      "nombre": "CAFETERIA",
+      "tipo": "PC",
+      "ip": "192.168.1.40",
+      "usuario": "DESKTOP-U8B7I56",
+      "ubicacion": "Cafetería",
+      "grupo_trabajo": "CAFETERIA",
+      "wifi": "HOTEL ADARIA",
+      "estado": "Operativa"
+    },
+    {
+      "nombre": "COMEDOR",
+      "tipo": "PC",
+      "ip": "192.168.1.39",
+      "usuario": "DESKTOP-MP58TKN",
+      "ubicacion": "Comedor",
+      "grupo_trabajo": "COMEDOR",
+      "wifi": "HOTEL ADARIA",
+      "estado": "Operativa"
+    },
+    {
+      "nombre": "PC 1 (IZQUIERDA)",
+      "tipo": "PC",
+      "ip": "192.168.1.51",
+      "usuario": "N/A",
+      "ubicacion": "Despacho",
+      "grupo_trabajo": "N/A",
+      "wifi": "Oficina Adaria",
+      "estado": "Operativa"
+    },
+    {
+      "nombre": "PC 2 (IZQUIERDA)",
+      "tipo": "PC",
+      "ip": "192.168.1.52",
+      "usuario": "N/A",
+      "ubicacion": "Despacho",
+      "grupo_trabajo": "N/A",
+      "wifi": "Oficina Adaria",
+      "estado": "Operativa"
+    },
+    {
+      "nombre": "PC 3 (DESPACHO)",
+      "tipo": "PC",
+      "ip": "192.168.1.53",
+      "usuario": "N/A",
+      "ubicacion": "Despacho",
+      "grupo_trabajo": "N/A",
+      "wifi": "Oficina Adaria",
+      "estado": "Operativa"
+    }
+  ],
+  "switches": [
+    {
+      "nombre": "Switch GS308EP #1",
+      "modelo": "Netgear GS308EP",
+      "serial": "6V665C5WA2AE1",
+      "puertos": 8,
+      "poe": "Plus",
+      "ip": "192.168.1.201",
+      "usuario": "admin",
+      "ubicacion": "CPD",
+      "fecha_compra": "2026-06-09",
+      "estado": "Operativo"
+    },
+    {
+      "nombre": "Switch GS308EP #2",
+      "modelo": "Netgear GS308EP",
+      "serial": "6V665C5AA1965",
+      "puertos": 8,
+      "poe": "Plus",
+      "ip": "192.168.1.202",
+      "usuario": "admin",
+      "ubicacion": "CPD",
+      "fecha_compra": "2026-06-09",
+      "estado": "Operativo"
+    },
+    {
+      "nombre": "Switch GS308EP #3",
+      "modelo": "Netgear GS308EP",
+      "serial": "6V665C5MA2318",
+      "puertos": 8,
+      "poe": "Plus",
+      "ip": "192.168.1.203",
+      "usuario": "admin",
+      "ubicacion": "CPD",
+      "fecha_compra": "2026-06-09",
+      "estado": "Operativo"
+    },
+    {
+      "nombre": "Switch GS724TPv3",
+      "modelo": "Netgear GS724TPv3",
+      "serial": "7NN259DHD039C",
+      "puertos": 24,
+      "poe": "Plus",
+      "ip": "192.168.1.204",
+      "usuario": "admin",
+      "ubicacion": "CPD",
+      "fecha_compra": "2026-06-09",
+      "estado": "Operativo"
+    },
+    {
+      "nombre": "Switch JGS516PE #1",
+      "modelo": "Netgear JGS516PE",
+      "serial": "3KJ2415F00241",
+      "puertos": 16,
+      "poe": "Sí",
+      "ip": "192.168.1.205",
+      "usuario": "admin",
+      "ubicacion": "CPD",
+      "fecha_compra": "2026-06-08",
+      "estado": "Operativo"
+    },
+    {
+      "nombre": "Switch JGS516PE #2",
+      "modelo": "Netgear JGS516PE",
+      "serial": "3KJ241540019F",
+      "puertos": 16,
+      "poe": "Sí",
+      "ip": "192.168.1.206",
+      "usuario": "admin",
+      "ubicacion": "CPD",
+      "fecha_compra": "2026-06-08",
+      "estado": "Operativo"
+    },
+    {
+      "nombre": "Switch GS724TPv2",
+      "modelo": "Netgear GS724TPv2",
+      "serial": "50XD1856001DE",
+      "puertos": 24,
+      "poe": "Plus",
+      "ip": "192.168.1.207",
+      "usuario": "admin",
+      "ubicacion": "CPD",
+      "fecha_compra": "2021-10-26",
+      "estado": "Operativo"
+    }
+  ],
+  "wifi": [
+    {
+      "ssid": "HOTEL ADARIA",
+      "tipo": "Clientes",
+      "banda": "2.4GHz + 5GHz",
+      "seguridad": "WPA2",
+      "ubicacion": "Todo el hotel",
+      "estado": "Operativa"
+    },
+    {
+      "ssid": "Oficina Adaria",
+      "tipo": "Oficina",
+      "banda": "2.4GHz + 5GHz",
+      "seguridad": "WPA2",
+      "ubicacion": "Zona administrativa",
+      "estado": "Operativa"
+    }
+  ],
+  "emails": [
+    {
+      "email": "direccion@hoteladariavera.com",
+      "imap_server": "imap.ionos.es",
+      "imap_port": 993,
+      "smtp_server": "smtp.ionos.es",
+      "smtp_port": 465,
+      "responsable": "Olga (Dirección)",
+      "estado": "Activa"
+    },
+    {
+      "email": "jeferepcion@hoteladariavera.com",
+      "imap_server": "imap.ionos.es",
+      "imap_port": 993,
+      "smtp_server": "smtp.ionos.es",
+      "smtp_port": 465,
+      "responsable": "Sergio (Recepción)",
+      "estado": "Activa"
+    },
+    {
+      "email": "recepcion@hoteladariavera.com",
+      "imap_server": "imap.ionos.es",
+      "imap_port": 993,
+      "smtp_server": "smtp.ionos.es",
+      "smtp_port": 465,
+      "responsable": "Recepción General",
+      "estado": "Activa"
+    },
+    {
+      "email": "info@hoteladariavera.com",
+      "imap_server": "imap.ionos.es",
+      "imap_port": 993,
+      "smtp_server": "smtp.ionos.es",
+      "smtp_port": 465,
+      "responsable": "Información General",
+      "estado": "Activa"
+    }
+  ],
+  "sistemas": [
+    {
+      "nombre": "ONITI",
+      "tipo": "Gestión de Llaves",
+      "usuario": "N/A",
+      "contraseña_alternativa": "5555 / 1111",
+      "ubicacion": "Sistema central",
+      "estado": "Operativo"
+    },
+    {
+      "nombre": "Cámaras CCTV",
+      "tipo": "Vigilancia",
+      "usuario": "admin",
+      "ubicacion": "Múltiples",
+      "estado": "Operativas"
+    },
+    {
+      "nombre": "ACI Dali",
+      "tipo": "PMS / Software Hotelero",
+      "usuario": "AdminAci",
+      "ubicacion": "PCs Recepción",
+      "estado": "Operativo"
+    },
+    {
+      "nombre": "ACI Hotel",
+      "tipo": "Gestión Administrativa",
+      "usuario": "AdminAci",
+      "ubicacion": "PC Central",
+      "estado": "Operativo"
+    },
+    {
+      "nombre": "Caldera",
+      "tipo": "Control HVAC",
+      "usuario": "manten",
+      "ubicacion": "Sistema HVAC central",
+      "estado": "Operativa"
+    }
+  ]
+}

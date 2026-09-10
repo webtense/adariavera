@@ -1,0 +1,17 @@
+<script>
+document.querySelectorAll('.reveal').forEach(function(btn){
+  btn.addEventListener('click', async function(){
+    var id=btn.dataset.id, t=btn.dataset.t, span=document.getElementById('pw-'+id);
+    if(btn.dataset.shown==='1'){ span.textContent='••••••••'; btn.dataset.shown='0'; btn.textContent='👁 Ver'; return; }
+    btn.disabled=true;
+    try{
+      var r=await fetch('/api/secret/'+t+'/'+id+'/reveal',{method:'POST',headers:{'Content-Type':'application/json'}});
+      var d=await r.json(); span.textContent=d.password||'';
+      btn.dataset.shown='1'; btn.textContent='🙈 Ocultar';
+      span.style.cursor='pointer'; span.title='Clic para copiar';
+      span.onclick=function(){ navigator.clipboard.writeText(d.password||''); btn.textContent='✓ Copiado'; setTimeout(function(){btn.textContent='🙈 Ocultar'},1200); };
+    }catch(e){ span.textContent='error'; }
+    btn.disabled=false;
+  });
+});
+</script>

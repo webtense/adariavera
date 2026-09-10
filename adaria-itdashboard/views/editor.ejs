@@ -1,0 +1,48 @@
+<%- include('partials/header', { title: 'Editar ' + sc.label }) %>
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <h1 style="margin-bottom:0">Editar · <%= sc.label %></h1>
+  <a class="btn btn-gray" href="<%= sc.volver %>" style="margin-left:auto">← Volver al apartado</a>
+</div>
+<p class="sub">Añade, edita o elimina registros. Las contraseñas se guardan cifradas.</p>
+
+<form class="card" method="post" action="/editar/<%= t %>/guardar" style="max-width:760px">
+  <% if(row){ %><input type="hidden" name="id" value="<%= row.id %>"><h3 style="margin-top:0">Editar #<%= row.id %></h3><% } else { %><h3 style="margin-top:0">Nuevo registro</h3><% } %>
+  <div class="row">
+  <% sc.fields.forEach(function(f){ var col=f[0],lab=f[1],type=f[2]; %>
+    <div style="<%= (type==='textarea')?'flex-basis:100%':'' %>">
+      <label><%= lab %><% if(type==='pw' && row){ %> <span class="muted">(vacío = mantener)</span><% } %></label>
+      <% if(type==='textarea'){ %>
+        <textarea name="<%= col %>" rows="2"><%= row ? (row[col]||'') : '' %></textarea>
+      <% } else if(type==='check'){ %>
+        <select name="<%= col %>"><option value="1" <%= row&&row[col]?'selected':'' %>>Sí</option><option value="" <%= row&&!row[col]?'selected':'' %>>No</option></select>
+      <% } else if(type==='pw'){ %>
+        <input name="password" type="text" autocomplete="off" placeholder="<%= row?'(sin cambios)':'' %>">
+      <% } else { %>
+        <input name="<%= col %>" type="<%= type==='num'?'number':'text' %>" value="<%= row ? (row[col]!=null?row[col]:'') : '' %>">
+      <% } %>
+    </div>
+  <% }) %>
+  </div>
+  <div style="margin-top:16px;display:flex;gap:10px">
+    <button class="btn" type="submit"><%= row?'Guardar cambios':'Añadir' %></button>
+    <% if(row){ %><a class="btn btn-gray" href="/editar/<%= t %>">Cancelar</a><% } %>
+  </div>
+</form>
+
+<h2>Registros (<%= rows.length %>)</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>#</th><th><%= sc.label %></th><th>Acciones</th></tr></thead>
+  <tbody>
+  <% rows.forEach(function(r){ %>
+    <tr>
+      <td class="muted"><%= r.id %></td>
+      <td><strong><%= r[titleCol] %></strong> <span class="muted"><%= r.ip||r.ip_ap||r.telefono||'' %></span></td>
+      <td style="white-space:nowrap">
+        <a class="btn btn-sm btn-gray" href="/editar/<%= t %>/<%= r.id %>">Editar</a>
+        <form class="inline" method="post" action="/editar/<%= t %>/<%= r.id %>/borrar" onsubmit="return confirm('¿Borrar este registro?')"><button class="btn btn-sm btn-danger" type="submit">✕</button></form>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table></div>
+<%- include('partials/footer') %>

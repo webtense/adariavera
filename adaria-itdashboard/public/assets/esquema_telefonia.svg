@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg">
+  <!-- Estilos -->
+  <defs>
+    <style>
+      .titulo { font-size: 28px; font-weight: bold; fill: #1a1a1a; font-family: Arial, sans-serif; }
+      .subtitulo { font-size: 16px; fill: #333; font-weight: bold; font-family: Arial, sans-serif; }
+      .etiqueta { font-size: 13px; fill: #333; font-family: Arial, sans-serif; font-weight: 600; }
+      .subtexto { font-size: 11px; fill: #666; font-family: Arial, sans-serif; }
+      .ip-mono { font-size: 11px; fill: #0d47a1; font-family: monospace; font-weight: bold; }
+      .caja-pstn { fill: #ffebee; stroke: #d32f2f; stroke-width: 2; }
+      .caja-gateway { fill: #e3f2fd; stroke: #1976d2; stroke-width: 2; }
+      .caja-centralita { fill: #f3e5f5; stroke: #7b1fa2; stroke-width: 2; }
+      .caja-pbx { fill: #e8f5e9; stroke: #388e3c; stroke-width: 2; }
+      .caja-telefono { fill: #fff3e0; stroke: #f57c00; stroke-width: 2; }
+      .linea-pstn { stroke: #d32f2f; stroke-width: 3; marker-end: url(#arrow-red); }
+      .linea-voip { stroke: #7b1fa2; stroke-width: 2.5; marker-end: url(#arrow-purple); }
+      .linea-sip { stroke: #1976d2; stroke-width: 2; stroke-dasharray: 3,3; marker-end: url(#arrow-blue); }
+      .linea-eth { stroke: #388e3c; stroke-width: 2; marker-end: url(#arrow-green); }
+      .etiqueta-flow { font-size: 10px; fill: #fff; font-weight: bold; font-family: Arial; }
+      .txt-flujo { font-size: 10px; fill: #666; font-style: italic; font-family: Arial; }
+    </style>
+
+    <!-- Flechas -->
+    <defs>
+      <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#d32f2f" />
+      </marker>
+      <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#7b1fa2" />
+      </marker>
+      <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#1976d2" />
+      </marker>
+      <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#388e3c" />
+      </marker>
+    </defs>
+  </defs>
+
+  <!-- Fondo -->
+  <rect width="1400" height="1000" fill="#fafafa"/>
+
+  <!-- Título -->
+  <text x="700" y="40" text-anchor="middle" class="titulo">TOPOLOGÍA DE TELEFONÍA IP VeraAdaria</text>
+  <text x="700" y="65" text-anchor="middle" class="subtitulo">Conversión PSTN → VoIP → Extensiones SIP</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- ESCENARIOS DE OPERACIÓN ════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- ESCENARIO 1: HOY (sin PBX local) -->
+  <g id="escenario-1">
+    <text x="100" y="110" class="subtitulo" fill="#1976d2">ESCENARIO 1: HOY (Grandstream directo)</text>
+    <text x="100" y="130" class="subtexto" fill="#666">Pasarela PSTN → VoIP sin PBX local</text>
+
+    <!-- PSTN / Movostar -->
+    <rect x="80" y="160" width="140" height="100" rx="5" class="caja-pstn"/>
+    <text x="150" y="185" text-anchor="middle" class="etiqueta" fill="#d32f2f">PSTN</text>
+    <text x="150" y="210" text-anchor="middle" class="subtexto">Movostar Almería</text>
+    <text x="150" y="230" text-anchor="middle" class="subtexto" font-size="10">Línea analógica</text>
+    <text x="150" y="248" text-anchor="middle" class="subtexto" font-size="9">Puerto: FXO</text>
+
+    <!-- Grandstream Gateway -->
+    <rect x="300" y="160" width="160" height="100" rx="5" class="caja-gateway"/>
+    <text x="380" y="190" text-anchor="middle" class="etiqueta">GRANDSTREAM</text>
+    <text x="380" y="210" text-anchor="middle" class="subtexto">VoIP Gateway</text>
+    <text x="380" y="230" text-anchor="middle" class="ip-mono" font-size="11">192.168.1.50</text>
+    <text x="380" y="248" text-anchor="middle" class="subtexto" font-size="9">Gw GXW4104</text>
+
+    <!-- Centralita Internet (Movostar) -->
+    <rect x="540" y="160" width="180" height="100" rx="5" class="caja-centralita"/>
+    <text x="630" y="190" text-anchor="middle" class="etiqueta" fill="#7b1fa2">CENTRALITA MOVOSTAR</text>
+    <text x="630" y="210" text-anchor="middle" class="subtexto">(en Internet)</text>
+    <text x="630" y="230" text-anchor="middle" class="subtexto" font-size="10">Portal.movostar.es</text>
+    <text x="630" y="248" text-anchor="middle" class="subtexto" font-size="9">Registrar teléfonos</text>
+
+    <!-- Teléfonos IP -->
+    <g id="phones-1">
+      <rect x="800" y="160" width="120" height="50" rx="4" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+      <text x="860" y="185" text-anchor="middle" class="etiqueta">RECEPCIÓN</text>
+      <text x="860" y="203" text-anchor="middle" class="subtexto" font-size="9">Ext 100-102</text>
+
+      <rect x="800" y="225" width="120" height="50" rx="4" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+      <text x="860" y="250" text-anchor="middle" class="etiqueta">DIRECCIÓN</text>
+      <text x="860" y="268" text-anchor="middle" class="subtexto" font-size="9">Ext 110</text>
+
+      <rect x="950" y="160" width="120" height="50" rx="4" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+      <text x="1010" y="185" text-anchor="middle" class="etiqueta">COCINA</text>
+      <text x="1010" y="203" text-anchor="middle" class="subtexto" font-size="9">Ext 120</text>
+
+      <rect x="950" y="225" width="120" height="50" rx="4" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+      <text x="1010" y="250" text-anchor="middle" class="etiqueta">CAFÉ</text>
+      <text x="1010" y="268" text-anchor="middle" class="subtexto" font-size="9">Ext 130</text>
+    </g>
+
+    <!-- Flujos -->
+    <!-- PSTN → Grandstream -->
+    <line x1="220" y1="210" x2="300" y2="210" class="linea-pstn"/>
+    <rect x="240" y="195" width="60" height="20" fill="#d32f2f" rx="3"/>
+    <text x="270" y="208" text-anchor="middle" class="etiqueta-flow" fill="#fff">Línea analógica</text>
+
+    <!-- Grandstream → Centralita Movostar (por Internet) -->
+    <path d="M 460 210 Q 500 150 540 210" class="linea-voip" fill="none"/>
+    <rect x="460" y="135" width="70" height="20" fill="#7b1fa2" rx="3"/>
+    <text x="495" y="148" text-anchor="middle" class="etiqueta-flow" fill="#fff">SIP por Internet</text>
+
+    <!-- Centralita → Teléfonos (SIP) -->
+    <line x1="630" y1="260" x2="860" y2="160" class="linea-sip"/>
+    <line x1="630" y1="260" x2="1010" y2="160" class="linea-sip"/>
+    <line x1="630" y1="260" x2="860" y2="225" class="linea-sip"/>
+    <line x1="630" y1="260" x2="1010" y2="225" class="linea-sip"/>
+
+    <rect x="700" y="290" width="80" height="20" fill="#7b1fa2" rx="3"/>
+    <text x="740" y="303" text-anchor="middle" class="etiqueta-flow" fill="#fff">SIP LAN</text>
+
+    <!-- Notas -->
+    <g id="notas-1">
+      <text x="80" y="330" class="etiqueta" fill="#d32f2f">⚠ VENTAJAS:</text>
+      <text x="80" y="348" class="subtexto">✓ Simple: pasarela directa PSTN→VoIP</text>
+      <text x="80" y="363" class="subtexto">✓ No requiere PBX local ni administración</text>
+      <text x="80" y="378" class="subtexto">✓ Centralita Movostar gestiona llamadas</text>
+
+      <text x="550" y="330" class="etiqueta" fill="#f57c00">⚠ LIMITACIONES:</text>
+      <text x="550" y="348" class="subtexto">✗ Transferencias simples (sin IVR)</text>
+      <text x="550" y="363" class="subtexto">✗ Sin grabación de llamadas local</text>
+      <text x="550" y="378" class="subtexto">✗ Reportes de tráfico en portal Movostar</text>
+    </g>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- ESCENARIO 2: FUTURO (con PBX local) ════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+  <g id="escenario-2" transform="translate(0, 450)">
+    <text x="100" y="110" class="subtitulo" fill="#388e3c">ESCENARIO 2: FUTURO (PBX local en Proxmox)</text>
+    <text x="100" y="130" class="subtexto" fill="#666">Mayor control: PSTN → Grandstream → 3CX/Asterisk → Teléfonos</text>
+
+    <!-- PSTN / Movostar -->
+    <rect x="80" y="160" width="140" height="100" rx="5" class="caja-pstn"/>
+    <text x="150" y="185" text-anchor="middle" class="etiqueta" fill="#d32f2f">PSTN</text>
+    <text x="150" y="210" text-anchor="middle" class="subtexto">Movostar Almería</text>
+    <text x="150" y="230" text-anchor="middle" class="subtexto" font-size="10">Línea analógica</text>
+
+    <!-- Grandstream Gateway -->
+    <rect x="300" y="160" width="160" height="100" rx="5" class="caja-gateway"/>
+    <text x="380" y="190" text-anchor="middle" class="etiqueta">GRANDSTREAM</text>
+    <text x="380" y="210" text-anchor="middle" class="subtexto">VoIP Gateway</text>
+    <text x="380" y="230" text-anchor="middle" class="ip-mono" font-size="11">192.168.1.50</text>
+
+    <!-- PBX Local (3CX en Proxmox) -->
+    <rect x="540" y="160" width="180" height="100" rx="5" class="caja-pbx"/>
+    <text x="630" y="190" text-anchor="middle" class="etiqueta" fill="#388e3c">PBX LOCAL</text>
+    <text x="630" y="210" text-anchor="middle" class="subtexto">3CX / Asterisk</text>
+    <text x="630" y="230" text-anchor="middle" class="ip-mono" font-size="11">192.168.1.100</text>
+    <text x="630" y="248" text-anchor="middle" class="subtexto" font-size="9">CT en Proxmox</text>
+
+    <!-- Centralita Internet (backup) -->
+    <rect x="800" y="160" width="160" height="100" rx="5" class="caja-centralita" stroke-dasharray="3,3"/>
+    <text x="880" y="190" text-anchor="middle" class="etiqueta" fill="#7b1fa2">CENTRALITA MOVOSTAR</text>
+    <text x="880" y="210" text-anchor="middle" class="subtexto">(redundancia)</text>
+    <text x="880" y="230" text-anchor="middle" class="subtexto" font-size="9">(Fallback opcional)</text>
+
+    <!-- Teléfonos IP -->
+    <g id="phones-2">
+      <rect x="1050" y="160" width="100" height="50" rx="4" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+      <text x="1100" y="180" text-anchor="middle" class="etiqueta" font-size="12">RECEPCIÓN</text>
+      <text x="1100" y="203" text-anchor="middle" class="subtexto" font-size="9">Ext 100</text>
+
+      <rect x="1050" y="225" width="100" height="50" rx="4" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+      <text x="1100" y="245" text-anchor="middle" class="etiqueta" font-size="12">DIRECCIÓN</text>
+      <text x="1100" y="268" text-anchor="middle" class="subtexto" font-size="9">Ext 110</text>
+
+      <rect x="1170" y="160" width="100" height="50" rx="4" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+      <text x="1220" y="180" text-anchor="middle" class="etiqueta" font-size="12">COCINA</text>
+      <text x="1220" y="203" text-anchor="middle" class="subtexto" font-size="9">Ext 120</text>
+
+      <rect x="1170" y="225" width="100" height="50" rx="4" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+      <text x="1220" y="245" text-anchor="middle" class="etiqueta" font-size="12">BAR</text>
+      <text x="1220" y="268" text-anchor="middle" class="subtexto" font-size="9">Ext 130</text>
+    </g>
+
+    <!-- Flujos -->
+    <!-- PSTN → Grandstream -->
+    <line x1="220" y1="210" x2="300" y2="210" class="linea-pstn"/>
+    <rect x="235" y="195" width="70" height="20" fill="#d32f2f" rx="3"/>
+    <text x="270" y="208" text-anchor="middle" class="etiqueta-flow" fill="#fff">PSTN In</text>
+
+    <!-- Grandstream → PBX (SIP Trunk) -->
+    <line x1="460" y1="210" x2="540" y2="210" class="linea-voip"/>
+    <rect x="480" y="195" width="60" height="20" fill="#7b1fa2" rx="3"/>
+    <text x="510" y="208" text-anchor="middle" class="etiqueta-flow" fill="#fff">SIP Trunk</text>
+
+    <!-- PBX → Teléfonos (SIP extensiones) -->
+    <line x1="630" y1="260" x2="1100" y2="160" class="linea-sip"/>
+    <line x1="630" y1="260" x2="1100" y2="225" class="linea-sip"/>
+    <line x1="630" y1="260" x2="1220" y2="160" class="linea-sip"/>
+    <line x1="630" y1="260" x2="1220" y2="225" class="linea-sip"/>
+
+    <rect x="800" y="290" width="80" height="20" fill="#1976d2" rx="3"/>
+    <text x="840" y="303" text-anchor="middle" class="etiqueta-flow" fill="#fff">SIP LAN</text>
+
+    <!-- Notas -->
+    <g id="notas-2">
+      <text x="80" y="330" class="etiqueta" fill="#388e3c">✓ VENTAJAS:</text>
+      <text x="80" y="348" class="subtexto">✓ Control total: IVR, transferencias, grabación</text>
+      <text x="80" y="363" class="subtexto">✓ Reportes detallados de tráfico local</text>
+      <text x="80" y="378" class="subtexto">✓ Integración con APIs (HR, CRM)</text>
+
+      <text x="550" y="330" class="etiqueta" fill="#f57c00">⚠ CONSIDERACIONES:</text>
+      <text x="550" y="348" class="subtexto">⚠ Requiere administrador VoIP dedicado</text>
+      <text x="550" y="363" class="subtexto">⚠ Licencias 3CX (20€/mes p/10 usuarios)</text>
+      <text x="550" y="378" class="subtexto">⚠ Mantenimiento: backups, actualizaciones</text>
+    </g>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- TABLA COMPARATIVA ══════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+  <g id="tabla">
+    <rect x="80" y="920" width="1240" height="60" fill="#f5f5f5" stroke="#999" stroke-width="1" rx="3"/>
+
+    <text x="100" y="940" class="etiqueta" fill="#333">RESUMEN:</text>
+    <text x="100" y="960" class="subtexto" font-size="10">
+      Grandstream transforma línea PSTN analógica → VoIP SIP. Hoy sin PBX local (gestión en Movostar).
+      Futuro: 3CX en Proxmox para control total, IVR, grabación, reportes avanzados.
+      Ambos escenarios usan la misma red: 192.168.1.x con Switch Core (GS724TPv3).
+    </text>
+  </g>
+</svg>

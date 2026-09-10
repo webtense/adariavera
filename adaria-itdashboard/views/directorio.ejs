@@ -1,0 +1,18 @@
+<%- include('partials/header', { title: 'Directorio — Adaria Vera' }) %>
+<h1>Directorio de teléfonos</h1>
+<p class="sub">Personal del hotel, proveedores y soporte.</p>
+<% if(user&&user.role==='admin'){ %><p><a class="btn btn-sm" href="/editar/contacts">✏️ Editar datos</a></p><% } %>
+<% Object.keys(cats).forEach(function(cat){ %>
+  <div class="cat-h"><%= cat %> <span class="muted" style="font-weight:400">(<%= cats[cat].length %>)</span></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th style="width:34%">Nombre</th><th style="width:22%">Teléfono</th><th>Notas</th></tr></thead>
+    <tbody>
+    <% cats[cat].forEach(function(c){ %>
+      <tr><td><strong><%= c.nombre %></strong></td>
+      <td class="mono"><% if(c.telefono){ %><a href="tel:<%= c.telefono %>"><%= c.telefono %></a><% } %></td>
+      <td class="muted"><%= c.notas||'' %></td></tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+<% }) %>
+<%- include('partials/footer') %>

@@ -1,0 +1,33 @@
+<%- include('partials/header', { title: 'WiFi — Adaria Vera' }) %>
+<h1>Redes WiFi</h1>
+<p class="sub">SSID, ubicaciones, IP de los puntos de acceso y estado. Las contraseñas se muestran al pulsar «Ver» (auditado).</p>
+<% if(user&&user.role==='admin'){ %><p><a class="btn btn-sm" href="/editar/wifi_networks">✏️ Editar datos</a></p><% } %>
+<div class="table-wrap"><table>
+  <thead><tr><th>SSID / AP</th><th>Tipo</th><th>IP AP</th><th>Banda</th><th>Seguridad</th><th>Contraseña</th><th>Ubicación</th><th>Estado</th></tr></thead>
+  <tbody>
+  <% redes.forEach(function(w){ %>
+    <tr>
+      <td><strong><%= w.ssid %></strong><% if(w.notas){ %><br><span class="muted" style="font-size:12px"><%= w.notas %></span><% } %></td>
+      <td><%= w.tipo || '' %></td>
+      <td class="mono"><% if(w.ip_ap){ %><a href="http://<%= w.ip_ap %>" target="_blank" rel="noopener"><%= w.ip_ap %></a><% } else { %>—<% } %></td>
+      <td><%= w.banda || '' %></td>
+      <td><%= w.seguridad || '' %></td>
+      <td>
+        <span class="pw" id="pw-<%= w.id %>">••••••••</span>
+        <button class="btn btn-sm btn-out reveal" data-t="wifi_networks" data-id="<%= w.id %>" type="button">👁 Ver</button>
+      </td>
+      <td><%= w.ubicacion || '' %></td>
+      <td>
+        <% if(w.monitor){ %>
+          <% var col = w.estado==='online'?'b-ok':(w.estado==='offline'?'b-off':'b-lector'); %>
+          <span class="badge <%= col %>"><%= w.estado==='online'?'🟢 online':(w.estado==='offline'?'🔴 offline':'⚪ sin datos') %></span>
+          <% if(w.last_check){ %><br><span class="muted" style="font-size:11px">últ. <%= w.last_check %></span><% } %>
+        <% } else { %><span class="muted">—</span><% } %>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table></div>
+<p class="muted">El estado de los APs se actualiza por ping cada 10 min desde un agente en la red del hotel (la VM del panel está en otra red y no los alcanza directamente).</p>
+<%- include('partials/reveal_script') %>
+<%- include('partials/footer') %>

@@ -1,0 +1,56 @@
+<%- include('partials/header', { title: 'Gestión de usuarios — Adaria Vera' }) %>
+<h1>Gestión de usuarios</h1>
+<p class="sub">Altas, bajas, roles y cambio de contraseña. Todo queda en la auditoría.</p>
+<% if(error){ %><div class="alert alert-err"><%= error %></div><% } %>
+<% if(magic){ %>
+  <div class="card" style="border-left:4px solid var(--green);background:#f0faf7">
+    <strong>🔗 Magic link generado para <%= magicUser %></strong>
+    <p class="muted" style="margin:6px 0">Cópialo y envíaselo. Da acceso directo sin contraseña (queda auditado). Para invalidarlo, usa «Revocar enlace».</p>
+    <input id="magicurl" value="<%= magic %>" readonly onclick="this.select()" style="font-family:ui-monospace,monospace;font-size:13px">
+    <button class="btn btn-sm" type="button" onclick="navigator.clipboard.writeText(document.getElementById('magicurl').value);this.textContent='✓ Copiado'">Copiar enlace</button>
+  </div>
+<% } %>
+
+<div class="table-wrap"><table>
+  <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Último acceso</th><th>Acciones</th></tr></thead>
+  <tbody>
+  <% users.forEach(function(u){ %>
+    <tr>
+      <td class="mono"><strong><%= u.username %></strong></td>
+      <td><%= u.nombre || '' %></td>
+      <td><span class="badge <%= u.role==='admin'?'b-admin':'b-lector' %>"><%= u.role %></span></td>
+      <td><span class="badge <%= u.activo?'b-ok':'b-off' %>"><%= u.activo?'activo':'inactivo' %></span></td>
+      <td class="muted"><%= u.last_login || 'nunca' %></td>
+      <td style="white-space:nowrap">
+        <form class="inline" method="post" action="/usuarios/<%= u.id %>/password" onsubmit="this.password.value=prompt('Nueva contraseña para <%= u.username %>:')||'';return this.password.value!=''">
+          <input type="hidden" name="password"><button class="btn btn-sm btn-gray" type="submit">Contraseña</button>
+        </form>
+        <form class="inline" method="post" action="/usuarios/<%= u.id %>/magic" onsubmit="this.dias.value=prompt('Días de validez del magic link (0 = sin caducidad):','90')||'';return this.dias.value!=''">
+          <input type="hidden" name="dias"><button class="btn btn-sm btn-terra" type="submit" title="Generar enlace de acceso sin contraseña">🔗 Magic link</button>
+        </form>
+        <% if(activeByUser[u.id]){ %>
+        <form class="inline" method="post" action="/usuarios/<%= u.id %>/magic-revoke" onsubmit="return confirm('¿Revocar el magic link de <%= u.username %>?')"><button class="btn btn-sm btn-out" type="submit">Revocar enlace</button></form>
+        <% } %>
+        <% if(u.username !== user.username){ %>
+        <form class="inline" method="post" action="/usuarios/<%= u.id %>/toggle"><button class="btn btn-sm btn-out" type="submit"><%= u.activo?'Desactivar':'Activar' %></button></form>
+        <form class="inline" method="post" action="/usuarios/<%= u.id %>/borrar" onsubmit="return confirm('¿Borrar usuario <%= u.username %>?')"><button class="btn btn-sm btn-danger" type="submit">✕</button></form>
+        <% } %>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table></div>
+
+<h2>Nuevo usuario</h2>
+<form class="card" method="post" action="/usuarios/crear" style="max-width:680px">
+  <div class="row">
+    <div><label>Usuario</label><input name="username" required></div>
+    <div><label>Nombre</label><input name="nombre"></div>
+  </div>
+  <div class="row">
+    <div><label>Contraseña</label><input name="password" type="text" required autocomplete="off"></div>
+    <div><label>Rol</label><select name="role"><option value="lector">Lector (ve dashboard y credenciales)</option><option value="admin">Admin (todo + gestión)</option></select></div>
+  </div>
+  <button class="btn" type="submit" style="margin-top:16px">Crear usuario</button>
+</form>
+<%- include('partials/footer') %>
