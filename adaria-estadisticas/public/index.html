@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hotel Adaria Vera · Estadísticas</title>
+<style>
+  :root {
+    --ocean-dark: #1b5e75;
+    --ocean-medium: #2d8aa3;
+    --terracota: #c67c6f;
+    --rust: #a65c52;
+    --bg: #f8f9fa;
+    --white: #ffffff;
+    --charcoal: #333333;
+    --gray: #6b6e72;
+    --light-gray: #e8e9eb;
+    --success: #27ae60;
+    --warning: #f39c12;
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--charcoal);
+    min-height: 100vh;
+  }
+  .header {
+    background: linear-gradient(135deg, var(--ocean-dark) 0%, var(--ocean-medium) 100%);
+    color: var(--white);
+    padding: 1.5rem 2rem;
+    box-shadow: var(--shadow-md);
+  }
+  .header-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .header .subtitle {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    margin-top: 0.2rem;
+  }
+  .version {
+    font-size: 0.75rem;
+    opacity: 0.75;
+    background: rgba(255,255,255,0.15);
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+  }
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  .updated-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .updated-bar span {
+    color: var(--gray);
+    font-size: 0.85rem;
+  }
+  .btn-refresh {
+    background-color: var(--ocean-dark);
+    color: var(--white);
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: 0.5rem 1.2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  .btn-refresh:hover { background-color: var(--ocean-medium); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .card {
+    background-color: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+  }
+  .card .label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  .card .value {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--ocean-dark);
+    line-height: 1;
+  }
+  .card .value.accent { color: var(--terracota); }
+  .card .sub {
+    font-size: 0.85rem;
+    color: var(--gray);
+    margin-top: 0.4rem;
+  }
+  .occupancy-card {
+    grid-column: span 1;
+  }
+  .bar-bg {
+    width: 100%;
+    height: 10px;
+    background-color: var(--light-gray);
+    border-radius: 9999px;
+    margin-top: 0.8rem;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--ocean-medium), var(--ocean-dark));
+    border-radius: 9999px;
+    transition: width 0.6s ease;
+  }
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--ocean-dark);
+    margin-bottom: 1rem;
+  }
+  .nac-list {
+    background-color: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+  }
+  .nac-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--light-gray);
+  }
+  .nac-row:last-child { border-bottom: none; }
+  .nac-name {
+    flex: 0 0 180px;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .nac-bar-bg {
+    flex: 1;
+    height: 8px;
+    background-color: var(--light-gray);
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+  .nac-bar-fill {
+    height: 100%;
+    background-color: var(--terracota);
+    border-radius: 9999px;
+    transition: width 0.6s ease;
+  }
+  .nac-total {
+    flex: 0 0 40px;
+    text-align: right;
+    font-weight: 700;
+    color: var(--ocean-dark);
+  }
+  .error-banner {
+    background-color: #fdecea;
+    color: #a65c52;
+    border: 1px solid #f5c6cb;
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+  .placeholder {
+    color: var(--gray);
+    font-style: italic;
+    font-size: 0.85rem;
+  }
+  .footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray);
+    font-size: 0.8rem;
+  }
+  @media (max-width: 600px) {
+    .container { padding: 1rem; }
+    .header { padding: 1rem 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-container">
+    <div>
+      <h1>Hotel Adaria Vera · Estadísticas</h1>
+      <div class="subtitle">Panel de ocupación en tiempo real (ACI)</div>
+    </div>
+    <div class="version">v1.0.0</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="error-banner" id="errorBanner">
+    No se pudo conectar con ACI en este momento. Mostrando último estado disponible.
+  </div>
+
+  <div class="updated-bar">
+    <span id="updatedAt">Cargando...</span>
+    <button class="btn-refresh" onclick="loadStats()">Actualizar</button>
+  </div>
+
+  <div class="grid">
+    <div class="card occupancy-card">
+      <div class="label">Ocupación de hoy</div>
+      <div class="value" id="ocupacionPct">—</div>
+      <div class="sub" id="ocupacionDetalle">— / — habitaciones</div>
+      <div class="bar-bg"><div class="bar-fill" id="ocupacionBar" style="width:0%"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="label">Entradas hoy</div>
+      <div class="value accent" id="entradasHoy">—</div>
+      <div class="sub">Check-ins previstos</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Salidas hoy</div>
+      <div class="value accent" id="salidasHoy">—</div>
+      <div class="sub">Check-outs previstos</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Huéspedes hoy</div>
+      <div class="value" id="huespedesHoy">—</div>
+      <div class="sub">Personas alojadas</div>
+    </div>
+  </div>
+
+  <div class="section-title">Distribución por nacionalidad</div>
+  <div class="nac-list" id="nacList">
+    <span class="placeholder">Cargando datos...</span>
+  </div>
+
+</div>
+
+<div class="footer">Hotel Adaria Vera · Estadísticas v1.0.0 · Datos de solo lectura desde ACI</div>
+
+<script>
+async function loadStats() {
+  const errorBanner = document.getElementById('errorBanner');
+  try {
+    const resp = await fetch('/api/stats');
+    const data = await resp.json();
+
+    if (!data.ok) {
+      errorBanner.style.display = 'block';
+      document.getElementById('updatedAt').textContent = 'Sin datos disponibles';
+      return;
+    }
+    errorBanner.style.display = 'none';
+
+    const oc = data.ocupacion;
+    document.getElementById('ocupacionPct').textContent = (oc.porcentaje ?? '—') + '%';
+    document.getElementById('ocupacionDetalle').textContent =
+      oc.habitaciones_ocupadas + ' / ' + oc.total_habitaciones + ' habitaciones';
+    document.getElementById('ocupacionBar').style.width = Math.min(oc.porcentaje, 100) + '%';
+
+    document.getElementById('entradasHoy').textContent = data.entradas_hoy;
+    document.getElementById('salidasHoy').textContent = data.salidas_hoy;
+    document.getElementById('huespedesHoy').textContent = data.huespedes_hoy;
+
+    const nacList = document.getElementById('nacList');
+    if (data.nacionalidades && data.nacionalidades.length > 0) {
+      const maxTotal = Math.max(...data.nacionalidades.map(n => n.total));
+      nacList.innerHTML = data.nacionalidades.map(n => `
+        <div class="nac-row">
+          <div class="nac-name">${n.nacionalidad}</div>
+          <div class="nac-bar-bg"><div class="nac-bar-fill" style="width:${(n.total / maxTotal) * 100}%"></div></div>
+          <div class="nac-total">${n.total}</div>
+        </div>
+      `).join('');
+    } else {
+      nacList.innerHTML = '<span class="placeholder">— (a mapear)</span>';
+    }
+
+    const fecha = new Date(data.generado);
+    document.getElementById('updatedAt').textContent =
+      'Actualizado: ' + fecha.toLocaleDateString('es-ES') + ' ' + fecha.toLocaleTimeString('es-ES');
+
+  } catch (err) {
+    errorBanner.style.display = 'block';
+    document.getElementById('updatedAt').textContent = 'Error de conexión';
+  }
+}
+
+loadStats();
+setInterval(loadStats, 60000);
+</script>
+
+</body>
+</html>
