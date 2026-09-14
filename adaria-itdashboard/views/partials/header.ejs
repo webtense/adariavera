@@ -27,6 +27,7 @@
         <a href="/directorio" class="<%= path.startsWith('/directorio')?'active':'' %>">Directorio</a>
         <a href="/backups" class="<%= path.startsWith('/backups')?'active':'' %>">Copias de seguridad</a>
         <a href="/credenciales" class="<%= path.startsWith('/credenciales')?'active':'' %>">Usuarios y Contraseñas</a>
+        <a href="/changelog" class="<%= path.startsWith('/changelog')?'active':'' %>">Historial de versiones</a>
         <% if (user && user.role==='admin'){ %>
           <a href="/usuarios" class="<%= path.startsWith('/usuarios')?'active':'' %>">Gestión usuarios</a>
           <a href="/auditoria" class="<%= path.startsWith('/auditoria')?'active':'' %>">Auditoría</a>
@@ -61,6 +62,7 @@
       <a href="/directorio" class="<%= path.startsWith('/directorio')?'active':'' %>">📇 Directorio</a>
       <a href="/backups" class="<%= path.startsWith('/backups')?'active':'' %>">💾 Copias de seguridad</a>
       <a href="/credenciales" class="<%= path.startsWith('/credenciales')?'active':'' %>">🔑 Usuarios y Contraseñas</a>
+      <a href="/changelog" class="<%= path.startsWith('/changelog')?'active':'' %>">📋 Historial de versiones</a>
       <% if (user && user.role==='admin'){ %>
         <a href="/usuarios" class="<%= path.startsWith('/usuarios')?'active':'' %>">👥 Gestión usuarios</a>
         <a href="/auditoria" class="<%= path.startsWith('/auditoria')?'active':'' %>">📋 Auditoría</a>

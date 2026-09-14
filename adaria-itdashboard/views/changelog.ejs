@@ -1,0 +1,21 @@
+<%- include('partials/header', { title: 'Historial de versiones — Adaria Vera' }) %>
+<h1>Historial de versiones</h1>
+<p class="sub"><%= changelog.app_name %> · versión actual v<%= changelog.current_version %></p>
+<div class="table-wrap"><table>
+  <thead><tr><th>Versión</th><th>Fecha</th><th>Título</th><th>Descripción</th><th>SHA</th></tr></thead>
+  <tbody>
+  <% (changelog.entries||[]).forEach(function(e){ %>
+    <tr>
+      <td><strong>v<%= e.version %></strong></td>
+      <td><%= e.fecha %></td>
+      <td><strong><%= e.titulo %></strong></td>
+      <td class="muted"><%= e.descripcion %></td>
+      <td class="mono"><%= (e.sha||'').slice(0,7) %></td>
+    </tr>
+  <% }) %>
+  <% if(!changelog.entries || !changelog.entries.length){ %>
+    <tr><td colspan="5" class="muted">Sin entradas todavía.</td></tr>
+  <% } %>
+  </tbody>
+</table></div>
+<%- include('partials/footer') %>

@@ -249,6 +249,13 @@ app.get('/backups', requireLogin, (req, res) => {
 });
 
 // ---- ESQUEMA DE RED ----
+app.get('/changelog', requireLogin, (req, res) => {
+  let changelog = { app_name: 'Dashboard IT (Hotel Adaria Vera)', entries: [] };
+  try {
+    changelog = JSON.parse(fs.readFileSync(path.join(__dirname, 'VERSION', 'changelog.json'), 'utf8'));
+  } catch (e) {}
+  res.render('changelog', { changelog });
+});
 app.get('/esquema-red', requireLogin, (req, res) => res.render('esquema'));
 app.get('/estructura-red', requireLogin, (req, res) => res.render('estructura'));
 app.get('/telefonia', requireLogin, (req, res) => res.render('telefonia'));
