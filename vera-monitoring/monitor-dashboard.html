@@ -304,12 +304,196 @@
       0%, 100% { opacity: 0.5; }
       50% { opacity: 1; }
     }
+
+    /* ===== CHANGELOG MODAL ===== */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-content {
+      background: white;
+      margin: 5% auto;
+      padding: 30px;
+      border-radius: 8px;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      animation: slideDown 0.3s;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #667eea;
+    }
+
+    .modal-header h2 {
+      font-size: 24px;
+      color: #667eea;
+      margin: 0;
+    }
+
+    .close-btn {
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #666;
+      background: none;
+      border: none;
+      padding: 0;
+      width: auto;
+      transition: all 0.3s;
+    }
+
+    .close-btn:hover {
+      color: #000;
+      transform: scale(1.2);
+    }
+
+    .changelog-entry {
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .changelog-entry:last-child {
+      border-bottom: none;
+    }
+
+    .changelog-date {
+      font-size: 12px;
+      color: #667eea;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .changelog-message {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #1f2937;
+    }
+
+    .changelog-author {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .changelog-body {
+      font-size: 13px;
+      white-space: pre-wrap;
+      color: #4b5563;
+      line-height: 1.6;
+      background: #f9fafb;
+      padding: 12px;
+      border-radius: 4px;
+      border-left: 3px solid #667eea;
+    }
+
+    .changelog-hash {
+      font-size: 11px;
+      color: #999;
+      font-family: monospace;
+      margin-top: 8px;
+    }
+
+    .changelog-loading {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .changelog-error {
+      background: #fee2e2;
+      border: 1px solid #ef4444;
+      padding: 12px;
+      border-radius: 4px;
+      color: #dc2626;
+      border-left: 3px solid #ef4444;
+    }
+
+    .changelog-summary {
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #e5e7eb;
+      background: #f0f4ff;
+      padding: 15px;
+      border-radius: 4px;
+    }
+
+    .changelog-summary p {
+      margin: 5px 0;
+      font-size: 14px;
+      color: #1f2937;
+    }
+
+    .changelog-summary strong {
+      color: #667eea;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .header-controls button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .header-controls button:hover {
+      background: #764ba2;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    @media (max-width: 768px) {
+      .modal-content {
+        margin: 20% auto;
+        max-width: 90%;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Vera Adaria — Health Monitor v1.1.0</h1>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h1 style="margin-bottom: 0;">Vera Adaria — Health Monitor v1.1.0</h1>
+        <div class="header-controls">
+          <button onclick="openChangelog()">📋 Historial</button>
+        </div>
+      </div>
       <div class="status-badge" id="overallStatus">
         <span class="spinner"></span> Cargando...
       </div>
@@ -349,6 +533,19 @@
       </ul>
       <div class="refresh-info">
         Actualización automática cada 5 segundos
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CHANGELOG MODAL ===== -->
+  <div id="changelogModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📋 Historial de Cambios</h2>
+        <button class="close-btn" onclick="closeChangelog()">&times;</button>
+      </div>
+      <div id="changelogBody">
+        <div class="changelog-loading"><span class="spinner"></span> Cargando historial...</div>
       </div>
     </div>
   </div>
@@ -523,6 +720,59 @@
 
     // Iniciar cuando cargue DOM
     document.addEventListener('DOMContentLoaded', startAutoRefresh);
+
+    /**
+     * Changelog Modal Functions
+     */
+    async function openChangelog() {
+      const modal = document.getElementById('changelogModal');
+      const body = document.getElementById('changelogBody');
+      modal.style.display = 'block';
+
+      try {
+        const response = await fetch('changelog.json');
+        if (!response.ok) throw new Error('Changelog no encontrado');
+
+        const data = await response.json();
+
+        if (data.error) {
+          body.innerHTML = `<div class="changelog-error">Error: ${data.error}</div>`;
+          return;
+        }
+
+        const html = `
+          <div class="changelog-summary">
+            <p>Total de cambios: <strong>${data.totalCommits}</strong></p>
+            <p>Última actualización: <strong>${new Date(data.lastUpdate).toLocaleString('es-ES')}</strong></p>
+          </div>
+          ${data.commits.map(commit => `
+            <div class="changelog-entry">
+              <div class="changelog-date">📅 ${new Date(commit.date).toLocaleString('es-ES')}</div>
+              <div class="changelog-message">${commit.message}</div>
+              <div class="changelog-author">👤 ${commit.author}</div>
+              ${commit.body ? `<div class="changelog-body">${commit.body}</div>` : ''}
+              <div class="changelog-hash">🔗 ${commit.hash.substring(0, 7)}</div>
+            </div>
+          `).join('')}
+        `;
+
+        body.innerHTML = html;
+      } catch (error) {
+        body.innerHTML = `<div class="changelog-error">Error al cargar el historial: ${error.message}</div>`;
+      }
+    }
+
+    function closeChangelog() {
+      document.getElementById('changelogModal').style.display = 'none';
+    }
+
+    // Cerrar modal al hacer clic fuera
+    window.addEventListener('click', (e) => {
+      const modal = document.getElementById('changelogModal');
+      if (e.target === modal) {
+        closeChangelog();
+      }
+    });
   </script>
 </body>
 </html>

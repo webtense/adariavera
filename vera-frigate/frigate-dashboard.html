@@ -423,6 +423,141 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    /* ===== CHANGELOG MODAL ===== */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-content {
+      background: var(--secondary);
+      margin: 5% auto;
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      animation: slideDown 0.3s;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--accent);
+    }
+
+    .modal-header h2 {
+      font-size: 1.8rem;
+      color: var(--info);
+    }
+
+    .close-btn {
+      font-size: 2rem;
+      font-weight: bold;
+      cursor: pointer;
+      color: var(--accent);
+      background: none;
+      border: none;
+      padding: 0;
+      width: auto;
+      transition: all 0.3s;
+    }
+
+    .close-btn:hover {
+      color: #fff;
+      transform: scale(1.2);
+    }
+
+    .changelog-entry {
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .changelog-entry:last-child {
+      border-bottom: none;
+    }
+
+    .changelog-date {
+      font-size: 0.85rem;
+      color: var(--info);
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .changelog-message {
+      font-size: 1rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      color: #ecf0f1;
+    }
+
+    .changelog-author {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-bottom: 0.75rem;
+    }
+
+    .changelog-body {
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      opacity: 0.9;
+      line-height: 1.5;
+      background: rgba(0,0,0,0.2);
+      padding: 1rem;
+      border-radius: 6px;
+      border-left: 3px solid var(--accent);
+    }
+
+    .changelog-hash {
+      font-size: 0.75rem;
+      color: var(--warning);
+      font-family: monospace;
+      margin-top: 0.5rem;
+      opacity: 0.7;
+    }
+
+    .changelog-loading {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .changelog-error {
+      background: rgba(231, 76, 60, 0.2);
+      border: 1px solid var(--accent);
+      padding: 1rem;
+      border-radius: 6px;
+      color: #e74c3c;
+    }
+
+    @media (max-width: 768px) {
+      .modal-content {
+        margin: 20% auto;
+        max-width: 90%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -439,6 +574,7 @@
       <button onclick="refreshDashboard()">🔄 Actualizar</button>
       <button class="secondary" onclick="toggleRecording()">⏹️ Grabar Todos</button>
       <button class="secondary" onclick="downloadEvents()">⬇️ Descargar Eventos</button>
+      <button class="secondary" onclick="openChangelog()">📋 Historial</button>
     </div>
 
     <!-- ===== ESTADO EN VIVO ===== -->
@@ -503,6 +639,19 @@
       <div class="chart-card">
         <div class="chart-title">Timeline Eventos</div>
         <canvas id="timelineChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CHANGELOG MODAL ===== -->
+  <div id="changelogModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📋 Historial de Cambios</h2>
+        <button class="close-btn" onclick="closeChangelog()">&times;</button>
+      </div>
+      <div id="changelogBody">
+        <div class="changelog-loading"><div class="spinner"></div> Cargando historial...</div>
       </div>
     </div>
   </div>
@@ -679,6 +828,59 @@
     function downloadEvents() {
       alert('Download Events - No implementado aún');
     }
+
+    // =========================================================================
+    // Changelog Modal
+    // =========================================================================
+    async function openChangelog() {
+      const modal = document.getElementById('changelogModal');
+      const body = document.getElementById('changelogBody');
+      modal.style.display = 'block';
+
+      try {
+        const response = await fetch('changelog.json');
+        if (!response.ok) throw new Error('Changelog no encontrado');
+
+        const data = await response.json();
+
+        if (data.error) {
+          body.innerHTML = `<div class="changelog-error">Error: ${data.error}</div>`;
+          return;
+        }
+
+        const html = `
+          <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <p style="opacity: 0.8;">Total de cambios: <strong>${data.totalCommits}</strong></p>
+            <p style="opacity: 0.8;">Última actualización: <strong>${new Date(data.lastUpdate).toLocaleString('es-ES')}</strong></p>
+          </div>
+          ${data.commits.map(commit => `
+            <div class="changelog-entry">
+              <div class="changelog-date">📅 ${new Date(commit.date).toLocaleString('es-ES')}</div>
+              <div class="changelog-message">${commit.message}</div>
+              <div class="changelog-author">👤 ${commit.author}</div>
+              ${commit.body ? `<div class="changelog-body">${commit.body}</div>` : ''}
+              <div class="changelog-hash">🔗 ${commit.hash.substring(0, 7)}</div>
+            </div>
+          `).join('')}
+        `;
+
+        body.innerHTML = html;
+      } catch (error) {
+        body.innerHTML = `<div class="changelog-error">Error al cargar el historial: ${error.message}</div>`;
+      }
+    }
+
+    function closeChangelog() {
+      document.getElementById('changelogModal').style.display = 'none';
+    }
+
+    // Cerrar modal al hacer clic fuera
+    window.addEventListener('click', (e) => {
+      const modal = document.getElementById('changelogModal');
+      if (e.target === modal) {
+        closeChangelog();
+      }
+    });
 
     // =========================================================================
     // Inicialización

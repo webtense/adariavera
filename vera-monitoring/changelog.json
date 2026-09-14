@@ -1,0 +1,14 @@
+{
+  "module": "monitoring",
+  "lastUpdate": "2026-09-02 23:31:31 +0200",
+  "totalCommits": 1,
+  "commits": [
+    {
+      "hash": "5d7ff53c4ea2a36845c72a2d7010cba35659e8b8",
+      "author": "Andres Sanchez",
+      "date": "2026-09-02 23:31:31 +0200",
+      "message": "feat: Health Checker v1.1.0 — sistema de monitoreo + alertas WhatsApp",
+      "body": "Watchdog service (puerto 3100):\n- Health checks automáticos cada 30 segundos\n- Monitoreo 9 servicios Vera Adaria\n- Alertas WhatsApp (Twilio + n8n)\n- Anti-spam: máx 1 alerta / 5 minutos\n- Métricas: uptime, latencia P95/P99, error rate, throughput\n\nComponentes:\n- watchdog-service.js (310 líneas)\n- alerter.js (151 líneas)\n- health-endpoints.js (219 líneas)\n- schema-monitoring.sql (270 líneas)\n- monitor-dashboard.html (528 líneas)\n- DB: PostgreSQL con histórico 30 días\n- API endpoints: /services/status, /metrics, /health\n\nIntegración:\n- Cada módulo expone /health y /metrics\n- Dashboard tiempo real (refresh 5s)\n- Alertas a +34 630 219 712 (Olga)\n- Cleanup automático de logs antiguos\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
+    }
+  ]
+}

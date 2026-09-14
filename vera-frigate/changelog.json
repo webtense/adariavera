@@ -1,0 +1,14 @@
+{
+  "module": "frigate",
+  "lastUpdate": "2026-09-03 09:03:33 +0200",
+  "totalCommits": 1,
+  "commits": [
+    {
+      "hash": "0683a7d5c2bbba442804f97e2953bbdc3a11c60f",
+      "author": "Andres Sanchez",
+      "date": "2026-09-03 09:03:33 +0200",
+      "message": "feat: Frigate NVR v1.1.0 — vigilancia inteligente con detección",
+      "body": "Sistema de vigilancia on-demand (10min antes + evento + 10min después):\n- 6 cámaras Tapo C210 pre-configuradas\n- Detección YOLO v8 (persona, vehículo, animal)\n- Grabación inteligente (solo eventos)\n- Almacenamiento optimizado: 40-50GB/mes\n- Alertas WhatsApp automáticas\n- Anti-spam: máx 1 alerta / 2 min por cámara\n\nComponentes:\n- frigate.yml (6 cámaras, zones, motion detection)\n- frigate-setup.sh (instalación automática Docker)\n- alerts-frigate.js (polling + webhook WhatsApp)\n- frigate-dashboard.html (UI tiempo real, 6 feeds)\n- schema-frigate.sql (PostgreSQL histórico eventos)\n- frigate-calibration.md (guía calibración por cámara)\n- docker-compose.yml (stack completo)\n\nIntegración:\n- Watchdog API: Frigate reporta eventos\n- PostgreSQL: Histórico 30 días\n- WhatsApp: Alertas inteligentes\n- Dashboard: Feeds en vivo + últimos eventos\n\nAlmacenamiento:\n- Pre-buffer: 10 min (memoria)\n- Grabación: Solo eventos detectados\n- Post-buffer: 10 min después\n- Límite: 100GB máximo\n- Limpieza automática: Eventos >30 días\n\nCálculo: 6 cámaras × 5 eventos/día × 20min = ~40GB/mes\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>"
+    }
+  ]
+}
