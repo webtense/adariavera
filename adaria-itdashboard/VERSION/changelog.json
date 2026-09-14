@@ -1,21 +1,27 @@
 {
-  "app_code": "adaria-itdashboard",
-  "app_name": "Dashboard IT (Hotel Adaria Vera)",
-  "current_version": "1.0.0",
-  "entries": [
-    {
-      "version": "1.0.0",
-      "fecha": "2026-09-10",
-      "titulo": "Versión dinámica en header/footer",
-      "descripcion": "El número de versión mostrado en cabecera y pie ya no está fijo en las vistas: se lee de package.json vía app.locals.appVersion.",
-      "sha": "338fe7b"
-    },
+  "app": "adaria-itdashboard",
+  "generado": "2026-09-14",
+  "versiones": [
     {
       "version": "1.0.0",
       "fecha": "2026-09-10",
       "titulo": "Incorporación al repositorio",
-      "descripcion": "El Dashboard IT (Servidores, Switches, Cámaras, WiFi, Esquema/Estructura de red, Telefonía, Directorio, Backups, Usuarios y Contraseñas, Auditoría) se incorpora al repo desde CT113.",
+      "resumen": "El Dashboard IT (Servidores, Switches, Cámaras, WiFi, Esquema de red, Telefonía, Directorio, Backups, Usuarios y Auditoría) se incorpora al repo desde CT113.",
       "sha": "3546112"
+    },
+    {
+      "version": "1.1.0",
+      "fecha": "2026-09-10",
+      "titulo": "Versión dinámica en header/footer",
+      "resumen": "El número de versión mostrado en cabecera y pie ya no está fijo en las vistas: se lee de package.json vía app.locals.appVersion.",
+      "sha": "338fe7b"
+    },
+    {
+      "version": "1.2.0",
+      "fecha": "2026-09-14",
+      "titulo": "Vista de historial de cambios",
+      "resumen": "Nueva vista /changelog con el historial de versiones del Dashboard IT.",
+      "sha": "b8ad488"
     }
   ]
 }
