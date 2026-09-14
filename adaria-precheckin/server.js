@@ -219,6 +219,49 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'adaria-precheckin', version: VERSION, ts: new Date().toISOString() });
 });
 
+// ─── Changelog (público, sin auth) ───
+// Sirve VERSION/changelog.json (histórico de commits generado desde git log)
+// y una vista HTML de tabla que lo consume vía fetch. Mismo criterio que
+// /health y /api/version: información operativa, no datos de huéspedes.
+app.use('/VERSION', express.static(path.join(__dirname, 'VERSION')));
+
+app.get('/changelog', (req, res) => {
+  res.send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Changelog · Pre check-in</title><style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#333;background:#f8f9fa;padding:24px}
+h1{color:#2c3e50;font-size:20px;margin-bottom:4px}
+.sub{color:#7f8c8d;font-size:13px;margin-bottom:20px;font-weight:600}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+th,td{text-align:left;padding:10px 14px;font-size:13px;border-bottom:1px solid #eee;vertical-align:top}
+th{background:#2c3e50;color:#fff;font-weight:600}
+td.ver{font-family:monospace;color:#7f8c8d;white-space:nowrap}
+td.fecha{white-space:nowrap;color:#888}
+td.resumen{white-space:pre-line;color:#555}
+tr:last-child td{border-bottom:none}
+.empty{padding:24px;text-align:center;color:#999}
+</style></head><body>
+<h1>📋 Changelog · Pre check-in</h1>
+<div class="sub">Hotel Adaria Vera</div>
+<table id="tbl"><thead><tr><th>Versión</th><th>Fecha</th><th>Cambio</th></tr></thead>
+<tbody id="tbody"><tr><td colspan="3" class="empty">Cargando…</td></tr></tbody></table>
+<script>
+fetch('/VERSION/changelog.json')
+  .then(function(r){ if(!r.ok) throw new Error('http '+r.status); return r.json(); })
+  .then(function(d){
+    var body = document.getElementById('tbody');
+    var versiones = (d && d.versiones) || [];
+    if (!versiones.length) { body.innerHTML = '<tr><td colspan="3" class="empty">Sin entradas</td></tr>'; return; }
+    body.innerHTML = versiones.map(function(v){
+      var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+      return '<tr><td class="ver">' + esc(v.version) + '</td><td class="fecha">' + esc(v.fecha) + '</td><td class="resumen">' + esc(v.titulo) + '</td></tr>';
+    }).join('');
+  })
+  .catch(function(){ document.getElementById('tbody').innerHTML = '<tr><td colspan="3" class="empty">No se pudo cargar el changelog</td></tr>'; });
+</script>
+</body></html>`);
+});
+
 // ─── API pública (huésped) ──────────────────────────────────────────────────
 
 // Busca la reserva por localizador+apellido o fecha de entrada+apellido.

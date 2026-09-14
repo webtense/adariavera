@@ -1,0 +1,62 @@
+{
+  "app": "adaria-precheckin",
+  "generado": "2026-09-14",
+  "versiones": [
+    {
+      "version": "13d6919",
+      "fecha": "2026-09-10",
+      "titulo": "Reconvertir badge de versión a header/footer real (personal + precheckin)",
+      "resumen": "Sprint de estandarización Vera Adaria: sustituye el div flotante de\nversion-badge.js por relleno de #adaria-header-version / #adaria-footer-version\n(fuente real: /api/version -> package.json, con fallback a VERSION/version.json).\n\n- adaria-personal: index.html y vista /quiosco (antes no cargaba el script en\n  absoluto) ahora muestran versión real en header y footer, respetando\n  __BASE_PATH__. Se elimina el \"Adaria Personal v1.4\" hardcodeado en\n  quiosco.js. Fix de requireAuth: version-badge.js se exime del login de\n  admin (lo necesita también el quiosco, que no usa esa sesión).\n- adaria-precheckin: montado desde cero (no tenía nada de esto). Se añade\n  /api/version en server.js (confirmado que ya existía en producción tras\n  un sprint anterior, no duplicado) y se elimina el div \".ver\" con \"v1.2.0\"\n  hardcodeado tanto en el formulario público como en el panel admin interno.\n\nDesplegado y verificado en producción (CT111, pct push + systemctl restart).",
+      "sha": "13d69194834e36285cf2a9d9253e077fde69753d"
+    },
+    {
+      "version": "78020f7",
+      "fecha": "2026-09-10",
+      "titulo": "feat(adaria-precheckin): desplegar FASE 3 (filtrado propiedad + reintentos + panel errores) fusionado con SMTP real de producción",
+      "resumen": "FASE 3 (commit 37668bf, 26/08/2026) nunca se había desplegado al servicio\nsystemd: producción seguía en v1.0. En paralelo, producción evolucionó\nmail.js (28/08/2026) con envío SMTP real (nodemailer, SEND_MODE test/live,\nBCC de auditoría) que el repo no reflejaba. Este commit fusiona ambas\nlíneas sin perder ninguna:\n\n- PROPERTY_MAP + requireProperty() en /admin, /admin/errores, /admin/:id y\n  /admin/:id/procesar (migración 002 ya estaba aplicada en la BD real).\n- registrarYNotificar() con traza en precheckin_notificacion_log, adaptado\n  al mail.js REAL (usa el campo `modo`/`error` que devuelve, no el `motivo`\n  que proponía el mail.js simplificado original de FASE 3).\n- cron_precheckin_mejoras.js con reintentos 3/3 días, mismo ajuste al\n  mail.js real. Programado en crontab de producción (09:00 diario).\n- Panel /admin/errores.\n- mail.js NO se toca: su envío SMTP real manda sobre la lógica de FASE 3.\n  Los gates PRECHECKIN_EMAIL_ENABLED/WRITE/ALTA quedan reservados, sin\n  cablear a ningún código (el control real de envío sigue siendo SEND_MODE\n  dentro de mail.js).\n\nProbado en CT111 contra una instancia temporal (puerto 3196, misma BD real\nde solo lectura salvo el propio log del cron) antes de tocar el servicio.\nDesplegado en producción con backup previo\n(/opt/adaria-precheckin.bak-pre-fase3-20260910_101555).\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>",
+      "sha": "78020f70f58bddcc7eec458c9a37c6a2a94329b8"
+    },
+    {
+      "version": "9992074",
+      "fecha": "2026-09-10",
+      "titulo": "sync: adaria-precheckin desde producción CT111 10/09/2026",
+      "resumen": "IMPORTANTE — hallazgo: el repo local estaba MÁS AVANZADO que producción,\nno al revés. El commit 37668bf (\"v1.2.0 FASE 3: gates, filtrado por\npropiedad, reintentos, panel de errores\") nunca se desplegó al servidor:\nel proceso systemd real (WorkingDirectory=/opt/adaria-precheckin, PID\nconfirmado) sigue ejecutando el server.js anterior (VERSION interno '1.0'),\nsin PROPERTY_MAP/requireProperty/registrarYNotificar ni los gates\nPRECHECKIN_EMAIL_ENABLED/WRITE/ALTA.\n\nmail.js sí siguió evolucionando en directo tras esa fecha: producción\nimplementó el envío real por SMTP (nodemailer, BCC de auditoría a\nTEST_MAILBOX) el 28/08, algo que el repo no tenía.\n\nEste commit sobrescribe server.js y mail.js con el contenido REAL que\ncorre en producción (que manda, según instrucción), dejando el trabajo de\nFASE 3 intacto en el historial de git (commit 37668bf) por si se decide\ndesplegarlo — ver decisión pendiente en el informe. package.json también\nsincronizado (añade mssql/nodemailer reales) y versión reconciliada a\n1.2.0 (coincide con VERSION/version.json).",
+      "sha": "999207452176f1c132fac62b6dd481e93c14b3c1"
+    },
+    {
+      "version": "e0d9771",
+      "fecha": "2026-09-02",
+      "titulo": "chore: npm install — actualizar package-lock.json",
+      "resumen": "Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>",
+      "sha": "e0d9771894f34d2b589c5408604c87907f167fb8"
+    },
+    {
+      "version": "cffdf50",
+      "fecha": "2026-09-02",
+      "titulo": "Fase 1: Sistema versionado + rollback para Welcome y Pre-checkin v1.1.0",
+      "resumen": "- Git tags: v1.0.0-{welcome,precheckin}-baseline, v1.1.0-{welcome,precheckin}\n- Scripts rollback: rollback-welcome.sh, rollback-precheckin.sh\n- Documentación: PHASE_1_VERSIONING_SUMMARY.md\n- VERSION/ files: version.json, CHANGELOG.md, ROLLBACK.md\n- package.json actualizado a v1.1.0 en ambos módulos\n\nRollback points:\n  - v1.0.0-welcome-baseline → 8fa1d1c\n  - v1.1.0-welcome → 463fb98\n  - v1.0.0-precheckin-baseline → 8fa1d1c\n  - v1.1.0-precheckin → 463fb98\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>",
+      "sha": "cffdf508d0a93498c1caf21f194a083adfe69781"
+    },
+    {
+      "version": "463fb98",
+      "fecha": "2026-09-02",
+      "titulo": "Versioning Phase 1: Update package.json to v1.1.0 for welcome and precheckin modules",
+      "resumen": "Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>",
+      "sha": "463fb983cf41b4fc94db4a17ff8028f649f999a9"
+    },
+    {
+      "version": "37668bf",
+      "fecha": "2026-08-26",
+      "titulo": "adaria-precheckin v1.2.0 — FASE 3: gates, filtrado por propiedad, reintentos, panel de errores",
+      "resumen": "- Gates apagados de fábrica: PRECHECKIN_EMAIL_ENABLED (real: gatea el aviso a\n  recepción). PRECHECKIN_WRITE / PRECHECKIN_ALTA reservados por continuidad\n  de nombre con btr_gestion_portal, sin cablear a ningún código — esta app\n  sigue siendo solo lectura contra ACI (no hay usuario adaria_rw ni conector\n  de escritura verificado; Tarea E sigue bloqueada).\n- PROPERTY_MAP + requireProperty() aplicado a /admin, /admin/errores,\n  /admin/:id y /admin/:id/procesar. Columna property en precheckin_reserva\n  (migración 002), default 'adaria', preparado para Poblet (sep-2026).\n- cron_precheckin_mejoras.js: reintentos 3/3 días con motivo diferenciado,\n  registra ejecución en precheckin_cron_log. Probado en vivo contra la BD\n  real (candidatos/reintentados/agotado verificados con datos de prueba,\n  limpiados después).\n- Panel /admin/errores: notificaciones con incidencia, check-ins ≤2 días sin\n  procesar, últimas ejecuciones del cron.\n- deshacer_escritura_aci.js: stub preparado y sin usar (no hay escritura en\n  ACI que revertir todavía).\n- Manual de recepción (/opt/adaria-manuales/precheckin.html) corregido para\n  describir el flujo real (búsqueda por localizador+apellido, no enlace\n  personalizado) y con datos reales del hotel (check-in 14:00, checkout\n  12:00, parking 61 plazas·10€/noche) — desplegado en vivo con backup.\n- Migración 002 aplicada en vivo (aditiva) contra precheckin_adaria.\n\nNo desplegado: el server.js/mail.js/cron nuevos quedan en el repo, no en el\nservicio systemd — el despliegue del código requiere reinicio del servicio y\nqueda pendiente de confirmación explícita.\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>",
+      "sha": "37668bf882cc4aceb3758e78a200551ab916daee"
+    },
+    {
+      "version": "8fa1d1c",
+      "fecha": "2026-08-26",
+      "titulo": "baseline pre-versionado — snapshot 26/08/2026",
+      "resumen": "baseline pre-versionado — snapshot 26/08/2026",
+      "sha": "8fa1d1c672be019ca55d79df9204f0312fcbb508"
+    }
+  ]
+}

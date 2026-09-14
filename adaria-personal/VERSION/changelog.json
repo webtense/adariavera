@@ -1,0 +1,48 @@
+{
+  "app": "adaria-personal",
+  "generado": "2026-09-14",
+  "versiones": [
+    {
+      "version": "3202d05",
+      "fecha": "2026-09-10",
+      "titulo": "feat: credenciales de staff compartidas entre gestion, parking y personal",
+      "resumen": "Cualquier usuario de adaria-gestion (users.json) ahora también puede\niniciar sesión en parking y personal con la misma contraseña, sin tocar\nnada a mano en cada módulo. Fuente única de verdad: users.json de\nadaria-gestion (mismo contenedor CT111). Roles mapeados:\nsuperadmin/admin -> admin/superadmin; guest -> operador/usuario.\n\nCada módulo sigue teniendo su propia pantalla de login (no es SSO real,\npor decisión explícita del usuario) pero valida contra las mismas\ncredenciales. Las cuentas creadas directamente en parking (p.ej. el\nadmin semilla) o el ADMIN_USER local de personal siguen funcionando\nigual, sin romper nada existente.",
+      "sha": "3202d0594e4ef5d0910273d8772aaafa02d40fe2"
+    },
+    {
+      "version": "13d6919",
+      "fecha": "2026-09-10",
+      "titulo": "Reconvertir badge de versión a header/footer real (personal + precheckin)",
+      "resumen": "Sprint de estandarización Vera Adaria: sustituye el div flotante de\nversion-badge.js por relleno de #adaria-header-version / #adaria-footer-version\n(fuente real: /api/version -> package.json, con fallback a VERSION/version.json).\n\n- adaria-personal: index.html y vista /quiosco (antes no cargaba el script en\n  absoluto) ahora muestran versión real en header y footer, respetando\n  __BASE_PATH__. Se elimina el \"Adaria Personal v1.4\" hardcodeado en\n  quiosco.js. Fix de requireAuth: version-badge.js se exime del login de\n  admin (lo necesita también el quiosco, que no usa esa sesión).\n- adaria-precheckin: montado desde cero (no tenía nada de esto). Se añade\n  /api/version en server.js (confirmado que ya existía en producción tras\n  un sprint anterior, no duplicado) y se elimina el div \".ver\" con \"v1.2.0\"\n  hardcodeado tanto en el formulario público como en el panel admin interno.\n\nDesplegado y verificado en producción (CT111, pct push + systemctl restart).",
+      "sha": "13d69194834e36285cf2a9d9253e077fde69753d"
+    },
+    {
+      "version": "2815bf8",
+      "fecha": "2026-09-10",
+      "titulo": "feat(adaria-personal): badge de versión dinámico + endpoint /api/version",
+      "resumen": "Corrige el embrión de badge desincronizado: <div class=\"ver\">Adaria\nPersonal v1.4</div> hardcodeado no coincidía con la versión real (1.3.0).\nSe sustituye por version-badge.js (respeta window.BASE_PATH=/rrhh) y se\nretira la regla CSS .ver ya no usada. Desplegado y verificado en\nproducción (CT111, puerto 3096) — /api/version responde 1.3.0.",
+      "sha": "2815bf81032c61f9d0dab869a8310927a0242c3d"
+    },
+    {
+      "version": "08e2b21",
+      "fecha": "2026-09-10",
+      "titulo": "sync: adaria-personal reconciliación de versión 10/09/2026",
+      "resumen": "Código ya estaba 100% sincronizado con producción CT111 (server.js,\ninit.sql, db.js, public/* idénticos byte a byte) — solo desviaba el\nnúmero de versión: package.json marcaba 1.3.0 pero VERSION/version.json\nse había quedado en 1.1.0. Se actualiza VERSION/version.json a 1.3.0\npara que ambos coincidan.\n\nNota: el APP_VERSION interno de server.js dice '1.4' — un tercer valor\nsin reconciliar, ver informe.",
+      "sha": "08e2b213d57f552a684107a0bd3de16e6fc48f72"
+    },
+    {
+      "version": "876b6d7",
+      "fecha": "2026-08-26",
+      "titulo": "Fase 1: Sistema versionado unificado v1.1.0 — endpoint /api/versiones, card Changelog, tablas SQL, 11 apps",
+      "resumen": "Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>",
+      "sha": "876b6d7826924413dfdd21d2e7c70ccd5b023816"
+    },
+    {
+      "version": "8fa1d1c",
+      "fecha": "2026-08-26",
+      "titulo": "baseline pre-versionado — snapshot 26/08/2026",
+      "resumen": "baseline pre-versionado — snapshot 26/08/2026",
+      "sha": "8fa1d1c672be019ca55d79df9204f0312fcbb508"
+    }
+  ]
+}
