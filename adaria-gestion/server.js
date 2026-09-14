@@ -177,7 +177,7 @@ function topbar(u, p){
   const link=(href,txt)=>`<a href="${href}" class="${p===href?'active':''}">${txt}</a>`;
   const pillCls = sup?'a':'u';
   return `<div class="top"><div class="b-wrap"><div class="b"><span>🌊</span>Hotel Adaria Vera · Gestión</div><div id="adaria-header-version"></div></div>
-   <nav>${link('/','Inicio')}${link('/qr','QR')}${sup?link('/usuarios','Usuarios')+link('/auditoria','Auditoría'):''}</nav>
+   <nav>${link('/','Inicio')}${link('/qr','QR')}${link('/changelog','Changelog')}${sup?link('/usuarios','Usuarios')+link('/auditoria','Auditoría'):''}</nav>
    <div class="r">👤 ${esc(u.nombre)} <span class="pill ${pillCls}">${esc(u.role||'guest')}</span><a href="/logout">Salir</a></div></div>`;
 }
 
@@ -256,6 +256,24 @@ app.post('/usuarios/:login/borrar',requireAuth,requireSuperadmin,(req,res)=>{
   const login=req.params.login.toLowerCase();
   if(login!==req.session.user.login && USERS[login]){ delete USERS[login]; saveUsers(); audit('USER_DELETE',req,{target:login}); }
   res.redirect('/usuarios?ok=Usuario borrado: '+login);
+});
+
+// ─── Changelog (histórico de versiones del portal) ───
+app.get('/changelog',requireAuth,(req,res)=>{
+  const CHANGELOG_FILE = path.join(__dirname,'VERSION','changelog.json');
+  let data={app_name:'Adaria Gestión (portal)',entries:[]};
+  try{ data=JSON.parse(fs.readFileSync(CHANGELOG_FILE,'utf8')); }catch(e){}
+  const rows=(data.entries||[]).map(e=>`<tr>
+    <td><span class="pill a">v${esc(e.version||'')}</span></td>
+    <td>${esc(e.fecha||'')}</td>
+    <td><b>${esc(e.titulo||'')}</b></td>
+    <td>${esc(e.descripcion||'')}</td>
+    <td><code style="font-size:12px;color:#888">${esc((e.sha||'').slice(0,7))}</code></td>
+  </tr>`).join('');
+  res.send(layout('Changelog',`<div class="wrap"><h1>Historial de versiones</h1>
+   <p class="muted">${esc(data.app_name||'')} · versión actual v${esc(data.current_version||'')}</p>
+   <table><tr><th>Versión</th><th>Fecha</th><th>Título</th><th>Descripción</th><th>SHA</th></tr>${rows||'<tr><td colspan="5" class="muted">Sin entradas todavía.</td></tr>'}</table>
+   </div>`, req.session.user, '/changelog'));
 });
 
 // ─── Auditoría (solo superadmin) ───

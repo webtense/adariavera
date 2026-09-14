@@ -1,0 +1,84 @@
+{
+  "app_code": "adaria-gestion",
+  "app_name": "Adaria Gestión (portal)",
+  "current_version": "1.1.0",
+  "entries": [
+    {
+      "version": "1.1.0",
+      "fecha": "2026-09-10",
+      "titulo": "Recorte de espacios en contraseña",
+      "descripcion": "Login, alta y reset de contraseña recortan espacios accidentales al inicio/fin.",
+      "sha": "d14ddd7"
+    },
+    {
+      "version": "1.1.0",
+      "fecha": "2026-09-10",
+      "titulo": "Versión dinámica en header/footer",
+      "descripcion": "El número de versión mostrado en cabecera y pie ya no está fijo en el HTML: se lee en caliente desde /api/version.",
+      "sha": "338fe7b"
+    },
+    {
+      "version": "1.1.0",
+      "fecha": "2026-09-10",
+      "titulo": "Versión de cada módulo en su card",
+      "descripcion": "El panel de recepción consulta la versión de cada módulo enlazado y la muestra como badge en su card.",
+      "sha": "89a232e"
+    },
+    {
+      "version": "1.1.0",
+      "fecha": "2026-09-10",
+      "titulo": "Badge de versión + endpoint /api/version",
+      "descripcion": "Nuevo endpoint /api/version y badge visible de la versión del propio portal.",
+      "sha": "a2a4640"
+    },
+    {
+      "version": "1.1.0",
+      "fecha": "2026-09-10",
+      "titulo": "Sincronización desde producción",
+      "descripcion": "Sincronizado el código fuente del repo con la versión desplegada en CT111.",
+      "sha": "3096a2d"
+    },
+    {
+      "version": "1.1.0",
+      "fecha": "2026-08-26",
+      "titulo": "Gestor de usuarios con checkboxes dinámicos",
+      "descripcion": "Fase 2 del gestor de usuarios: alta/edición con checkboxes dinámicos por permiso.",
+      "sha": "46b22d3"
+    },
+    {
+      "version": "1.1.0",
+      "fecha": "2026-08-26",
+      "titulo": "Sistema de versionado unificado",
+      "descripcion": "Fase 1: versionado unificado para los módulos del portal, base para el changelog.",
+      "sha": "497c72e"
+    },
+    {
+      "version": "1.0.0",
+      "fecha": "2026-08-26",
+      "titulo": "Escáner DNI/MRZ en modo prueba",
+      "descripcion": "Fase 4: escáner de documentos de identidad, modo seguro DRY_RUN=true, sin escrituras en ACI.",
+      "sha": "deb90d7"
+    },
+    {
+      "version": "1.0.0",
+      "fecha": "2026-08-26",
+      "titulo": "Gestor de usuarios — base bcrypt",
+      "descripcion": "Fase 2: alta de gestor de usuarios con checkboxes dinámicos, bcrypt, backup atómico y asanchez como superadmin fijo.",
+      "sha": "be56381"
+    },
+    {
+      "version": "1.0.0",
+      "fecha": "2026-08-26",
+      "titulo": "Versionado unificado — endpoint /api/versiones",
+      "descripcion": "Fase 1: endpoint /api/versiones, card de Changelog y tablas SQL para 11 apps del grupo.",
+      "sha": "876b6d7"
+    },
+    {
+      "version": "1.0.0",
+      "fecha": "2026-08-26",
+      "titulo": "Baseline pre-versionado",
+      "descripcion": "Snapshot del portal previo a introducir el sistema de versionado.",
+      "sha": "8fa1d1c"
+    }
+  ]
+}
