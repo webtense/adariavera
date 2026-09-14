@@ -1,0 +1,13 @@
+{
+  "app": "adaria-parking",
+  "generado": "2026-09-14",
+  "versiones": [
+    {
+      "version": "a55e911",
+      "fecha": "2026-09-10",
+      "titulo": "feat: incorporar adaria-parking al repo desde producción CT111",
+      "resumen": "• feat: credenciales de staff compartidas entre gestion, parking y personal\n• feat(adaria-parking): login propio bcrypt + auditoría + bloqueo/mover plazas + método de pago/recaudación (v2.0.0)\n• Reconvertir version-badge.js: rellenar IDs en header/footer en lugar de div flotante\n• feat(adaria-estadisticas,adaria-parking,adaria-guest): badge de versión + /api/version\n• feat: incorporar adaria-parking al repo desde producción CT111",
+      "sha": "a55e91164cb1ef024afc6852784643b5bb3c755f"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "app": "adaria-estadisticas",
+  "generado": "2026-09-14",
+  "versiones": [
+    {
+      "version": "2c21867",
+      "fecha": "2026-09-10",
+      "titulo": "feat: incorporar adaria-estadisticas al repo desde producción CT111",
+      "resumen": "• Reconvertir version-badge.js: rellenar IDs en header/footer en lugar de div flotante\n• feat(adaria-estadisticas,adaria-parking,adaria-guest): badge de versión + /api/version\n• feat: incorporar adaria-estadisticas al repo desde producción CT111",
+      "sha": "2c21867a721530816f24eea233732873e63c84e9"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "app": "adaria-welcome",
+  "generado": "2026-09-14",
+  "versiones": [
+    {
+      "version": "dbd6053",
+      "fecha": "2026-09-10",
+      "titulo": "feat(adaria-welcome): badge de versión visible + endpoint /api/version",
+      "resumen": "• Reconvertir version-badge.js: rellenar IDs en header/footer en lugar de div flotante\n• feat(adaria-welcome): badge de versión visible + endpoint /api/version",
+      "sha": "dbd60534eeee0eb023c2317ab7d6c48081a0cadd"
+    },
+    {
+      "version": "463fb98",
+      "fecha": "2026-09-02",
+      "titulo": "Versioning Phase 1: Update package.json to v1.1.0 for welcome and precheckin modules",
+      "resumen": "• chore: npm install — actualizar package-lock.json\n• Fase 1: Sistema versionado + rollback para Welcome y Pre-checkin v1.1.0\n• Versioning Phase 1: Update package.json to v1.1.0 for welcome and precheckin modules",
+      "sha": "463fb983cf41b4fc94db4a17ff8028f649f999a9"
+    },
+    {
+      "version": "8fa1d1c",
+      "fecha": "2026-08-26",
+      "titulo": "baseline pre-versionado — snapshot 26/08/2026",
+      "resumen": "• Fase 1: Sistema versionado unificado v1.1.0 — endpoint /api/versiones, card Changelog, tablas SQL, 11 apps\n• baseline pre-versionado — snapshot 26/08/2026",
+      "sha": "8fa1d1c672be019ca55d79df9204f0312fcbb508"
+    }
+  ]
+}
