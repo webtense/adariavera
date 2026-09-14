@@ -6,6 +6,8 @@ const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
+const redis = require('redis');
+const RedisStore = require('connect-redis').default;
 const aci = require('./aci');
 const auth = require('./lib/auth');
 
@@ -27,20 +29,33 @@ app.use(express.json());
 // Secure funcione cuando se sirve tras un reverse proxy HTTPS.
 app.set('trust proxy', 1);
 
-// ── Sesión (express-session + bcryptjs puro, SIN SSO/Odoo) ─────────────────
+// Redis client para sesiones compartidas (SSO)
+const redisClient = redis.createClient({
+  host: '127.0.0.1',
+  port: 6379,
+  legacyMode: false
+});
+redisClient.connect().catch(e => console.error('[Redis]', e.message));
+
+// ── Sesión (express-session + Redis store para SSO compartido) ────────────
 // cookie.secure = true solo cuando se sirve tras HTTPS (reverse proxy con TLS).
 // Activar con COOKIE_SECURE=true en .env cuando el vhost HTTPS esté activo.
 const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'adaria-parking-dev-secret-2026',
+const sessionConfig = {
+  store: new RedisStore({ client: redisClient }),
+  secret: 'adaria-sso-secret-2026',
+  name: 'adaria_session',
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    maxAge: 8 * 60 * 60 * 1000, // 8 horas
+    sameSite: 'lax',
     secure: COOKIE_SECURE,
-  },
-}));
+    maxAge: 8 * 60 * 60 * 1000
+  }
+};
+
+app.use(session(sessionConfig));
 
 const requireAuth = auth.requireAuth({ loginPath: '/login.html' });
 const requireAdmin = auth.requireAdmin({ loginPath: '/login.html' });
@@ -905,6 +920,8 @@ app.get('/', (req, res) => {
   }
   res.redirect('/login.html');
 });
+
+app.get('/halo', (req, res) => res.json({ ok: true, modulo: 'parking', timestamp: Date.now(), version: require('./package.json').version }));
 
 async function start() {
   try {

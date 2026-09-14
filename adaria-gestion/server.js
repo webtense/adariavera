@@ -10,6 +10,8 @@ const fs = require('fs');
 const path = require('path');
 const QRCode = require('qrcode');
 const { Pool } = require('pg');
+const redis = require('redis');
+const RedisStore = require('connect-redis').default;
 
 const PORT = process.env.PORT || 3093;
 const SECRET = process.env.SESSION_SECRET || 'cambia-esto';
@@ -73,6 +75,8 @@ const CARDS = [
   { key:'manuales', nombre:'Manuales', icono:'📚', url:'/manuales/', ready:true },
   { key:'it', nombre:'Dashboard IT', icono:'🖥️', url:'https://it.hoteladariavera.com', ready:true, admin:true },
   { key:'personal', nombre:'Personal', icono:'👥', url:'/rrhh/', ready:true, admin:true },
+  { key:'kiosco', nombre:'Kiosco de Fichaje', icono:'⌚', url:'/rrhh/quiosco', ready:true,
+    estadoTexto:'Disponible', estadoClase:'ok' },
   { key:'qr', nombre:'Gestor de QR', icono:'🔳', url:'/qr', ready:true },
 ];
 
@@ -113,11 +117,31 @@ const ROLE_RANK = { guest:0, admin:1, superadmin:2 };
 const isSuperadmin = u => !!u && u.role === 'superadmin';
 const isAtLeastAdmin = u => !!u && ROLE_RANK[u.role] >= ROLE_RANK.admin;
 
+const redisClient = redis.createClient({
+  host: '127.0.0.1',
+  port: 6379,
+  legacyMode: false
+});
+redisClient.connect().catch(e => console.error('[Redis]', e.message));
+
+const sessionConfig = {
+  store: new RedisStore({ client: redisClient }),
+  secret: 'adaria-sso-secret-2026',
+  name: 'adaria_session',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: false,
+    maxAge: 1000 * 60 * 60 * 8
+  }
+};
+
 const app = express();
 app.set('trust proxy', 1);
 app.use(express.urlencoded({ extended:false }));
-app.use(session({ secret:SECRET, resave:false, saveUninitialized:false,
-  cookie:{ httpOnly:true, sameSite:'lax', secure:false, maxAge:1000*60*60*8 } }));
+app.use(session(sessionConfig));
 
 // Ficheros estáticos (solo lo que necesita el Escáner DNI: documentos.html +
 // favicon/manifest). El resto del portal se sirve renderizado desde aquí.
