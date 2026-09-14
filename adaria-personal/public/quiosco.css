@@ -15,8 +15,8 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:linear-g
 
 .k-pad{display:grid;grid-template-columns:repeat(3,84px);gap:16px;margin-bottom:22px}
 .k-pad button{width:84px;height:84px;border-radius:50%;border:none;background:rgba(255,255,255,.12);color:#fff;font-size:28px;
-  font-weight:600;cursor:pointer;transition:background .1s}
-.k-pad button:active{background:rgba(255,255,255,.32)}
+  font-weight:600;cursor:pointer;transition:background .1s;min-touch-target-size:48px;-webkit-touch-callout:none}
+.k-pad button:active{background:rgba(255,255,255,.32);transform:scale(.95)}
 .k-pad button.wide{font-size:15px;font-weight:600}
 .k-pad button.borrar{background:rgba(198,124,111,.35)}
 
@@ -29,18 +29,28 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:linear-g
 .k-emp-estado{font-size:15px;opacity:.85;margin-bottom:26px;padding:4px 14px;border-radius:999px;background:rgba(255,255,255,.14);display:inline-block}
 
 .k-acciones{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-bottom:22px;max-width:480px}
-.k-acciones button{min-width:150px;padding:22px 20px;border-radius:16px;border:none;background:#fff;color:var(--od);font-size:17px;
-  font-weight:700;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.2)}
-.k-acciones button:active{transform:scale(.97)}
+.k-acciones button{min-width:150px;min-height:64px;padding:22px 20px;border-radius:16px;border:none;background:#fff;color:var(--od);font-size:17px;
+  font-weight:700;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.2);transition:all .1s;-webkit-touch-callout:none}
+.k-acciones button:active{transform:scale(.96);box-shadow:0 4px 12px rgba(0,0,0,.3)}
 .k-acciones button.salida{background:var(--tc);color:#fff}
 
-.k-cancelar{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;padding:10px 22px;border-radius:10px;font-size:13px;cursor:pointer}
+.k-cancelar{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;padding:12px 22px;min-height:48px;border-radius:10px;font-size:13px;cursor:pointer;transition:all .1s;-webkit-touch-callout:none;display:flex;align-items:center;justify-content:center}
+.k-cancelar:active{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.6)}
 
 .k-confirm{display:flex;flex-direction:column;align-items:center}
 .k-confirm .tick{font-size:64px;margin-bottom:10px}
 .k-confirm .tipo{font-size:22px;font-weight:700;margin-bottom:6px}
 .k-confirm .hora{font-size:44px;font-weight:800;letter-spacing:1px;margin-bottom:6px}
 .k-confirm .persona{opacity:.85;font-size:15px}
+
+/* ─── Vista Confirmación Fusionada (Saludo + Motivación) ─── */
+.k-confirm-merged{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:500px;animation:kmotIn .3s ease}
+.k-confirm-merged .tick{font-size:64px;margin-bottom:8px}
+.k-confirm-merged .tipo{font-size:22px;font-weight:700}
+.k-confirm-merged .hora{font-size:44px;font-weight:800;letter-spacing:1px;margin:8px 0}
+.k-confirm-merged .saludo{font-size:20px;font-weight:600;margin:16px 0;color:rgba(255,255,255,.95)}
+.k-confirm-merged .motivacion{font-size:16px;font-style:italic;opacity:.85;padding:14px 16px;background:rgba(0,0,0,.15);border-radius:12px;line-height:1.35}
+.k-confirm-merged .persona-footer{opacity:.75;font-size:13px;margin-top:8px}
 
 .k-ver{position:fixed;left:0;right:0;text-align:center;font-size:11px;opacity:.5;pointer-events:none;z-index:5}
 .k-ver-top{top:8px}
@@ -63,3 +73,81 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:linear-g
 .k-cartel-icono{font-size:56px;margin-bottom:16px}
 .k-cartel-texto{font-size:20px;line-height:1.45;font-weight:600;margin-bottom:24px}
 .k-cartel-hint{opacity:.55;font-size:13px}
+
+/* ─── RESPONSIVE BREAKPOINTS ─── */
+
+/* MOBILE: 480px y menores */
+@media (max-width:480px){
+  .k-brand{font-size:18px;gap:8px}
+  .k-brand .ic{font-size:24px}
+  .k-sub{font-size:13px;margin-bottom:18px}
+
+  .k-pad{grid-template-columns:repeat(3,70px);gap:12px;margin-bottom:16px}
+  .k-pad button{width:70px;height:70px;font-size:24px}
+  .k-hint{font-size:11px;max-width:260px}
+
+  .k-emp-nombre{font-size:22px}
+  .k-acciones{gap:12px;max-width:380px}
+  .k-acciones button{min-width:130px;padding:18px 16px;font-size:15px}
+
+  .k-confirm-merged{max-width:95vw;gap:10px}
+  .k-confirm-merged .tick{font-size:56px;margin-bottom:6px}
+  .k-confirm-merged .tipo{font-size:18px}
+  .k-confirm-merged .hora{font-size:36px}
+  .k-confirm-merged .saludo{font-size:17px;margin:12px 0}
+  .k-confirm-merged .motivacion{font-size:14px;padding:10px 14px}
+
+  .k-mot-wrap{max-width:90vw;gap:10px}
+  .k-mot-card{padding:14px 16px;gap:10px}
+  .k-mot-icono{font-size:28px}
+  .k-mot-texto{font-size:13px}
+
+  .k-cartel{max-width:95vw}
+  .k-cartel-brand{font-size:14px;margin-bottom:16px}
+  .k-cartel-icono{font-size:48px;margin-bottom:12px}
+  .k-cartel-texto{font-size:16px;margin-bottom:18px}
+  .k-cartel-hint{font-size:11px}
+}
+
+/* DESKTOP: 1024px y mayores */
+@media (min-width:1024px){
+  .k-brand{font-size:26px;gap:12px}
+  .k-brand .ic{font-size:36px}
+  .k-sub{font-size:16px;margin-bottom:32px}
+
+  .k-pad{grid-template-columns:repeat(3,100px);gap:18px;margin-bottom:28px}
+  .k-pad button{width:100px;height:100px;font-size:32px}
+  .k-hint{font-size:14px;max-width:320px;margin-top:8px}
+
+  .k-emp-nombre{font-size:32px;margin-bottom:8px}
+  .k-emp-estado{font-size:17px}
+  .k-acciones{gap:20px;max-width:600px}
+  .k-acciones button{min-width:180px;padding:26px 24px;font-size:19px}
+
+  .k-confirm-merged{max-width:600px;gap:14px}
+  .k-confirm-merged .tick{font-size:72px;margin-bottom:12px}
+  .k-confirm-merged .tipo{font-size:26px}
+  .k-confirm-merged .hora{font-size:52px}
+  .k-confirm-merged .saludo{font-size:22px;margin:18px 0}
+  .k-confirm-merged .motivacion{font-size:17px;padding:16px 18px}
+
+  .k-mot-wrap{max-width:500px;gap:16px}
+  .k-mot-card{padding:20px 22px;gap:16px}
+  .k-mot-icono{font-size:38px}
+  .k-mot-texto{font-size:16px}
+
+  .k-cartel{max-width:550px}
+  .k-cartel-brand{font-size:18px;margin-bottom:28px;gap:10px}
+  .k-cartel-icono{font-size:64px;margin-bottom:20px}
+  .k-cartel-texto{font-size:24px;margin-bottom:32px}
+  .k-cartel-hint{font-size:14px}
+}
+
+/* TABLET: 481px a 1023px (valores por defecto) */
+@media (min-width:481px) and (max-width:1023px){
+  .k-brand{font-size:22px;gap:10px}
+  .k-brand .ic{font-size:28px}
+  .k-pad{grid-template-columns:repeat(3,84px);gap:14px}
+  .k-pad button{width:84px;height:84px;font-size:26px}
+  .k-acciones button{min-width:140px;padding:20px 18px;font-size:16px}
+}

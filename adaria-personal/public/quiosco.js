@@ -187,53 +187,66 @@ async function fichar(empleadoId, tipo, origen) {
 
 const ETIQUETA = { entrada: 'Entrada registrada', salida: 'Salida registrada', pausa_inicio: 'Pausa iniciada', pausa_fin: 'Pausa finalizada' };
 
-function vistaConfirmacion(r) {
-  app.innerHTML = `
-    <div class="k-confirm">
-      <div class="tick">✅</div>
-      <div class="tipo">${esc(ETIQUETA[r.tipo] || 'Fichaje registrado')}</div>
-      <div class="hora">${horaBonita(r.ts)}</div>
-      <div class="persona">${esc(r.nombre)} ${esc(r.apellidos)} · ${esc(r.estado_texto)}</div>
-    </div>
-  `;
-  setTimeout(() => vistaMotivacion(r), 1800);
+// ─── Función saludoPorHora: retorna el saludo según la hora actual ───
+function saludoPorHora(nombre) {
+  const now = new Date();
+  const hora = now.getHours();
+  let saludo = '';
+
+  if (hora >= 6 && hora < 14) {
+    saludo = `Buenos días, ${esc(nombre)}`;
+  } else if (hora >= 14 && hora < 21) {
+    saludo = `Buenas tardes, ${esc(nombre)}`;
+  } else {
+    saludo = `Buenas noches, ${esc(nombre)}`;
+  }
+
+  return saludo;
 }
 
-// ─── FASE 5 — Motivación: se muestra justo después de la confirmación del
-// fichaje. Combina (si aplica): felicitación de cumpleaños propia, aviso de
-// cumpleaños de un/a compañero/a (sin edad), aniversario propio o de un/a
-// compañero/a (con años de antigüedad, nunca edad) y el mensaje del día.
-// Si no hay nada que mostrar, vuelve directamente al teclado.
-function vistaMotivacion(r) {
+// ─── Frases motivacionales aleatorias ───
+const FRASES_MOTIVACIONALES = [
+  '¡Un nuevo día, nuevas oportunidades!',
+  'Tu esfuerzo hoy es tu éxito mañana.',
+  '¡Sigue adelante con energía!',
+  'Cada fichaje es un paso hacia tus metas.',
+  '¡Que tengas un excelente día!',
+  'Tu dedicación marca la diferencia.',
+  '¡Contagia tu energía al equipo!',
+  'Hoy es un buen día para ser extraordinario.'
+];
+
+function getMotivacion() {
+  return FRASES_MOTIVACIONALES[Math.floor(Math.random() * FRASES_MOTIVACIONALES.length)];
+}
+
+function vistaConfirmacion(r) {
+  const saludo = saludoPorHora(r.nombre);
+  const motivacion = getMotivacion();
   const mot = r.motivacion || {};
   const bloques = [];
 
-  if (mot.cumpleanos_propio) {
-    bloques.push(`<div class="k-mot-card k-mot-cumple"><div class="k-mot-icono">🎂</div>
-      <div class="k-mot-texto">¡Feliz cumpleaños, ${esc(r.nombre)}! Todo el equipo te desea un gran día.</div></div>`);
-  }
-  if (mot.aniversario_propio) {
-    const a = mot.aniversario_propio.anios;
-    bloques.push(`<div class="k-mot-card k-mot-aniversario"><div class="k-mot-icono">🏆</div>
-      <div class="k-mot-texto">Hoy es tu aniversario en la empresa: ¡cumples ${a} año${a === 1 ? '' : 's'} con nosotros! Felicidades por tus ${a} año${a === 1 ? '' : 's'}.</div></div>`);
-  }
-  (mot.avisos || []).forEach((a) => {
-    if (a.tipo === 'cumpleanos') {
-      bloques.push(`<div class="k-mot-card"><div class="k-mot-icono">🎈</div>
-        <div class="k-mot-texto">¡Hoy es el cumpleaños de tu compañero/a ${esc(a.nombre)}!</div></div>`);
-    } else {
-      bloques.push(`<div class="k-mot-card"><div class="k-mot-icono">🏆</div>
-        <div class="k-mot-texto">Hoy es el aniversario de ${esc(a.nombre)}: cumple ${a.anios} año${a.anios === 1 ? '' : 's'} en la empresa. ¡Felicidades por sus ${a.anios} año${a.anios === 1 ? '' : 's'}!</div></div>`);
-    }
-  });
-  if (mot.mensaje_dia) {
-    bloques.push(`<div class="k-mot-card k-mot-frase"><div class="k-mot-icono">💬</div><div class="k-mot-texto">${esc(mot.mensaje_dia)}</div></div>`);
-  }
+  app.innerHTML = `
+    <div class="k-confirm-merged">
+      <div class="tick">✅</div>
+      <div class="tipo">${esc(ETIQUETA[r.tipo] || 'Fichaje registrado')}</div>
+      <div class="hora">${horaBonita(r.ts)}</div>
+      <div class="saludo">${saludo}</div>
+      <div class="motivacion">${motivacion}</div>
+      <div class="persona-footer">${esc(r.nombre)} ${esc(r.apellidos)} · ${esc(r.estado_texto)}</div>
+    </div>
+  `;
 
-  if (!bloques.length) { vistaTeclado(); return; }
-  app.innerHTML = `<div class="k-mot-wrap">${bloques.join('')}<div class="k-mot-hint">Volviendo al fichaje…</div></div>`;
-  setTimeout(() => vistaTeclado(), 6500);
+  setTimeout(() => vistaTeclado(), 4000);
 }
+
+// ─── FASE 5 (DEPRECATED) — Motivación legacy: antes se mostraba después con
+// delay. Ahora se integra en vistaConfirmacion. Se deja como comentario para referencia.
+// function vistaMotivacion(r) {
+//   const mot = r.motivacion || {};
+//   const bloques = [];
+//   // ... (código anteriormente usado)
+// }
 
 // ─── FASE 5 — Pantalla de reposo ("cartelera"): en bucle, sin identificar a
 // nadie. Muestra los avisos de hoy (cumpleaños/aniversarios, sin edad) y un
