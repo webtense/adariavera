@@ -1,0 +1,30 @@
+{
+  "app": "adaria-holding",
+  "generado": "2026-09-14",
+  "versiones": [
+    {
+      "version": "1.0.0",
+      "fecha": "2026-09-10",
+      "cambios": [
+        {
+          "hash": "0e07b43",
+          "fecha": "2026-09-10 14:13:22",
+          "autor": "Andres Sanchez",
+          "mensaje": "Estandarizar header/footer/version en manuales y holding"
+        },
+        {
+          "hash": "aaa2d19",
+          "fecha": "2026-09-10 12:21:20",
+          "autor": "Andres Sanchez",
+          "mensaje": "feat(adaria-holding,adaria-manuales): badge de versión (sitios estáticos)"
+        },
+        {
+          "hash": "f4cb03c",
+          "fecha": "2026-09-10 11:53:47",
+          "autor": "Andres Sanchez",
+          "mensaje": "feat: incorporar adaria-holding al repo desde producción CT111"
+        }
+      ]
+    }
+  ]
+}

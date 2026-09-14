@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog · Adaria Manuales</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .changelog-container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    .changelog-table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
+    .changelog-table thead { background: var(--color-ocean-dark); color: white; }
+    .changelog-table th { padding: 1rem; text-align: left; font-weight: 600; }
+    .changelog-table td { padding: 1rem; border-bottom: 1px solid var(--color-light-gray); }
+    .changelog-table tr:hover { background: var(--color-ocean-pale); }
+    .version-badge {
+      display: inline-block;
+      background: var(--color-terracota);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .commit-hash {
+      font-family: monospace;
+      font-size: 0.875rem;
+      background: var(--color-light-gray);
+      padding: 0.25rem 0.5rem;
+      border-radius: 3px;
+    }
+    .empty-state { text-align: center; padding: 3rem; color: var(--color-gray); }
+    .loading { text-align: center; padding: 2rem; }
+    .error {
+      background: #ffe0e0;
+      color: #c41c3b;
+      padding: 1rem;
+      border-radius: var(--radius-md);
+      margin-top: 1rem;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      background: var(--color-light-gray);
+      border-radius: var(--radius-md);
+    }
+    .back-link:hover { background: var(--color-ocean-pale); }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark">AV</div>
+      <div class="brand-text">
+        <h1>Hotel Adaria Vera · Manuales</h1>
+        <div class="subtitle">Historial de cambios</div>
+      </div>
+    </div>
+    <div id="adaria-header-version"></div>
+  </div>
+</header>
+
+<main class="changelog-container">
+  <h2>Historial de cambios</h2>
+  <p>Registro completo de actualizaciones y mejoras en el módulo de Manuales.</p>
+
+  <div id="changelog-content">
+    <div class="loading">Cargando historial...</div>
+  </div>
+
+  <a href="index.html" class="back-link">← Volver a manuales</a>
+</main>
+
+<footer class="site-footer">
+  Hotel Adaria Vera · Changelog de Manuales · <span id="adaria-footer-version"></span>
+</footer>
+
+<script>
+async function loadChangelog() {
+  try {
+    const response = await fetch('./VERSION/changelog.json');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const data = await response.json();
+    const container = document.getElementById('changelog-content');
+
+    if (!data.versiones || data.versiones.length === 0) {
+      container.innerHTML = '<div class="empty-state">No hay cambios registrados aún.</div>';
+      return;
+    }
+
+    let html = '<table class="changelog-table"><thead><tr><th>Versión</th><th>Cambios</th><th>Autor</th><th>Fecha</th></tr></thead><tbody>';
+
+    data.versiones.forEach(version => {
+      version.cambios.forEach((cambio, idx) => {
+        html += `<tr>
+          ${idx === 0 ? `<td rowspan="${version.cambios.length}"><span class="version-badge">${version.version}</span></td>` : ''}
+          <td>
+            <span class="commit-hash">${cambio.hash}</span><br/>
+            ${cambio.mensaje}
+          </td>
+          <td>${cambio.autor}</td>
+          <td><small>${cambio.fecha}</small></td>
+        </tr>`;
+      });
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  } catch (error) {
+    document.getElementById('changelog-content').innerHTML =
+      `<div class="error">Error cargando changelog: ${error.message}</div>`;
+  }
+}
+
+loadChangelog();
+</script>
+<script src="version-badge.js"></script>
+</body>
+</html>
