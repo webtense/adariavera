@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📜</text></svg>">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hotel Adaria Vera · INE · Changelog</title>
+<style>
+  :root {
+    --azul: #1b5e75;
+    --azul-osc: #124a5c;
+    --terracota: #c67c6f;
+    --terracota-osc: #ab6255;
+    --bg: #f5f3f0;
+    --texto: #2c2c2c;
+    --borde: #ddd6d0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--texto);
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    background: linear-gradient(135deg, var(--azul), var(--azul-osc));
+    color: #fff;
+    padding: 24px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header h1 { margin: 0; font-size: 1.4rem; font-weight: 600; }
+  header .subt { font-size: 0.85rem; opacity: 0.85; }
+  .badge-version {
+    background: var(--terracota);
+    color: #fff;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+  .card {
+    background: #fff;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  .card h2 { margin-top: 0; font-size: 1.05rem; color: var(--azul-osc); }
+  .volver {
+    display: inline-block;
+    margin-bottom: 16px;
+    color: var(--azul);
+    text-decoration: none;
+    font-size: 0.85rem;
+  }
+  .volver:hover { text-decoration: underline; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+  th { background: #f0ece7; color: var(--azul-osc); font-weight: 600; }
+  td.hash { font-family: "Consolas", monospace; font-size: 0.78rem; color: #888; white-space: nowrap; }
+  td.fecha { white-space: nowrap; color: #555; }
+  td.autor { white-space: nowrap; }
+  td.msg strong { display: block; }
+  td.msg small { color: #777; white-space: pre-line; display: block; margin-top: 4px; }
+  .vacio { color: #888; font-size: 0.9rem; padding: 12px 0; }
+  footer { text-align: center; font-size: 0.78rem; color: #888; padding: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Hotel Adaria Vera · INE</h1>
+    <div class="subt">Historial de cambios del módulo</div>
+  </div>
+  <span class="badge-version">v{{ version }}</span>
+</header>
+
+<main>
+  <a class="volver" href="{{ url_for('index') }}">&larr; Volver al módulo</a>
+
+  <div class="card">
+    <h2>Changelog</h2>
+    {% if changelog and changelog.commits %}
+    <p style="font-size:0.85rem;color:#666;margin-top:-6px;">
+      {{ changelog.totalCommits }} commit(s) · última actualización {{ changelog.lastUpdate }}
+    </p>
+    <table>
+      <thead>
+        <tr><th>Fecha</th><th>Commit</th><th>Autor</th><th>Mensaje</th></tr>
+      </thead>
+      <tbody>
+        {% for c in changelog.commits %}
+        <tr>
+          <td class="fecha">{{ c.date }}</td>
+          <td class="hash">{{ c.hash[:7] }}</td>
+          <td class="autor">{{ c.author }}</td>
+          <td class="msg">
+            <strong>{{ c.message }}</strong>
+            {% if c.body %}<small>{{ c.body }}</small>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="vacio">Sin historial de cambios disponible.</div>
+    {% endif %}
+  </div>
+</main>
+
+<footer>Hotel Adaria Vera · Módulo INE v{{ version }} · Changelog</footer>
+</body>
+</html>

@@ -159,7 +159,7 @@
     <h1>Hotel Adaria Vera · INE</h1>
     <div class="subt">Encuesta de Ocupación Hotelera (EOH) · Provincia de Almería (04){% if num_orden %} · Nº orden establecimiento: {{ num_orden }}{% endif %}</div>
   </div>
-  <span class="badge-version">v{{ version }}</span>
+  <span class="badge-version"><a href="{{ url_for('changelog') }}" style="color:#fff;text-decoration:none;">v{{ version }}</a></span>
 </header>
 
 <main>
@@ -229,7 +229,7 @@
   </div>
 </main>
 
-<footer>Hotel Adaria Vera · Módulo INE v{{ version }} · Datos ACI en solo lectura · Puerto 3092</footer>
+<footer>Hotel Adaria Vera · Módulo INE v{{ version }} · Datos ACI en solo lectura · Puerto 3092 · <a href="{{ url_for('changelog') }}" style="color:#888;">Changelog</a></footer>
 
 <script>
 const mesInput = document.getElementById('mes');

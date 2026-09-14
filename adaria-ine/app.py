@@ -9,6 +9,7 @@ combina con campos manuales (días abierto, plazas, personal) y genera
 el XML EOH (estructura provisional, ver ine_xml.py).
 """
 import os
+import json
 import datetime
 
 from flask import Flask, render_template, request, jsonify, Response
@@ -99,6 +100,19 @@ def generar_xml():
         mimetype="application/xml",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@app.route("/changelog")
+def changelog():
+    changelog_path = os.path.join(
+        os.path.dirname(__file__), "VERSION", "changelog.json"
+    )
+    try:
+        with open(changelog_path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        data = None
+    return render_template("changelog.html", version=APP_VERSION, changelog=data)
 
 
 @app.route("/health")

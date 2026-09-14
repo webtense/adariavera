@@ -1,0 +1,14 @@
+{
+  "module": "ine",
+  "lastUpdate": "2026-09-10 11:53:47 +0200",
+  "totalCommits": 1,
+  "commits": [
+    {
+      "hash": "db1885270b0001f78327997d172b257343224041",
+      "author": "Andres Sanchez",
+      "date": "2026-09-10 11:53:47 +0200",
+      "message": "feat: incorporar adaria-ine al repo desde producción CT111",
+      "body": "Primera versión versionada de adaria-ine, hasta ahora solo existía como código\nsuelto en /opt/adaria-ine del contenedor adaria-portales (CT111, 192.168.1.81).\nIncluye VERSION/version.json (1.0.0) y .gitignore. Excluidos node_modules,\nvenv, .env, logs y backups locales."
+    }
+  ]
+}
