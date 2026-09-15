@@ -60,6 +60,31 @@ const TEXTS = {
     consentimientoObligatorio: '(required)',
     consentimientoOpcional: '(optional)',
     firmaDeclaracion: 'I electronically sign accepting the above and confirming the accuracy of the data.'
+  },
+  fr: {
+    tituloCondiciones: 'Conditions de séjour',
+    condiciones: `Le titulaire de la réservation et les accompagnateurs déclarent connaître et accepter les ` +
+      `conditions générales de contrat de l'hôtel, le règlement intérieur et les tarifs appliqués. La ` +
+      `signature de ce document équivaut à la signature de la fiche de police (fiche de voyageur) exigée ` +
+      `par la réglementation espagnole en matière de sécurité publique.`,
+    tituloPrivacidad: 'Informations sur la protection des données (RGPD)',
+    privacidad: `Responsable du traitement : ${RAZON_SOCIAL}, CIF ${CIF}, domicile social à ` +
+      `${DOM_SOCIAL} (établissement : ${DOM_HOTEL}). Finalité : gestion de la réservation et du séjour, ` +
+      `respect des obligations d'enregistrement des voyageurs et de facturation. Base légale : exécution ` +
+      `du contrat d'hébergement et respect d'une obligation légale. Destinataires : forces de sécurité de ` +
+      `l'État espagnol (fiche de voyageurs) ; aucune donnée n'est cédée à des tiers sauf obligation légale. ` +
+      `Droits : accès, rectification, suppression, opposition, limitation et portabilité en écrivant à ` +
+      `${CONTACTO}. ${REGISTRO}.`,
+    tituloImagen: "Autorisation d'utilisation de l'image (facultatif)",
+    imagen: `J'autorise ${RAZON_SOCIAL} à utiliser des photographies prises pendant mon séjour à des fins ` +
+      `promotionnelles de l'hôtel sur les réseaux sociaux et le site web, sans contrepartie financière. ` +
+      `Cette autorisation est volontaire et révocable à tout moment en écrivant à ${CONTACTO}.`,
+    tituloMarketing: 'Communications commerciales (facultatif)',
+    marketing: `J'accepte de recevoir des communications commerciales sur les offres et actualités de ` +
+      `l'hôtel par email. Je peux me désinscrire à tout moment.`,
+    consentimientoObligatorio: '(obligatoire)',
+    consentimientoOpcional: '(facultatif)',
+    firmaDeclaracion: "Je signe électroniquement en acceptant ce qui précède et en confirmant l'exactitude des données."
   }
 };
 
@@ -67,8 +92,11 @@ function getLegalTexts(lang) {
   return TEXTS[lang] || TEXTS.es;
 }
 
+const SUPPORTED_LANGS = Object.keys(TEXTS);
+
 module.exports = {
   getLegalTexts,
+  SUPPORTED_LANGS,
   RAZON_SOCIAL,
   CIF,
   DOM_SOCIAL,

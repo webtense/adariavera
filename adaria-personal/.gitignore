@@ -1,0 +1,8 @@
+node_modules/
+.env
+.env.local
+*.log
+uploads/*
+!uploads/.gitkeep
+backups_bd/
+*.bak-fase*

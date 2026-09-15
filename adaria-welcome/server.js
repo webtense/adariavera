@@ -103,6 +103,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ ok: false, error: 'Error interno del servidor' });
 });
 
+app.get('/halo', (req, res) => res.json({ ok: true, modulo: 'welcome', timestamp: Date.now(), version: require('./package.json').version }));
+
 async function start() {
   try {
     await initSchema();

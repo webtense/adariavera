@@ -246,3 +246,202 @@ WHERE d.property_id = 'vera'
   AND NOT EXISTS (
     SELECT 1 FROM mensaje_motivacional m WHERE m.property_id = 'vera' AND m.departamento_id = d.id
   );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- FASE 6 — Turnos y Cuadrantes
+-- Idempotente: se puede volver a ejecutar sin romper nada de Fases 1-5.
+-- Tres tablas nuevas, aditivas, sin tocar ninguna de las anteriores:
+--  a) turno_config: catálogo de turnos configurables por propiedad
+--     (código, nombre, horario previsto, tolerancias). Nunca se borra
+--     físicamente (solo activo=false) para no romper referencias desde
+--     cuadrante ya planificado/histórico.
+--  b) cuadrante: planificación de qué turno le toca a cada empleado cada
+--     día. Es planificación, NO registro legal de jornada (eso sigue
+--     siendo `fichaje`, fuente única de verdad de horas trabajadas):
+--     por eso aquí SÍ se permite borrado físico.
+--  c) cuadrante_import_log: auditoría de importaciones CSV/Excel del
+--     cuadrante, mismo patrón que export_log (Fase 3).
+-- ═══════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS turno_config (
+  id SERIAL PRIMARY KEY,
+  property_id VARCHAR(30) NOT NULL REFERENCES propiedad(id),
+  codigo VARCHAR(20) NOT NULL,
+  nombre VARCHAR(100) NOT NULL,
+  tipo VARCHAR(20) NOT NULL DEFAULT 'trabajo',
+  hora_entrada TIME NULL,
+  hora_salida TIME NULL,
+  duracion_prevista_min INTEGER NULL,
+  turno_nocturno BOOLEAN NOT NULL DEFAULT false,
+  tolerancia_entrada_min INTEGER NOT NULL DEFAULT 0 CHECK (tolerancia_entrada_min >= 0),
+  tolerancia_salida_min INTEGER NOT NULL DEFAULT 0 CHECK (tolerancia_salida_min >= 0),
+  activo BOOLEAN NOT NULL DEFAULT true,
+  creado_en TIMESTAMP NOT NULL DEFAULT now(),
+  actualizado_en TIMESTAMP NOT NULL DEFAULT now(),
+  CONSTRAINT turno_config_tipo_chk CHECK (tipo IN ('trabajo','libre','vacaciones','baja','otros')),
+  UNIQUE(property_id, codigo)
+);
+
+CREATE INDEX IF NOT EXISTS idx_turno_config_property ON turno_config(property_id, activo);
+
+CREATE TABLE IF NOT EXISTS cuadrante (
+  id SERIAL PRIMARY KEY,
+  property_id VARCHAR(30) NOT NULL REFERENCES propiedad(id),
+  empleado_id INTEGER NOT NULL REFERENCES empleado(id) ON DELETE CASCADE,
+  fecha DATE NOT NULL,
+  turno_config_id INTEGER NOT NULL REFERENCES turno_config(id),
+  nota TEXT,
+  creado_por VARCHAR(100),
+  origen VARCHAR(20) NOT NULL DEFAULT 'manual',
+  creado_en TIMESTAMP NOT NULL DEFAULT now(),
+  actualizado_en TIMESTAMP NOT NULL DEFAULT now(),
+  CONSTRAINT cuadrante_origen_chk CHECK (origen IN ('manual','import_csv','import_excel')),
+  UNIQUE(property_id, empleado_id, fecha)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cuadrante_empleado_fecha ON cuadrante(empleado_id, fecha);
+CREATE INDEX IF NOT EXISTS idx_cuadrante_property_fecha ON cuadrante(property_id, fecha);
+
+-- Mismo patrón que export_log (Fase 3): auditoría de importaciones, con
+-- sello de integridad (SHA-256 del contenido del fichero importado).
+CREATE TABLE IF NOT EXISTS cuadrante_import_log (
+  id SERIAL PRIMARY KEY,
+  property_id VARCHAR(30) NOT NULL REFERENCES propiedad(id),
+  importado_por VARCHAR(100) NOT NULL,
+  nombre_fichero VARCHAR(255) NOT NULL,
+  filas_totales INTEGER NOT NULL,
+  filas_aplicadas INTEGER NOT NULL,
+  filas_error INTEGER NOT NULL,
+  hash VARCHAR(64) NOT NULL,
+  ts TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cuadrante_import_log_property ON cuadrante_import_log(property_id, ts);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- FASE 7 — Comparativa fichaje vs cuadrante + Plan B.
+-- No crea tablas nuevas (usa fichaje + cuadrante/turno_config, ya
+-- existentes): solo amplía el CHECK de export_log para admitir los
+-- formatos de exportación de la comparativa, mismo patrón que Fase 4.
+-- ═══════════════════════════════════════════════════════════════════
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'export_log_formato_chk') THEN
+    ALTER TABLE export_log DROP CONSTRAINT export_log_formato_chk;
+  END IF;
+  ALTER TABLE export_log ADD CONSTRAINT export_log_formato_chk
+    CHECK (formato IN ('pdf','csv','informe_pdf','informe_csv','comparativa_pdf','comparativa_csv'));
+END $$;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- FASE 8 — Vacaciones y ausencias justificadas.
+-- Tabla nueva ausencia_justificada: solicitud → aprobación/rechazo →
+-- (opcional) cancelación. Solo las de estado='aprobada' alimentan la
+-- comparativa de Fase 7 (ver ausenciaCubreFecha en lib/comparativa.js).
+-- Aditivo, no toca nada previo.
+-- ═══════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS ausencia_justificada (
+  id SERIAL PRIMARY KEY,
+  property_id VARCHAR(30) NOT NULL REFERENCES propiedad(id),
+  empleado_id INTEGER NOT NULL REFERENCES empleado(id) ON DELETE CASCADE,
+  tipo VARCHAR(20) NOT NULL,
+  fecha_inicio DATE NOT NULL,
+  fecha_fin DATE NOT NULL,
+  dias NUMERIC(5,1) NOT NULL,
+  estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+  solicitado_por VARCHAR(100) NOT NULL,
+  aprobado_por VARCHAR(100),
+  fecha_aprobacion TIMESTAMP,
+  observaciones TEXT,
+  creado_en TIMESTAMP NOT NULL DEFAULT now(),
+  actualizado_en TIMESTAMP NOT NULL DEFAULT now(),
+  CONSTRAINT ausencia_justificada_tipo_chk CHECK (tipo IN ('vacaciones','baja','permiso','libre','compensacion','otros')),
+  CONSTRAINT ausencia_justificada_estado_chk CHECK (estado IN ('pendiente','aprobada','rechazada','cancelada')),
+  CONSTRAINT ausencia_justificada_fechas_chk CHECK (fecha_fin >= fecha_inicio),
+  CONSTRAINT ausencia_justificada_dias_chk CHECK (dias > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ausencia_justificada_empleado_fechas ON ausencia_justificada(empleado_id, fecha_inicio, fecha_fin);
+CREATE INDEX IF NOT EXISTS idx_ausencia_justificada_property_estado ON ausencia_justificada(property_id, estado);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- FASE 9 — Auditoría legal de control horario.
+-- Un auditoria_run agrupa los auditoria_control ejecutados en esa
+-- ejecución del checklist (lib/auditoria.js), con sello de integridad
+-- (SHA-256 sobre la representación canónica de los controles), mismo
+-- patrón que export_log (Fase 3). Aditivo, no toca nada previo.
+-- ═══════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS auditoria_run (
+  id SERIAL PRIMARY KEY,
+  property_id VARCHAR(30) NOT NULL REFERENCES propiedad(id),
+  ejecutado_por VARCHAR(100) NOT NULL,
+  desde DATE NOT NULL,
+  hasta DATE NOT NULL,
+  ts TIMESTAMP NOT NULL DEFAULT now(),
+  hash VARCHAR(64) NOT NULL,
+  CONSTRAINT auditoria_run_fechas_chk CHECK (hasta >= desde)
+);
+
+CREATE INDEX IF NOT EXISTS idx_auditoria_run_property_ts ON auditoria_run(property_id, ts);
+
+CREATE TABLE IF NOT EXISTS auditoria_control (
+  id SERIAL PRIMARY KEY,
+  auditoria_run_id INTEGER NOT NULL REFERENCES auditoria_run(id) ON DELETE CASCADE,
+  empleado_id INTEGER REFERENCES empleado(id),
+  codigo_control VARCHAR(50) NOT NULL,
+  estado VARCHAR(10) NOT NULL,
+  detalle TEXT,
+  fecha_referencia DATE,
+  creado_en TIMESTAMP NOT NULL DEFAULT now(),
+  CONSTRAINT auditoria_control_estado_chk CHECK (estado IN ('GREEN','AMBER','RED','UNKNOWN'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_auditoria_control_run ON auditoria_control(auditoria_run_id);
+CREATE INDEX IF NOT EXISTS idx_auditoria_control_empleado_fecha ON auditoria_control(empleado_id, fecha_referencia);
+
+-- Amplía export_log (Fase 3/4/7) para admitir los formatos de exportación
+-- del informe de auditoría, mismo patrón que las fases anteriores.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'export_log_formato_chk') THEN
+    ALTER TABLE export_log DROP CONSTRAINT export_log_formato_chk;
+  END IF;
+  ALTER TABLE export_log ADD CONSTRAINT export_log_formato_chk
+    CHECK (formato IN ('pdf','csv','informe_pdf','informe_csv','comparativa_pdf','comparativa_csv','auditoria_pdf','auditoria_csv'));
+END $$;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- FASE 10 — Incidencias.
+-- Bandeja de incidencias generadas a partir de la comparativa (Fase 7) y
+-- de la auditoría legal (Fase 9). Deduplicación vía UNIQUE(dedupe_key),
+-- calculada en server.js como
+-- `${property_id}|${empleado_id ?? 'null'}|${fecha}|${origen}|${tipo}`.
+-- INSERT ... ON CONFLICT (dedupe_key) DO NOTHING: re-ejecutar auditoría o
+-- comparativa nunca duplica ni reabre una incidencia ya
+-- RESOLVED/DISMISSED. Aditivo, no toca nada previo.
+-- ═══════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS incidencia (
+  id SERIAL PRIMARY KEY,
+  property_id VARCHAR(30) NOT NULL REFERENCES propiedad(id),
+  empleado_id INTEGER REFERENCES empleado(id) ON DELETE SET NULL,
+  fecha DATE NOT NULL,
+  origen VARCHAR(20) NOT NULL, -- comparativa | auditoria | fichaje | manual
+  tipo VARCHAR(50) NOT NULL,   -- p.ej. RETRASO, AUSENCIA_INJUSTIFICADA, ENTRADA_SIN_SALIDA, etc.
+  severidad VARCHAR(10) NOT NULL DEFAULT 'media', -- baja | media | alta
+  descripcion TEXT NOT NULL,
+  estado VARCHAR(20) NOT NULL DEFAULT 'OPEN', -- OPEN | IN_PROGRESS | RESOLVED | DISMISSED
+  ref_tipo VARCHAR(30),        -- 'auditoria_control' | 'comparativa_dia' | NULL
+  ref_id INTEGER,              -- id del registro origen si aplica (ej. auditoria_control.id)
+  dedupe_key VARCHAR(150) NOT NULL UNIQUE,  -- calculated in server.js
+  usuario_responsable VARCHAR(100),
+  notas TEXT,
+  creado_en TIMESTAMP NOT NULL DEFAULT now(),
+  actualizado_en TIMESTAMP NOT NULL DEFAULT now(),
+  resuelto_en TIMESTAMP,
+  CONSTRAINT incidencia_severidad_chk CHECK (severidad IN ('baja','media','alta')),
+  CONSTRAINT incidencia_estado_chk CHECK (estado IN ('OPEN','IN_PROGRESS','RESOLVED','DISMISSED')),
+  CONSTRAINT incidencia_origen_chk CHECK (origen IN ('comparativa','auditoria','fichaje','manual'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_incidencia_property_estado ON incidencia(property_id, estado);
+CREATE INDEX IF NOT EXISTS idx_incidencia_empleado_fecha ON incidencia(empleado_id, fecha);
+CREATE INDEX IF NOT EXISTS idx_incidencia_dedupe ON incidencia(dedupe_key);

@@ -201,6 +201,7 @@ app.get('/changelog', (req, res) => {
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/halo', (req, res) => res.json({ ok: true, modulo: 'estadisticas', timestamp: Date.now(), version: require('./package.json').version }));
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Adaria Estadisticas escuchando en 0.0.0.0:${PORT}`);

@@ -169,6 +169,66 @@ html, body {
 
 .error-state { color: var(--error); }
 
+/* --- Wizard de check-in (pasos) --- */
+.step-indicator {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+}
+
+.step-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 64px;
+  text-align: center;
+}
+
+.step-dot .dot-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--light-gray);
+  color: var(--gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.step-dot .dot-label {
+  font-size: 0.7rem;
+  color: var(--gray);
+  font-weight: 600;
+}
+
+.step-dot.current .dot-num {
+  background: var(--ocean-dark);
+  color: var(--white);
+}
+
+.step-dot.current .dot-label { color: var(--ocean-dark); }
+
+.step-dot.done .dot-num {
+  background: var(--success);
+  color: var(--white);
+}
+
+.info-banner {
+  background: var(--ocean-pale);
+  color: var(--ocean-dark);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
 /* --- Check-in form --- */
 .form-card {
   background: var(--white);

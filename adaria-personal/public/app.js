@@ -32,9 +32,15 @@ function tabs(active) {
     <button class="${active === 'empleados' ? 'on' : ''}" onclick="location.hash='#/empleados'">👤 Empleados</button>
     <button class="${active === 'departamentos' ? 'on' : ''}" onclick="location.hash='#/departamentos'">🏷️ Departamentos</button>
     <button class="${active === 'fichajes' ? 'on' : ''}" onclick="location.hash='#/fichajes'">🕒 Fichajes</button>
+    <button class="${active === 'turnos' ? 'on' : ''}" onclick="location.hash='#/turnos'">🗓️ Turnos</button>
+    <button class="${active === 'cuadrantes' ? 'on' : ''}" onclick="location.hash='#/cuadrantes'">🧩 Cuadrantes</button>
+    <button class="${active === 'comparativa' ? 'on' : ''}" onclick="location.hash='#/comparativa'">🔍 Comparativa</button>
     <button class="${active === 'inspeccion' ? 'on' : ''}" onclick="location.hash='#/inspeccion'">📋 Inspección de Trabajo</button>
     <button class="${active === 'informes' ? 'on' : ''}" onclick="location.hash='#/informes'">📊 Informes</button>
     <button class="${active === 'motivacion' ? 'on' : ''}" onclick="location.hash='#/motivacion'">🎉 Motivación</button>
+    <button class="${active === 'vacaciones' ? 'on' : ''}" onclick="location.hash='#/vacaciones'">🏖️ Vacaciones</button>
+    <button class="${active === 'auditoria' ? 'on' : ''}" onclick="location.hash='#/auditoria'">✅ Auditoría</button>
+    <button class="${active === 'incidencias' ? 'on' : ''}" onclick="location.hash='#/incidencias'">🚨 Incidencias</button>
     <button class="${active === 'quiosco' ? 'on' : ''}" onclick="location.hash='#/quiosco'">🔑 Quiosco</button>
   </div>`;
 }
@@ -958,6 +964,956 @@ async function consultarMesMotivacion() {
   }
 }
 
+// ─── Vista: Turnos (definiciones de turno) ───
+async function vistaTurnos() {
+  app.innerHTML = `<h1>Turnos</h1><p class="muted">Catálogo de turnos (horario tipo) usado por Cuadrantes y Comparativa.</p>
+    ${tabs('turnos')}
+    <div class="box">
+      <div class="toolbar">
+        <button class="btn" id="btnNuevoTurno">➕ Crear turno</button>
+      </div>
+      <div class="box" id="boxTurno" style="display:none;background:#f5fafc" data-edit-id=""></div>
+      <div id="listaTurnos" class="empty">Cargando…</div>
+    </div>`;
+
+  document.getElementById('btnNuevoTurno').addEventListener('click', () => abrirFormularioTurno({}));
+
+  await listarTurnos();
+}
+
+function formularioTurno(t) {
+  t = t || {};
+  return `
+    <div class="grid2">
+      <div><label>Código *</label><input id="t_codigo" value="${esc(t.codigo)}"></div>
+      <div><label>Nombre *</label><input id="t_nombre" value="${esc(t.nombre)}"></div>
+    </div>
+    <div class="grid2">
+      <div><label>Tipo</label><select id="t_tipo">
+        <option value="trabajo" ${t.tipo === 'trabajo' || !t.tipo ? 'selected' : ''}>Trabajo</option>
+        <option value="libre" ${t.tipo === 'libre' ? 'selected' : ''}>Libre</option>
+        <option value="vacaciones" ${t.tipo === 'vacaciones' ? 'selected' : ''}>Vacaciones</option>
+        <option value="baja" ${t.tipo === 'baja' ? 'selected' : ''}>Baja</option>
+        <option value="otros" ${t.tipo === 'otros' ? 'selected' : ''}>Otros</option>
+      </select></div>
+      <div><label>Duración (min)</label><input id="t_duracion" type="number" min="0" value="${t.duracion_prevista_min != null ? t.duracion_prevista_min : ''}"></div>
+    </div>
+    <div class="grid2">
+      <div><label>Entrada</label><input id="t_entrada" type="time" value="${esc(t.hora_entrada)}"></div>
+      <div><label>Salida</label><input id="t_salida" type="time" value="${esc(t.hora_salida)}"></div>
+    </div>
+    <div class="grid2">
+      <div><label>Tolerancia entrada (min)</label><input id="t_tolE" type="number" min="0" value="${t.tolerancia_entrada_min != null ? t.tolerancia_entrada_min : 0}"></div>
+      <div><label>Tolerancia salida (min)</label><input id="t_tolS" type="number" min="0" value="${t.tolerancia_salida_min != null ? t.tolerancia_salida_min : 0}"></div>
+    </div>
+    <div class="grid2">
+      <div><label>Nocturno</label><select id="t_nocturno">
+        <option value="false" ${!t.turno_nocturno ? 'selected' : ''}>No</option>
+        <option value="true" ${t.turno_nocturno ? 'selected' : ''}>Sí</option>
+      </select></div>
+      <div><label>Activo</label><select id="t_activo">
+        <option value="true" ${t.activo !== false ? 'selected' : ''}>Sí</option>
+        <option value="false" ${t.activo === false ? 'selected' : ''}>No</option>
+      </select></div>
+    </div>`;
+}
+
+function leerFormularioTurno() {
+  return {
+    codigo: document.getElementById('t_codigo').value.trim(),
+    nombre: document.getElementById('t_nombre').value.trim(),
+    tipo: document.getElementById('t_tipo').value,
+    hora_entrada: document.getElementById('t_entrada').value,
+    hora_salida: document.getElementById('t_salida').value,
+    duracion_prevista_min: document.getElementById('t_duracion').value || null,
+    turno_nocturno: document.getElementById('t_nocturno').value === 'true',
+    tolerancia_entrada_min: document.getElementById('t_tolE').value || 0,
+    tolerancia_salida_min: document.getElementById('t_tolS').value || 0,
+    activo: document.getElementById('t_activo').value === 'true',
+  };
+}
+
+function abrirFormularioTurno(t) {
+  const box = document.getElementById('boxTurno');
+  box.dataset.editId = t.id || '';
+  box.innerHTML = formularioTurno(t) + `<div id="msgTurno"></div>
+    <div class="actions">
+      <button class="btn" id="btnGuardarTurno">Guardar</button>
+      <button class="btn sec" id="btnCancelarTurno">Cancelar</button>
+    </div>`;
+  document.getElementById('btnGuardarTurno').addEventListener('click', guardarTurno);
+  document.getElementById('btnCancelarTurno').addEventListener('click', () => { box.style.display = 'none'; });
+  box.style.display = 'block';
+}
+
+async function guardarTurno() {
+  const box = document.getElementById('boxTurno');
+  const msg = document.getElementById('msgTurno');
+  const editId = box.dataset.editId;
+  try {
+    const d = leerFormularioTurno();
+    if (editId) {
+      await api('PUT', '/api/turnos/' + editId, d);
+    } else {
+      await api('POST', '/api/turnos', d);
+    }
+    box.style.display = 'none';
+    await listarTurnos();
+  } catch (e) {
+    msg.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+async function listarTurnos() {
+  const cont = document.getElementById('listaTurnos');
+  try {
+    const rows = await api('GET', '/api/turnos');
+    window.__TURNOS__ = rows;
+    if (!rows.length) { cont.innerHTML = '<div class="empty">Sin turnos todavía</div>'; return; }
+    cont.innerHTML = `<table><tr>
+      <th>Código</th><th>Nombre</th><th>Tipo</th><th>Entrada</th><th>Salida</th><th>Duración</th><th>Nocturno</th><th>Tol. E/S</th><th>Activo</th><th></th></tr>
+      ${rows.map((t) => `<tr>
+        <td><b>${esc(t.codigo)}</b></td>
+        <td>${esc(t.nombre)}</td>
+        <td>${esc(t.tipo)}</td>
+        <td>${esc(t.hora_entrada || '—')}</td>
+        <td>${esc(t.hora_salida || '—')}</td>
+        <td>${t.duracion_prevista_min != null ? t.duracion_prevista_min + ' min' : '—'}</td>
+        <td>${t.turno_nocturno ? '🌙 Sí' : 'No'}</td>
+        <td>${t.tolerancia_entrada_min || 0} / ${t.tolerancia_salida_min || 0}</td>
+        <td>${t.activo ? '<span class="pill ok">Activo</span>' : '<span class="pill baja">Inactivo</span>'}</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn sm sec" onclick="editarTurno(${t.id})">Editar</button>
+          ${t.activo ? `<button class="btn sm d" onclick="desactivarTurno(${t.id})">Desactivar</button>` : ''}
+        </td>
+      </tr>`).join('')}</table>`;
+  } catch (e) {
+    cont.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+window.editarTurno = function (id) {
+  const row = (window.__TURNOS__ || []).find((r) => r.id === id);
+  if (!row) return;
+  abrirFormularioTurno(row);
+};
+
+window.desactivarTurno = async function (id) {
+  if (!confirm('¿Desactivar este turno? (no se elimina, solo queda inactivo)')) return;
+  const row = (window.__TURNOS__ || []).find((r) => r.id === id);
+  if (!row) return;
+  try {
+    // El PUT exige el turno completo (nombre y tipo son obligatorios); solo cambiamos activo.
+    await api('PUT', '/api/turnos/' + id, {
+      nombre: row.nombre, tipo: row.tipo, hora_entrada: row.hora_entrada, hora_salida: row.hora_salida,
+      duracion_prevista_min: row.duracion_prevista_min, turno_nocturno: row.turno_nocturno,
+      tolerancia_entrada_min: row.tolerancia_entrada_min, tolerancia_salida_min: row.tolerancia_salida_min,
+      activo: false,
+    });
+    await listarTurnos();
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
+// ─── Vista: Cuadrantes (planificación por día/empleado + import CSV) ───
+async function vistaCuadrantes() {
+  await cargarDepartamentos();
+  const empleados = await api('GET', '/api/empleados?activo=true');
+  const turnos = await api('GET', '/api/turnos?activo=true').catch(() => []);
+  window.__TURNOS_ACTIVOS__ = turnos.filter((t) => t.activo !== false);
+  window.__EMPLEADOS_CUADRANTE__ = empleados;
+
+  app.innerHTML = `<h1>Cuadrantes</h1><p class="muted">Planificación de turnos por empleado y día. Fuente para la Comparativa.</p>
+    ${tabs('cuadrantes')}
+    <div class="box">
+      <div class="toolbar">
+        <select id="cqEmpleado"><option value="">Todos los empleados</option></select>
+        <input type="date" id="cqDesde">
+        <input type="date" id="cqHasta">
+        <button class="btn sm" id="btnFiltrarCq">Filtrar</button>
+        <button class="btn sm sec" id="btnNuevoCq">➕ Crear</button>
+        <button class="btn sm sec" id="btnImportarCq">📁 Importar CSV</button>
+      </div>
+      <div id="tablaCuadrantes" class="empty">Cargando…</div>
+    </div>
+    <div class="box" id="boxNuevoCq" style="display:none">
+      <h2>Nuevo cuadrante</h2>
+      <div class="grid2">
+        <div><label>Empleado</label><select id="ncEmpleado"></select></div>
+        <div><label>Fecha</label><input type="date" id="ncFecha"></div>
+      </div>
+      <div class="grid2">
+        <div><label>Turno</label><select id="ncTurno"></select></div>
+        <div><label>Nota</label><input type="text" id="ncNota"></div>
+      </div>
+      <div id="msgNc"></div>
+      <div class="actions">
+        <button class="btn" id="btnGuardarNc">Guardar</button>
+        <button class="btn sec" id="btnCancelarNc">Cancelar</button>
+      </div>
+    </div>
+    <div class="box" id="boxImportCq" style="display:none">
+      <h2>Importar CSV de cuadrante</h2>
+      <p class="muted">Cabecera esperada: <code>empleado_id, fecha, codigo_turno, nota</code></p>
+      <input type="file" id="csvCq" accept=".csv">
+      <div class="actions">
+        <button class="btn sm" id="btnValidarCq">Validar</button>
+        <button class="btn sm sec" id="btnCancelarImportCq">Cancelar</button>
+      </div>
+      <div id="resValidacionCq"></div>
+    </div>`;
+
+  const opcionesEmp = empleados.map((e) => `<option value="${e.id}">${esc(e.apellidos)}, ${esc(e.nombre)}</option>`).join('');
+  document.getElementById('cqEmpleado').innerHTML += opcionesEmp;
+  document.getElementById('ncEmpleado').innerHTML = '<option value="">— Selecciona —</option>' + opcionesEmp;
+  const opcionesTurno = window.__TURNOS_ACTIVOS__.map((t) => `<option value="${t.id}">${esc(t.codigo)} — ${esc(t.nombre)}</option>`).join('');
+  document.getElementById('ncTurno').innerHTML = '<option value="">— Selecciona —</option>' + opcionesTurno;
+
+  const cargar = () => listarCuadrantes();
+  document.getElementById('btnFiltrarCq').addEventListener('click', cargar);
+
+  document.getElementById('btnNuevoCq').addEventListener('click', () => {
+    document.getElementById('ncEmpleado').disabled = false;
+    document.getElementById('ncFecha').disabled = false;
+    document.getElementById('ncEmpleado').value = '';
+    document.getElementById('ncFecha').value = '';
+    document.getElementById('ncTurno').value = '';
+    document.getElementById('ncNota').value = '';
+    document.getElementById('msgNc').innerHTML = '';
+    document.getElementById('btnGuardarNc').onclick = null;
+    document.getElementById('boxNuevoCq').style.display = 'block';
+    document.getElementById('boxImportCq').style.display = 'none';
+  });
+  document.getElementById('btnCancelarNc').addEventListener('click', () => {
+    document.getElementById('boxNuevoCq').style.display = 'none';
+  });
+  document.getElementById('btnGuardarNc').addEventListener('click', async () => {
+    if (document.getElementById('btnGuardarNc').onclick) return; // en modo edición, editarCuadrante gestiona el click
+    const msg = document.getElementById('msgNc');
+    try {
+      const empleado_id = document.getElementById('ncEmpleado').value;
+      const fecha = document.getElementById('ncFecha').value;
+      const turno_config_id = document.getElementById('ncTurno').value;
+      const nota = document.getElementById('ncNota').value.trim();
+      if (!empleado_id || !fecha || !turno_config_id) { msg.innerHTML = '<div class="err">Empleado, fecha y turno son obligatorios</div>'; return; }
+      await api('POST', '/api/cuadrante', { empleado_id, fecha, turno_config_id, nota });
+      document.getElementById('boxNuevoCq').style.display = 'none';
+      cargar();
+    } catch (err) {
+      msg.innerHTML = `<div class="err">${esc(err.message)}</div>`;
+    }
+  });
+
+  document.getElementById('btnImportarCq').addEventListener('click', () => {
+    document.getElementById('boxImportCq').style.display = 'block';
+    document.getElementById('boxNuevoCq').style.display = 'none';
+    document.getElementById('resValidacionCq').innerHTML = '';
+  });
+  document.getElementById('btnCancelarImportCq').addEventListener('click', () => {
+    document.getElementById('boxImportCq').style.display = 'none';
+  });
+  document.getElementById('btnValidarCq').addEventListener('click', validarImportCuadrante);
+
+  cargar();
+}
+
+async function listarCuadrantes() {
+  const cont = document.getElementById('tablaCuadrantes');
+  const params = new URLSearchParams();
+  const emp = document.getElementById('cqEmpleado').value;
+  const desde = document.getElementById('cqDesde').value;
+  const hasta = document.getElementById('cqHasta').value;
+  if (emp) params.set('empleado_id', emp);
+  if (desde) params.set('desde', desde);
+  if (hasta) params.set('hasta', hasta);
+  try {
+    const rows = await api('GET', '/api/cuadrante?' + params.toString());
+    window.__CUADRANTES__ = rows;
+    if (!rows.length) { cont.innerHTML = '<div class="empty">Sin cuadrantes en este filtro</div>'; return; }
+    cont.innerHTML = `<table><tr><th>Empleado</th><th>Fecha</th><th>Turno</th><th>Nota</th><th></th></tr>
+      ${rows.map((r) => `<tr>
+        <td>${esc(r.apellidos)}, ${esc(r.nombre)}</td>
+        <td>${esc(r.fecha)}</td>
+        <td>${esc(r.turno_codigo || '—')}</td>
+        <td>${esc(r.nota || '—')}</td>
+        <td style="display:flex;gap:6px">
+          <button class="btn sm sec" onclick="editarCuadrante(${r.id})">Editar</button>
+          <button class="btn sm d" onclick="borrarCuadrante(${r.id})">Eliminar</button>
+        </td>
+      </tr>`).join('')}</table>`;
+  } catch (e) {
+    cont.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+window.editarCuadrante = function (id) {
+  const row = (window.__CUADRANTES__ || []).find((r) => r.id === id);
+  if (!row) return;
+  document.getElementById('boxNuevoCq').style.display = 'block';
+  document.getElementById('boxImportCq').style.display = 'none';
+  document.getElementById('ncEmpleado').value = row.empleado_id;
+  document.getElementById('ncFecha').value = row.fecha;
+  document.getElementById('ncEmpleado').disabled = true;
+  document.getElementById('ncFecha').disabled = true;
+  document.getElementById('ncTurno').value = row.turno_config_id || '';
+  document.getElementById('ncNota').value = row.nota || '';
+  const btn = document.getElementById('btnGuardarNc');
+  btn.onclick = async () => {
+    const msg = document.getElementById('msgNc');
+    try {
+      await api('PUT', '/api/cuadrante/' + id, {
+        turno_config_id: document.getElementById('ncTurno').value,
+        nota: document.getElementById('ncNota').value.trim(),
+      });
+      document.getElementById('boxNuevoCq').style.display = 'none';
+      btn.onclick = null;
+      await listarCuadrantes();
+    } catch (err) {
+      msg.innerHTML = `<div class="err">${esc(err.message)}</div>`;
+    }
+  };
+};
+
+window.borrarCuadrante = async function (id) {
+  if (!confirm('¿Eliminar este cuadrante?')) return;
+  try {
+    await api('DELETE', '/api/cuadrante/' + id);
+    await listarCuadrantes();
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
+async function validarImportCuadrante() {
+  const cont = document.getElementById('resValidacionCq');
+  const file = document.getElementById('csvCq').files[0];
+  if (!file) { cont.innerHTML = '<div class="err">Selecciona un fichero CSV</div>'; return; }
+  cont.innerHTML = '<div class="empty">Validando…</div>';
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const r = await api('POST', '/api/cuadrante/import/validar', fd);
+    window.__IMPORT_CQ__ = r;
+    const errores = [...(r.errores || []), ...(r.duplicados || [])];
+    let html = `<p style="margin-top:10px"><b>${r.filas_ok}</b> fila(s) válidas · <b>${errores.length}</b> error(es)</p>`;
+    if (errores.length) {
+      html += `<table class="import-errores"><tr><th>Fila</th><th>Motivo</th></tr>
+        ${errores.map((e) => `<tr><td>${esc(e.fila)}</td><td>${esc(e.motivo)}</td></tr>`).join('')}</table>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;margin-top:10px">
+          <input type="checkbox" id="chkSoloValidas" style="width:auto"> Aplicar solo filas válidas
+        </label>`;
+    }
+    html += `<div class="actions">
+      <button class="btn" id="btnConfirmarImportCq" ${errores.length ? 'disabled' : ''}>Confirmar importación</button>
+    </div>
+    <div id="msgConfirmCq"></div>`;
+    cont.innerHTML = html;
+    if (errores.length) {
+      const chk = document.getElementById('chkSoloValidas');
+      const btn = document.getElementById('btnConfirmarImportCq');
+      chk.addEventListener('change', () => { btn.disabled = !chk.checked; });
+    }
+    document.getElementById('btnConfirmarImportCq').addEventListener('click', confirmarImportCuadrante);
+  } catch (e) {
+    cont.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+async function confirmarImportCuadrante() {
+  const msg = document.getElementById('msgConfirmCq');
+  const r = window.__IMPORT_CQ__;
+  if (!r) return;
+  const errores = [...(r.errores || []), ...(r.duplicados || [])];
+  const chk = document.getElementById('chkSoloValidas');
+  try {
+    const res = await api('POST', '/api/cuadrante/import/confirmar', {
+      hash_validacion: r.hash,
+      aplica_solo_filas_validas: errores.length ? !!(chk && chk.checked) : false,
+    });
+    msg.innerHTML = `<div class="ok-msg">${res.filas_aplicadas} fila(s) importadas</div>`;
+    document.getElementById('boxImportCq').style.display = 'none';
+    await listarCuadrantes();
+  } catch (e) {
+    msg.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+// ─── Vista: Comparativa (previsto vs real) ───
+function pillEstadoComparativa(estado) {
+  const map = {
+    CORRECTO: 'ok', RETRASO: 'warn', SALIDA_ANTICIPADA: 'warn',
+    AUSENCIA: 'err', INCOMPLETO: 'err', INCONSISTENTE: 'err', HORAS_EXTRA: 'info',
+  };
+  const iconos = { CORRECTO: '✓ ' };
+  const clase = map[estado] || 'baja';
+  return `<span class="pill ${clase}">${esc(iconos[estado] || '')}${esc(estado || '—')}</span>`;
+}
+
+function pillSource(source) {
+  if (source === 'PLAN_B') return '<span class="pill est">⚠️ PLAN_B (estimado)</span>';
+  if (source === 'SCHEDULE') return '<span class="pill ok">SCHEDULE</span>';
+  return '<span class="pill baja">N/A</span>';
+}
+
+async function vistaComparativa() {
+  await cargarDepartamentos();
+  const empleados = await api('GET', '/api/empleados');
+  const hoy = new Date();
+  const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10);
+  const hoyStr = hoy.toISOString().slice(0, 10);
+
+  app.innerHTML = `<h1>Comparativa</h1><p class="muted">Turno previsto (cuadrante) frente a lo realmente fichado.</p>
+    ${tabs('comparativa')}
+    <div class="box">
+      <div class="toolbar">
+        <a class="btn sm sec" id="btnCmpPdf" href="#">📄 Exportar PDF</a>
+        <a class="btn sm sec" id="btnCmpCsv" href="#">🧾 Exportar CSV</a>
+      </div>
+      <div class="toolbar">
+        <select id="cmEmpleado"><option value="">Todos los empleados</option></select>
+        <select id="cmDepartamento"><option value="">Todos los departamentos</option></select>
+        <input type="date" id="cmDesde" value="${primerDiaMes}">
+        <input type="date" id="cmHasta" value="${hoyStr}">
+        <select id="cmEstado"><option value="">Todos los estados</option>
+          <option>CORRECTO</option><option>RETRASO</option><option>SALIDA_ANTICIPADA</option>
+          <option>AUSENCIA</option><option>INCOMPLETO</option><option>INCONSISTENTE</option><option>HORAS_EXTRA</option>
+        </select>
+        <select id="cmSource"><option value="">Todo origen</option>
+          <option value="SCHEDULE">SCHEDULE</option><option value="PLAN_B">PLAN_B</option><option value="N/A">N/A</option>
+        </select>
+        <button class="btn sm" id="btnFiltrarCmp">Filtrar</button>
+      </div>
+      <div id="tablaComparativa" class="empty">Cargando…</div>
+    </div>`;
+
+  const opcionesEmp = empleados.map((e) => `<option value="${e.id}">${esc(e.apellidos)}, ${esc(e.nombre)}</option>`).join('');
+  document.getElementById('cmEmpleado').innerHTML += opcionesEmp;
+  document.getElementById('cmDepartamento').innerHTML += DEPARTAMENTOS.map((d) => `<option value="${d.id}">${esc(d.nombre)}</option>`).join('');
+
+  function paramsCmp() {
+    const params = new URLSearchParams();
+    const emp = document.getElementById('cmEmpleado').value;
+    const dep = document.getElementById('cmDepartamento').value;
+    const desde = document.getElementById('cmDesde').value;
+    const hasta = document.getElementById('cmHasta').value;
+    const estado = document.getElementById('cmEstado').value;
+    const source = document.getElementById('cmSource').value;
+    if (emp) params.set('empleado_id', emp);
+    if (dep) params.set('departamento_id', dep);
+    if (desde) params.set('desde', desde);
+    if (hasta) params.set('hasta', hasta);
+    if (estado) params.set('estado', estado);
+    if (source) params.set('source', source);
+    return params;
+  }
+
+  function actualizarEnlacesCmp() {
+    const p = paramsCmp();
+    document.getElementById('btnCmpPdf').href = BASE + '/api/comparativa/export?formato=pdf&' + p.toString();
+    document.getElementById('btnCmpCsv').href = BASE + '/api/comparativa/export?formato=csv&' + p.toString();
+  }
+  ['cmEmpleado', 'cmDepartamento', 'cmDesde', 'cmHasta', 'cmEstado', 'cmSource'].forEach((id) =>
+    document.getElementById(id).addEventListener('change', actualizarEnlacesCmp));
+  actualizarEnlacesCmp();
+
+  const cargar = async () => {
+    actualizarEnlacesCmp();
+    const cont = document.getElementById('tablaComparativa');
+    cont.innerHTML = '<div class="empty">Cargando…</div>';
+    try {
+      const data = await api('GET', '/api/comparativa?' + paramsCmp().toString());
+      const source = document.getElementById('cmSource').value;
+      const rows = (data.resultados || []).filter((r) => !source || r.source === source);
+      if (!rows.length) { cont.innerHTML = '<div class="empty">Sin resultados</div>'; return; }
+      cont.innerHTML = `<table><tr>
+        <th>Empleado</th><th>Fecha</th><th>Turno</th><th>Estado</th><th>Source</th><th>H. esperadas</th><th>H. trabajadas</th><th>Detalle</th></tr>
+        ${rows.map((r) => `<tr>
+          <td>${esc(r.apellidos)}, ${esc(r.nombre)}</td>
+          <td>${esc(r.fecha)}</td>
+          <td>${esc(r.turno_codigo || '—')}</td>
+          <td>${pillEstadoComparativa(r.estado)}</td>
+          <td>${pillSource(r.source)}</td>
+          <td>${r.horas_esperadas != null ? r.horas_esperadas.toFixed(2) : '—'}</td>
+          <td>${r.horas_trabajadas != null ? r.horas_trabajadas.toFixed(2) : '—'}</td>
+          <td>${esc(r.detalle || '—')}</td>
+        </tr>`).join('')}</table>`;
+    } catch (e) {
+      cont.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+    }
+  };
+  document.getElementById('btnFiltrarCmp').addEventListener('click', cargar);
+  await cargar();
+}
+
+// ─── Vista: Vacaciones / Ausencias ───
+async function vistaVacaciones() {
+  const empleados = await api('GET', '/api/empleados?activo=true');
+  app.innerHTML = `<h1>Vacaciones</h1><p class="muted">Solicitudes de ausencia (vacaciones, baja, otros) y su aprobación.</p>
+    ${tabs('vacaciones')}
+    <div class="box">
+      <div class="toolbar">
+        <select id="vqEmpleado"><option value="">Todos los empleados</option></select>
+        <select id="vqEstado"><option value="">Todos los estados</option>
+          <option value="pendiente">Pendiente</option><option value="aprobada">Aprobada</option>
+          <option value="rechazada">Rechazada</option><option value="cancelada">Cancelada</option>
+        </select>
+        <input type="date" id="vqDesde">
+        <input type="date" id="vqHasta">
+        <button class="btn sm" id="btnFiltrarVq">Filtrar</button>
+        <button class="btn sm sec" id="btnNuevaSolicitud">➕ Solicitar</button>
+      </div>
+      <div id="tablaVacaciones" class="empty">Cargando…</div>
+    </div>
+    <div class="box" id="boxNuevaSolicitud" style="display:none">
+      <h2>Nueva solicitud</h2>
+      <div class="grid2">
+        <div><label>Empleado</label><select id="vsEmpleado"></select></div>
+        <div><label>Tipo</label><select id="vsTipo">
+          <option value="vacaciones">Vacaciones</option><option value="baja">Baja</option><option value="otros">Otros</option>
+        </select></div>
+      </div>
+      <div class="grid2">
+        <div><label>Desde</label><input type="date" id="vsDesde"></div>
+        <div><label>Hasta</label><input type="date" id="vsHasta"></div>
+      </div>
+      <div class="grid2">
+        <div><label>Días</label><input type="number" min="0" step="0.5" id="vsDias"></div>
+        <div><label>Observaciones</label><input type="text" id="vsObs"></div>
+      </div>
+      <div id="msgVs"></div>
+      <div class="actions">
+        <button class="btn" id="btnGuardarVs">Solicitar</button>
+        <button class="btn sec" id="btnCancelarVs">Cancelar</button>
+      </div>
+    </div>
+    <div class="modal-bg" id="modalRechazo">
+      <div class="modal-box">
+        <h2>Rechazar solicitud</h2>
+        <label>Notas</label><textarea id="rechazoNotas" placeholder="Motivo del rechazo"></textarea>
+        <div id="msgRechazo"></div>
+        <div class="actions">
+          <button class="btn d" id="btnConfirmarRechazo">Rechazar</button>
+          <button class="btn sec" id="btnCancelarRechazo">Cancelar</button>
+        </div>
+      </div>
+    </div>`;
+
+  const opcionesEmp = empleados.map((e) => `<option value="${e.id}">${esc(e.apellidos)}, ${esc(e.nombre)}</option>`).join('');
+  document.getElementById('vqEmpleado').innerHTML += opcionesEmp;
+  document.getElementById('vsEmpleado').innerHTML = '<option value="">— Selecciona —</option>' + opcionesEmp;
+
+  const cargar = () => listarVacaciones();
+  document.getElementById('btnFiltrarVq').addEventListener('click', cargar);
+  document.getElementById('btnNuevaSolicitud').addEventListener('click', () => {
+    document.getElementById('boxNuevaSolicitud').style.display = 'block';
+  });
+  document.getElementById('btnCancelarVs').addEventListener('click', () => {
+    document.getElementById('boxNuevaSolicitud').style.display = 'none';
+  });
+  document.getElementById('btnGuardarVs').addEventListener('click', async () => {
+    const msg = document.getElementById('msgVs');
+    try {
+      const body = {
+        empleado_id: document.getElementById('vsEmpleado').value,
+        tipo: document.getElementById('vsTipo').value,
+        fecha_inicio: document.getElementById('vsDesde').value,
+        fecha_fin: document.getElementById('vsHasta').value,
+        dias: document.getElementById('vsDias').value || null,
+        observaciones: document.getElementById('vsObs').value.trim(),
+      };
+      if (!body.empleado_id || !body.fecha_inicio || !body.fecha_fin || !(Number(body.dias) > 0)) {
+        msg.innerHTML = '<div class="err">Empleado, desde, hasta y días (mayor que 0) son obligatorios</div>'; return;
+      }
+      await api('POST', '/api/ausencias', body);
+      document.getElementById('boxNuevaSolicitud').style.display = 'none';
+      cargar();
+    } catch (err) {
+      msg.innerHTML = `<div class="err">${esc(err.message)}</div>`;
+    }
+  });
+  document.getElementById('btnCancelarRechazo').addEventListener('click', () => {
+    document.getElementById('modalRechazo').classList.remove('on');
+  });
+
+  cargar();
+}
+
+function pillEstadoVacacion(estado) {
+  const map = { pendiente: 'warn', aprobada: 'ok', rechazada: 'err', cancelada: 'baja' };
+  return `<span class="pill ${map[estado] || 'baja'}">${esc(estado)}</span>`;
+}
+
+async function listarVacaciones() {
+  const cont = document.getElementById('tablaVacaciones');
+  const params = new URLSearchParams();
+  const emp = document.getElementById('vqEmpleado').value;
+  const estado = document.getElementById('vqEstado').value;
+  const desde = document.getElementById('vqDesde').value;
+  const hasta = document.getElementById('vqHasta').value;
+  if (emp) params.set('empleado_id', emp);
+  if (estado) params.set('estado', estado);
+  if (desde) params.set('desde', desde);
+  if (hasta) params.set('hasta', hasta);
+  try {
+    const rows = await api('GET', '/api/ausencias?' + params.toString());
+    window.__VACACIONES__ = rows;
+    if (!rows.length) { cont.innerHTML = '<div class="empty">Sin solicitudes en este filtro</div>'; return; }
+    cont.innerHTML = `<table><tr>
+      <th>Empleado</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th>Días</th><th>Estado</th><th>Aprobador</th><th>Acciones</th></tr>
+      ${rows.map((r) => `<tr>
+        <td>${esc(r.apellidos)}, ${esc(r.nombre)}</td>
+        <td>${esc(r.tipo)}</td>
+        <td>${esc(r.fecha_inicio)}</td>
+        <td>${esc(r.fecha_fin)}</td>
+        <td>${r.dias != null ? r.dias : '—'}</td>
+        <td>${pillEstadoVacacion(r.estado)}</td>
+        <td>${esc(r.aprobador || '—')}</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap">${accionesVacacion(r)}</td>
+      </tr>`).join('')}</table>`;
+  } catch (e) {
+    cont.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+function accionesVacacion(r) {
+  if (r.estado === 'pendiente') {
+    return `<button class="btn sm" onclick="aprobarVacacion(${r.id})">Aprobar</button>
+      <button class="btn sm d" onclick="abrirRechazoVacacion(${r.id})">Rechazar</button>
+      <button class="btn sm d" onclick="borrarVacacion(${r.id})">Eliminar</button>`;
+  }
+  if (r.estado === 'aprobada') {
+    return `<button class="btn sm sec" onclick="cancelarVacacion(${r.id})">Cancelar</button>`;
+  }
+  return '<span class="hint">Solo lectura</span>';
+}
+
+window.aprobarVacacion = async function (id) {
+  if (!confirm('¿Aprobar esta solicitud?')) return;
+  try {
+    await api('PUT', '/api/ausencias/' + id + '/aprobar', {});
+    await listarVacaciones();
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
+window.abrirRechazoVacacion = function (id) {
+  const modal = document.getElementById('modalRechazo');
+  document.getElementById('rechazoNotas').value = '';
+  document.getElementById('msgRechazo').innerHTML = '';
+  modal.classList.add('on');
+  document.getElementById('btnConfirmarRechazo').onclick = async () => {
+    const msg = document.getElementById('msgRechazo');
+    try {
+      const observaciones_rechazo = document.getElementById('rechazoNotas').value.trim();
+      if (!observaciones_rechazo) { msg.innerHTML = '<div class="err">El motivo del rechazo es obligatorio</div>'; return; }
+      await api('PUT', '/api/ausencias/' + id + '/rechazar', { observaciones_rechazo });
+      modal.classList.remove('on');
+      await listarVacaciones();
+    } catch (e) {
+      msg.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+    }
+  };
+};
+
+window.cancelarVacacion = async function (id) {
+  if (!confirm('¿Cancelar esta solicitud aprobada?')) return;
+  try {
+    await api('PUT', '/api/ausencias/' + id + '/cancelar', {});
+    await listarVacaciones();
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
+window.borrarVacacion = async function (id) {
+  if (!confirm('¿Eliminar esta solicitud pendiente?')) return;
+  try {
+    await api('DELETE', '/api/ausencias/' + id);
+    await listarVacaciones();
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
+// ─── Vista: Auditoría ───
+function pillResultadoAuditoria(v) {
+  const map = { GREEN: 'ok', AMBER: 'warn', RED: 'err', UNKNOWN: 'baja' };
+  return `<span class="pill ${map[v] || 'baja'}">${esc(v || 'UNKNOWN')}</span>`;
+}
+
+// El resumen que devuelve /api/auditoria/runs es {total, green, amber, red, unknown};
+// se reduce a un único resultado global (RED domina sobre AMBER, luego GREEN, luego UNKNOWN).
+function resumenGlobalAuditoria(resumen) {
+  if (!resumen) return 'UNKNOWN';
+  if (resumen.red > 0) return 'RED';
+  if (resumen.amber > 0) return 'AMBER';
+  if (resumen.green > 0) return 'GREEN';
+  return 'UNKNOWN';
+}
+
+async function vistaAuditoria() {
+  app.innerHTML = `<h1>Auditoría</h1><p class="muted">Ejecuciones de auditoría de fichajes/cuadrantes y sus controles por empleado.</p>
+    ${tabs('auditoria')}
+    <div class="box">
+      <div class="toolbar">
+        <button class="btn" id="btnEjecutarAuditoria">▶️ Ejecutar auditoría</button>
+      </div>
+    </div>
+    <div class="modal-bg" id="modalAuditoria">
+      <div class="modal-box">
+        <h2>Ejecutar auditoría</h2>
+        <div class="grid2">
+          <div><label>Desde</label><input type="date" id="auDesde"></div>
+          <div><label>Hasta</label><input type="date" id="auHasta"></div>
+        </div>
+        <div id="msgAuditoria"></div>
+        <div class="actions">
+          <button class="btn" id="btnConfirmarAuditoria">Ejecutar</button>
+          <button class="btn sec" id="btnCancelarAuditoria">Cancelar</button>
+        </div>
+      </div>
+    </div>
+    <div class="box">
+      <h2>Histórico de ejecuciones</h2>
+      <div id="listaRunsAuditoria" class="empty">Cargando…</div>
+    </div>`;
+
+  document.getElementById('btnEjecutarAuditoria').addEventListener('click', () => {
+    document.getElementById('msgAuditoria').innerHTML = '';
+    document.getElementById('modalAuditoria').classList.add('on');
+  });
+  document.getElementById('btnCancelarAuditoria').addEventListener('click', () => {
+    document.getElementById('modalAuditoria').classList.remove('on');
+  });
+  document.getElementById('btnConfirmarAuditoria').addEventListener('click', async () => {
+    const msg = document.getElementById('msgAuditoria');
+    try {
+      const desde = document.getElementById('auDesde').value;
+      const hasta = document.getElementById('auHasta').value;
+      if (!desde || !hasta) { msg.innerHTML = '<div class="err">Desde y hasta son obligatorios</div>'; return; }
+      await api('POST', '/api/auditoria/ejecutar?' + new URLSearchParams({ desde, hasta }).toString());
+      document.getElementById('modalAuditoria').classList.remove('on');
+      await listarRunsAuditoria();
+    } catch (e) {
+      msg.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+    }
+  });
+
+  await listarRunsAuditoria();
+}
+
+async function listarRunsAuditoria() {
+  const cont = document.getElementById('listaRunsAuditoria');
+  try {
+    const runs = await api('GET', '/api/auditoria/runs');
+    if (!runs.length) { cont.innerHTML = '<div class="empty">Todavía no se ha ejecutado ninguna auditoría</div>'; return; }
+    cont.innerHTML = runs.map((r) => `<details class="run" id="run_${r.id}">
+      <summary>${new Date(r.ts).toLocaleString('es-ES')} · ${esc(r.desde)} a ${esc(r.hasta)} · ${esc(r.ejecutado_por || '—')} · ${pillResultadoAuditoria(resumenGlobalAuditoria(r.resumen))}
+        <small class="hint" style="display:inline;margin-left:8px">(${r.resumen ? r.resumen.total : 0} controles: ${r.resumen ? r.resumen.green : 0} verde · ${r.resumen ? r.resumen.amber : 0} ámbar · ${r.resumen ? r.resumen.red : 0} rojo)</small>
+      </summary>
+      <div class="actions" style="margin-top:10px">
+        <a class="btn sm sec" href="${BASE}/api/auditoria/runs/${r.id}/export?formato=pdf">📄 Exportar PDF</a>
+        <a class="btn sm sec" href="${BASE}/api/auditoria/runs/${r.id}/export?formato=csv">🧾 Exportar CSV</a>
+      </div>
+      <div id="detalleRun_${r.id}" class="empty" style="margin-top:10px">Sin cargar todavía</div>
+    </details>`).join('');
+    runs.forEach((r) => {
+      document.getElementById('run_' + r.id).addEventListener('toggle', async (ev) => {
+        if (!ev.target.open) return;
+        const det = document.getElementById('detalleRun_' + r.id);
+        if (det.dataset.loaded) return;
+        det.innerHTML = '<div class="empty">Cargando…</div>';
+        try {
+          const detalle = await api('GET', '/api/auditoria/runs/' + r.id);
+          const controles = detalle.controles || [];
+          det.innerHTML = !controles.length ? '<div class="empty">Sin controles</div>' : `<table><tr>
+            <th>Código control</th><th>Empleado</th><th>Estado</th><th>Detalle</th></tr>
+            ${controles.map((c) => `<tr>
+              <td>${esc(c.codigo_control)}</td>
+              <td>${esc(c.apellidos ? c.apellidos + ', ' + c.nombre : '—')}</td>
+              <td>${pillResultadoAuditoria(c.estado)}</td>
+              <td>${esc(c.detalle || '—')}</td>
+            </tr>`).join('')}</table>`;
+          det.dataset.loaded = '1';
+        } catch (e) {
+          det.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+        }
+      });
+    });
+  } catch (e) {
+    cont.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+// ─── Vista: Incidencias ───
+// Debe coincidir exactamente con TRANSICIONES_INCIDENCIA del servidor (server.js).
+const TRANSICIONES_INCIDENCIA = {
+  OPEN: ['IN_PROGRESS', 'DISMISSED'],
+  IN_PROGRESS: ['RESOLVED', 'OPEN'],
+  RESOLVED: ['OPEN'],
+  DISMISSED: ['OPEN'],
+};
+
+function pillSeveridad(sev) {
+  const map = { alta: 'err', media: 'warn', baja: 'info' };
+  return `<span class="pill ${map[sev] || 'baja'}">${esc(sev)}</span>`;
+}
+
+function pillEstadoIncidencia(estado) {
+  const map = { OPEN: 'warn', IN_PROGRESS: 'info', RESOLVED: 'ok', DISMISSED: 'baja' };
+  return `<span class="pill ${map[estado] || 'baja'}">${esc(estado)}</span>`;
+}
+
+async function vistaIncidencias() {
+  const empleados = await api('GET', '/api/empleados');
+  app.innerHTML = `<h1>Incidencias</h1><p class="muted">Incidencias detectadas (manuales o generadas desde auditoría) y su seguimiento.</p>
+    ${tabs('incidencias')}
+    <div class="box">
+      <div class="toolbar">
+        <select id="icEmpleado"><option value="">Todos los empleados</option></select>
+        <select id="icEstado"><option value="">Todos los estados</option>
+          <option value="OPEN">OPEN</option><option value="IN_PROGRESS">IN_PROGRESS</option>
+          <option value="RESOLVED">RESOLVED</option><option value="DISMISSED">DISMISSED</option>
+        </select>
+        <select id="icSeveridad"><option value="">Toda severidad</option>
+          <option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option>
+        </select>
+        <select id="icOrigen"><option value="">Todo origen</option>
+          <option value="auditoria">Auditoría</option><option value="manual">Manual</option>
+        </select>
+        <input type="date" id="icDesde">
+        <input type="date" id="icHasta">
+        <button class="btn sm" id="btnFiltrarIc">Filtrar</button>
+        <button class="btn sm sec" id="btnGenerarIc">⚙️ Generar desde auditoría</button>
+      </div>
+      <div id="tablaIncidencias" class="empty">Cargando…</div>
+    </div>
+    <div class="modal-bg" id="modalGenerarIc">
+      <div class="modal-box">
+        <h2>Generar incidencias desde auditoría</h2>
+        <label>Ejecución de auditoría</label>
+        <select id="genRunId"><option value="">Cargando…</option></select>
+        <div id="msgGenerarIc"></div>
+        <div class="actions">
+          <button class="btn" id="btnConfirmarGenerarIc">Generar</button>
+          <button class="btn sec" id="btnCancelarGenerarIc">Cancelar</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-bg" id="modalEstadoIc">
+      <div class="modal-box">
+        <h2>Cambiar estado</h2>
+        <select id="nuevoEstadoIc"></select>
+        <label>Notas</label><textarea id="notasEstadoIc" placeholder="Motivo del cambio"></textarea>
+        <div id="msgEstadoIc"></div>
+        <div class="actions">
+          <button class="btn" id="btnConfirmarEstadoIc">Guardar</button>
+          <button class="btn sec" id="btnCancelarEstadoIc">Cancelar</button>
+        </div>
+      </div>
+    </div>`;
+
+  const opcionesEmp = empleados.map((e) => `<option value="${e.id}">${esc(e.apellidos)}, ${esc(e.nombre)}</option>`).join('');
+  document.getElementById('icEmpleado').innerHTML += opcionesEmp;
+
+  const cargar = () => listarIncidencias();
+  document.getElementById('btnFiltrarIc').addEventListener('click', cargar);
+
+  document.getElementById('btnGenerarIc').addEventListener('click', async () => {
+    document.getElementById('msgGenerarIc').innerHTML = '';
+    const sel = document.getElementById('genRunId');
+    sel.innerHTML = '<option value="">Cargando…</option>';
+    document.getElementById('modalGenerarIc').classList.add('on');
+    try {
+      const runs = await api('GET', '/api/auditoria/runs');
+      if (!runs.length) { sel.innerHTML = '<option value="">Sin ejecuciones de auditoría</option>'; return; }
+      sel.innerHTML = runs.map((r) => `<option value="${r.id}">${esc(r.desde)} a ${esc(r.hasta)} — ${new Date(r.ts).toLocaleString('es-ES')}</option>`).join('');
+    } catch (e) {
+      sel.innerHTML = `<option value="">Error: ${esc(e.message)}</option>`;
+    }
+  });
+  document.getElementById('btnCancelarGenerarIc').addEventListener('click', () => {
+    document.getElementById('modalGenerarIc').classList.remove('on');
+  });
+  document.getElementById('btnConfirmarGenerarIc').addEventListener('click', async () => {
+    const msg = document.getElementById('msgGenerarIc');
+    const runId = document.getElementById('genRunId').value;
+    if (!runId) { msg.innerHTML = '<div class="err">Selecciona una ejecución</div>'; return; }
+    try {
+      const r = await api('POST', '/api/incidencias/generar?origen=auditoria&auditoria_run_id=' + runId);
+      msg.innerHTML = `<div class="ok-msg">${r.creadas} incidencia(s) nueva(s) generadas (${r.duplicadas} ya existían)</div>`;
+      await cargar();
+    } catch (e) {
+      msg.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+    }
+  });
+  document.getElementById('btnCancelarEstadoIc').addEventListener('click', () => {
+    document.getElementById('modalEstadoIc').classList.remove('on');
+  });
+
+  cargar();
+}
+
+async function listarIncidencias() {
+  const cont = document.getElementById('tablaIncidencias');
+  const params = new URLSearchParams();
+  const emp = document.getElementById('icEmpleado').value;
+  const estado = document.getElementById('icEstado').value;
+  const sev = document.getElementById('icSeveridad').value;
+  const origen = document.getElementById('icOrigen').value;
+  const desde = document.getElementById('icDesde').value;
+  const hasta = document.getElementById('icHasta').value;
+  if (emp) params.set('empleado_id', emp);
+  if (estado) params.set('estado', estado);
+  if (sev) params.set('severidad', sev);
+  if (origen) params.set('origen', origen);
+  if (desde) params.set('desde', desde);
+  if (hasta) params.set('hasta', hasta);
+  try {
+    const rows = await api('GET', '/api/incidencias?' + params.toString());
+    if (!rows.length) { cont.innerHTML = '<div class="empty">Sin incidencias en este filtro</div>'; return; }
+    cont.innerHTML = `<table><tr>
+      <th>Empleado</th><th>Fecha</th><th>Tipo</th><th>Severidad</th><th>Estado</th><th>Origen</th><th>Acciones</th></tr>
+      ${rows.map((r) => `<tr>
+        <td>${esc(r.apellidos ? r.apellidos + ', ' + r.nombre : '—')}</td>
+        <td>${esc(r.fecha)}</td>
+        <td>${esc(r.tipo)}</td>
+        <td>${pillSeveridad(r.severidad)}</td>
+        <td>${pillEstadoIncidencia(r.estado)}</td>
+        <td>${esc(r.origen)}</td>
+        <td><button class="btn sm sec" onclick="cambiarEstadoIncidencia(${r.id}, '${esc(r.estado)}')">Cambiar estado</button></td>
+      </tr>`).join('')}</table>`;
+  } catch (e) {
+    cont.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+window.cambiarEstadoIncidencia = function (id, estadoActual) {
+  const permitidos = TRANSICIONES_INCIDENCIA[estadoActual] || [];
+  const sel = document.getElementById('nuevoEstadoIc');
+  sel.innerHTML = permitidos.length
+    ? permitidos.map((e) => `<option value="${e}">${e}</option>`).join('')
+    : '<option value="">Sin transiciones disponibles</option>';
+  document.getElementById('notasEstadoIc').value = '';
+  document.getElementById('msgEstadoIc').innerHTML = '';
+  document.getElementById('modalEstadoIc').classList.add('on');
+  document.getElementById('btnConfirmarEstadoIc').onclick = async () => {
+    const msg = document.getElementById('msgEstadoIc');
+    const nuevo = sel.value;
+    if (!nuevo) { msg.innerHTML = '<div class="err">No hay un estado válido que elegir</div>'; return; }
+    try {
+      const notas = document.getElementById('notasEstadoIc').value.trim();
+      await api('PUT', '/api/incidencias/' + id + '/estado', { estado: nuevo, notas });
+      document.getElementById('modalEstadoIc').classList.remove('on');
+      await listarIncidencias();
+    } catch (e) {
+      msg.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+    }
+  };
+};
+
 // ─── Router ───
 async function router() {
   const hash = location.hash || '#/empleados';
@@ -965,9 +1921,15 @@ async function router() {
   try {
     if (partes[0] === 'departamentos') return await vistaDepartamentos();
     if (partes[0] === 'fichajes') return await vistaFichajes();
+    if (partes[0] === 'turnos') return await vistaTurnos();
+    if (partes[0] === 'cuadrantes') return await vistaCuadrantes();
+    if (partes[0] === 'comparativa') return await vistaComparativa();
     if (partes[0] === 'inspeccion') return await vistaInspeccion();
     if (partes[0] === 'informes') return await vistaInformes();
     if (partes[0] === 'motivacion') return await vistaMotivacion();
+    if (partes[0] === 'vacaciones') return await vistaVacaciones();
+    if (partes[0] === 'auditoria') return await vistaAuditoria();
+    if (partes[0] === 'incidencias') return await vistaIncidencias();
     if (partes[0] === 'quiosco') return await vistaQuiosco();
     if (partes[0] === 'empleados' && partes[1] === 'nuevo') return await vistaNuevoEmpleado();
     if (partes[0] === 'empleados' && partes[1]) return await vistaFichaEmpleado(partes[1]);

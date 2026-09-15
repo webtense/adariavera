@@ -16,6 +16,23 @@ pool.on('error', (err) => {
   console.error('[db] Error inesperado en el pool de PostgreSQL:', err.message);
 });
 
+// Pool de SOLO LECTURA hacia la BD del módulo Pre check-in online
+// (precheckin_adaria). Welcome NUNCA escribe ahí; solo consulta para
+// precargar los datos que el huésped ya rellenó antes de llegar.
+const precheckinPool = new Pool({
+  host: process.env.PRECHECKIN_PG_HOST || process.env.PG_HOST,
+  port: parseInt(process.env.PRECHECKIN_PG_PORT || process.env.PG_PORT || '5432', 10),
+  database: process.env.PRECHECKIN_PG_DATABASE || 'precheckin_adaria',
+  user: process.env.PRECHECKIN_PG_USER || process.env.PG_USER,
+  password: process.env.PRECHECKIN_PG_PASSWORD || process.env.PG_PASSWORD,
+  max: 5,
+  idleTimeoutMillis: 30000
+});
+
+precheckinPool.on('error', (err) => {
+  console.error('[db] Error inesperado en el pool de precheckin_adaria:', err.message);
+});
+
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS checkins (
   id                  SERIAL PRIMARY KEY,
@@ -72,4 +89,4 @@ async function logAudit(accion, detalle, clientIp) {
   }
 }
 
-module.exports = { pool, initSchema, logAudit };
+module.exports = { pool, precheckinPool, initSchema, logAudit };

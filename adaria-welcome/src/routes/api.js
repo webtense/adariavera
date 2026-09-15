@@ -4,8 +4,8 @@ const fs = require('fs');
 const router = express.Router();
 
 const aci = require('../aci');
-const { pool, logAudit } = require('../db');
-const { getLegalTexts } = require('../legal');
+const { pool, precheckinPool, logAudit } = require('../db');
+const { getLegalTexts, SUPPORTED_LANGS } = require('../legal');
 const { encryptSensitive, computeIntegrityHash } = require('../crypto');
 const { generateCheckinPdf } = require('../pdf');
 
@@ -38,8 +38,73 @@ router.get('/arrivals', async (req, res) => {
 
 // GET /api/legal/:lang - textos legales ES/EN
 router.get('/legal/:lang', (req, res) => {
-  const lang = req.params.lang === 'en' ? 'en' : 'es';
+  const requested = String(req.params.lang || '').toLowerCase();
+  const lang = SUPPORTED_LANGS.includes(requested) ? requested : 'es';
   res.json({ ok: true, lang, texts: getLegalTexts(lang) });
+});
+
+// GET /api/precheckin/by-codigo/:codigo - precarga datos ya enviados por el huésped
+// desde el módulo Pre check-in online (BD precheckin_adaria, SOLO LECTURA).
+// Welcome nunca escribe en esa base; esto es una consulta de precarga para
+// evitar que el huésped tenga que volver a teclear lo que ya envió antes de llegar.
+router.get('/precheckin/by-codigo/:codigo', async (req, res) => {
+  const codigo = String(req.params.codigo || '').trim();
+  if (!codigo) {
+    return res.status(400).json({ ok: false, error: 'Falta el código de reserva' });
+  }
+  try {
+    const reservaResult = await precheckinPool.query(
+      `SELECT id, res_guid, codigo, apellido_busqueda, titular_nombre, titular_apellido,
+              habitacion, fecha_entrada, fecha_salida, pax, email, telefono,
+              hora_llegada_estimada, observaciones, idioma, procesado
+       FROM precheckin_reserva WHERE codigo = $1`,
+      [codigo]
+    );
+    if (reservaResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'No hay pre check-in registrado para ese código' });
+    }
+    const reserva = reservaResult.rows[0];
+
+    const personasResult = await precheckinPool.query(
+      `SELECT es_titular, nombre, apellido1, apellido2, tipo_documento, numero_documento,
+              fecha_nacimiento, nacionalidad
+       FROM precheckin_persona WHERE reserva_id = $1
+       ORDER BY es_titular DESC, id ASC`,
+      [reserva.id]
+    );
+
+    const personas = personasResult.rows.map((p) => ({
+      esTitular: p.es_titular,
+      nombre: p.nombre || '',
+      apellido1: p.apellido1 || '',
+      apellido2: p.apellido2 || '',
+      tipoDocumento: p.tipo_documento || '',
+      numeroDocumento: p.numero_documento || '',
+      fechaNacimiento: p.fecha_nacimiento,
+      nacionalidad: p.nacionalidad || ''
+    }));
+
+    res.json({
+      ok: true,
+      precheckin: {
+        codigo: reserva.codigo,
+        habitacion: reserva.habitacion,
+        fechaEntrada: reserva.fecha_entrada,
+        fechaSalida: reserva.fecha_salida,
+        pax: reserva.pax,
+        email: reserva.email,
+        telefono: reserva.telefono,
+        horaLlegadaEstimada: reserva.hora_llegada_estimada,
+        observaciones: reserva.observaciones,
+        idioma: reserva.idioma,
+        procesado: reserva.procesado,
+        personas
+      }
+    });
+  } catch (e) {
+    console.error('[api] Error consultando precheckin por codigo:', e.message);
+    res.status(502).json({ ok: false, error: 'No se pudo consultar el pre check-in' });
+  }
 });
 
 // POST /api/checkin - registra el check-in firmado (firma+PDF SOLO en BD local, nunca en ACI)

@@ -41,6 +41,9 @@ const QRCode = require('qrcode');
 const PDFDocument = require('pdfkit');
 const nodemailer = require('nodemailer');
 const { pool } = require('./db');
+const { compararRango } = require('./lib/comparativa');
+const { ejecutarChecklistAuditoria } = require('./lib/auditoria');
+const { calcularDeduperKey, severidadComparativa, severidadAuditoria, ESTADOS_COMPARATIVA_SIN_INCIDENCIA } = require('./lib/incidencias');
 
 const PORT = parseInt(process.env.PORT || '3096', 10);
 const SECRET = process.env.SESSION_SECRET || 'cambia-esto';
@@ -82,6 +85,14 @@ if (!fs.existsSync(LOGS_DIR)) fs.mkdirSync(LOGS_DIR, { mode: 0o700 });
 const property = JSON.parse(fs.readFileSync(path.join(__dirname, 'property.json'), 'utf8'));
 const PROPERTY_ID = property.id_propiedad;
 const PROPERTY_NAME = property.nombre;
+// FASE 7 — Plan B: config de jornada estándar usada SOLO cuando un empleado
+// ficha sin tener cuadrante asignado ese día. Si falta en property.json,
+// Plan B queda desactivado (nunca se inventan horas esperadas por defecto).
+const PLAN_B = {
+  activo: !!(property.planB && property.planB.activo),
+  horasEsperadas: property.planB && property.planB.horas_dia != null ? property.planB.horas_dia : null,
+  toleranciaMin: property.planB && property.planB.tolerancia_min != null ? property.planB.tolerancia_min : 0,
+};
 const COLORS = property.branding.colores;
 const ICON = property.branding.icono_emoji || '👥';
 
@@ -142,7 +153,7 @@ redisClient.connect().catch(e => console.error('[Redis]', e.message));
 app.use(session({
   store: new RedisStore({ client: redisClient }),
   name: 'adaria_session',
-  secret: 'adaria-sso-secret-2026',
+  secret: process.env.SSO_SESSION_SECRET || SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -1538,6 +1549,7 @@ function diasSinFichajeEmpleado(fechaAltaStr, desde, hasta, fechasConFichaje) {
 
 const NOTA_DIAS_SIN_FICHAJE = 'Días DENTRO del periodo, de empleados actualmente activos (y ya dados de alta), sin NINGÚN fichaje. No es una ausencia justificada ni injustificada -no existen cuadrantes/turnos previstos todavía-, es solo la ausencia de registro de fichaje ese día.';
 const NOTA_COSTE_PENDIENTE = 'El coste excluye a los empleados sin "coste/hora" asignado en su ficha (aparecen como "(coste pendiente)"); nunca se asume 0 ni se inventa un valor.';
+const NOTA_PLAN_B = 'Sin cuadrante asignado: resultado calculado contra jornada estándar configurada (Plan B), no contra un horario específico. Valores de este tipo son estimados.';
 
 // Construye el informe de un periodo (con filtros opcionales de
 // departamento/empleado), agregando por empleado y por departamento.
@@ -2267,4 +2279,1243 @@ app.post('/api/admin/kiosk-link', (req, res) => {
   res.json({ link, info: 'Comparte este enlace con el dispositivo para configurar como quiosco de fichaje' });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`Adaria Personal v${APP_VERSION} (${PROPERTY_ID}) en :${PORT}`));
+// ═══════════════════════════════════════════════════════════════════
+// FASE 6 — Turnos y Cuadrantes
+// turno_config: catálogo de turnos por propiedad (código, horario previsto,
+// tolerancias). Nunca se borra físicamente (solo activo=false) porque
+// cuadrante ya planificado/histórico referencia su id.
+// cuadrante: qué turno le toca a cada empleado cada día. Es planificación,
+// NO registro legal de jornada (eso sigue siendo `fichaje`): por eso aquí
+// SÍ se permite el borrado físico.
+// Importación CSV: se valida en un paso separado (/import/validar) sin
+// escribir nada en BD, y solo se aplica en /import/confirmar, dentro de
+// una transacción. La validación se guarda en sesión indexada por el hash
+// SHA-256 del fichero, así el confirmar comprueba que el CSV no cambió
+// entre medias (y no hace falta reenviar/re-parsear el fichero completo).
+// ═══════════════════════════════════════════════════════════════════
+const TIPOS_TURNO = ['trabajo', 'libre', 'vacaciones', 'baja', 'otros'];
+const uploadCsvMemoria = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB, de sobra para un CSV de cuadrante
+});
+
+// ─── Turnos (catálogo) ───
+
+app.get('/api/turnos', ensureAdmin, async (req, res) => {
+  try {
+    const cond = ['property_id = $1'];
+    const params = [PROPERTY_ID];
+    if (req.query.activo === 'true' || req.query.activo === 'false') {
+      params.push(req.query.activo === 'true');
+      cond.push(`activo = $${params.length}`);
+    }
+    const { rows } = await pool.query(
+      `SELECT * FROM turno_config WHERE ${cond.join(' AND ')} ORDER BY codigo`,
+      params
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al leer los turnos' });
+  }
+});
+
+app.post('/api/turnos', ensureAdmin, async (req, res) => {
+  const codigo = (req.body.codigo || '').trim();
+  const nombre = (req.body.nombre || '').trim();
+  const tipo = String(req.body.tipo || '');
+  const horaEntrada = req.body.hora_entrada || null;
+  const horaSalida = req.body.hora_salida || null;
+  const duracionPrevistaMin = req.body.duracion_prevista_min === undefined || req.body.duracion_prevista_min === null || req.body.duracion_prevista_min === ''
+    ? null : parseInt(req.body.duracion_prevista_min, 10);
+  const turnoNocturno = !!req.body.turno_nocturno;
+  const toleranciaEntradaMin = parseInt(req.body.tolerancia_entrada_min, 10) || 0;
+  const toleranciaSalidaMin = parseInt(req.body.tolerancia_salida_min, 10) || 0;
+  if (!codigo || !nombre || !TIPOS_TURNO.includes(tipo)) {
+    return res.status(400).json({ error: 'Código, nombre y tipo son obligatorios (tipo válido: ' + TIPOS_TURNO.join(', ') + ')' });
+  }
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO turno_config(property_id, codigo, nombre, tipo, hora_entrada, hora_salida, duracion_prevista_min, turno_nocturno, tolerancia_entrada_min, tolerancia_salida_min)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [PROPERTY_ID, codigo, nombre, tipo, horaEntrada, horaSalida, duracionPrevistaMin, turnoNocturno, toleranciaEntradaMin, toleranciaSalidaMin]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: `Ya existe un turno con código "${codigo}" en esta propiedad` });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Error al crear el turno' });
+  }
+});
+
+app.put('/api/turnos/:id', ensureAdmin, async (req, res) => {
+  const nombre = (req.body.nombre || '').trim();
+  const tipo = String(req.body.tipo || '');
+  const horaEntrada = req.body.hora_entrada || null;
+  const horaSalida = req.body.hora_salida || null;
+  const duracionPrevistaMin = req.body.duracion_prevista_min === undefined || req.body.duracion_prevista_min === null || req.body.duracion_prevista_min === ''
+    ? null : parseInt(req.body.duracion_prevista_min, 10);
+  const turnoNocturno = !!req.body.turno_nocturno;
+  const toleranciaEntradaMin = parseInt(req.body.tolerancia_entrada_min, 10) || 0;
+  const toleranciaSalidaMin = parseInt(req.body.tolerancia_salida_min, 10) || 0;
+  const activo = req.body.activo === undefined ? true : !!req.body.activo;
+  if (!nombre || !TIPOS_TURNO.includes(tipo)) {
+    return res.status(400).json({ error: 'Nombre y tipo son obligatorios (tipo válido: ' + TIPOS_TURNO.join(', ') + ')' });
+  }
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE turno_config SET nombre=$1, tipo=$2, hora_entrada=$3, hora_salida=$4, duracion_prevista_min=$5,
+         turno_nocturno=$6, tolerancia_entrada_min=$7, tolerancia_salida_min=$8, activo=$9, actualizado_en=now()
+       WHERE id=$10 AND property_id=$11`,
+      [nombre, tipo, horaEntrada, horaSalida, duracionPrevistaMin, turnoNocturno, toleranciaEntradaMin, toleranciaSalidaMin, activo, req.params.id, PROPERTY_ID]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Turno no encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al actualizar el turno' });
+  }
+});
+
+// ─── Cuadrante (planificación por empleado y día) ───
+
+app.get('/api/cuadrante', ensureAdmin, async (req, res) => {
+  const desde = req.query.desde;
+  const hasta = req.query.hasta;
+  if (!desde || !hasta) {
+    return res.status(400).json({ error: 'desde y hasta son obligatorios (YYYY-MM-DD)' });
+  }
+  try {
+    const cond = ['c.property_id = $1', 'c.fecha >= $2', 'c.fecha <= $3'];
+    const params = [PROPERTY_ID, desde, hasta];
+    if (req.query.empleado_id) {
+      params.push(req.query.empleado_id);
+      cond.push(`c.empleado_id = $${params.length}`);
+    }
+    if (req.query.departamento_id) {
+      params.push(req.query.departamento_id);
+      cond.push(`e.departamento_id = $${params.length}`);
+    }
+    const { rows } = await pool.query(
+      `SELECT c.id, c.empleado_id, e.nombre, e.apellidos, e.departamento_id, c.fecha,
+              c.turno_config_id, t.codigo AS turno_codigo, t.nombre AS turno_nombre, t.tipo AS turno_tipo,
+              c.nota, c.origen, c.creado_por, c.creado_en, c.actualizado_en
+       FROM cuadrante c
+       JOIN empleado e ON e.id = c.empleado_id
+       JOIN turno_config t ON t.id = c.turno_config_id
+       WHERE ${cond.join(' AND ')}
+       ORDER BY c.fecha, e.apellidos, e.nombre`,
+      params
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al leer el cuadrante' });
+  }
+});
+
+app.post('/api/cuadrante', ensureAdmin, async (req, res) => {
+  const empleadoId = parseInt(req.body.empleado_id, 10);
+  const fecha = req.body.fecha;
+  const turnoConfigId = parseInt(req.body.turno_config_id, 10);
+  const nota = (req.body.nota || '').trim() || null;
+  if (!empleadoId || !fecha || !turnoConfigId) {
+    return res.status(400).json({ error: 'empleado_id, fecha y turno_config_id son obligatorios' });
+  }
+  try {
+    if (!(await empleadoDeLaPropiedad(empleadoId))) {
+      return res.status(404).json({ error: 'Empleado no encontrado' });
+    }
+    const creadoPor = req.session?.user?.login || req.user?.login || req.user?.username || 'admin';
+    const { rows } = await pool.query(
+      `INSERT INTO cuadrante(property_id, empleado_id, fecha, turno_config_id, nota, creado_por, origen)
+       VALUES ($1,$2,$3,$4,$5,$6,'manual') RETURNING id`,
+      [PROPERTY_ID, empleadoId, fecha, turnoConfigId, nota, creadoPor]
+    );
+    res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'Ya existe un cuadrante para ese empleado ese día — edita el existente en vez de duplicarlo' });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Error al crear el cuadrante' });
+  }
+});
+
+app.put('/api/cuadrante/:id', ensureAdmin, async (req, res) => {
+  const turnoConfigId = parseInt(req.body.turno_config_id, 10);
+  const nota = (req.body.nota || '').trim() || null;
+  if (!turnoConfigId) {
+    return res.status(400).json({ error: 'turno_config_id es obligatorio' });
+  }
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE cuadrante SET turno_config_id=$1, nota=$2, actualizado_en=now()
+       WHERE id=$3 AND property_id=$4`,
+      [turnoConfigId, nota, req.params.id, PROPERTY_ID]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Cuadrante no encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al actualizar el cuadrante' });
+  }
+});
+
+app.delete('/api/cuadrante/:id', ensureAdmin, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      'DELETE FROM cuadrante WHERE id = $1 AND property_id = $2',
+      [req.params.id, PROPERTY_ID]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Cuadrante no encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al borrar el cuadrante' });
+  }
+});
+
+// ─── Importación CSV del cuadrante (validar → confirmar) ───
+// Formato esperado, cabecera obligatoria: empleado_id,fecha,codigo_turno,nota
+// (nota opcional). Parseo propio muy simple (split por líneas/comas): no se
+// añade la dependencia csv-parse porque no está en package.json y el
+// formato de entrada es deliberadamente básico.
+function parsearCsvCuadrante(texto) {
+  const lineas = texto.split(/\r\n|\r|\n/).filter(l => l.trim() !== '');
+  if (!lineas.length) return { cabecera: [], filas: [] };
+  const cabecera = lineas[0].split(',').map(c => c.trim().toLowerCase());
+  const filas = lineas.slice(1).map(linea => {
+    const celdas = linea.split(',').map(c => c.trim());
+    const obj = {};
+    cabecera.forEach((nombreCol, i) => { obj[nombreCol] = celdas[i] !== undefined ? celdas[i] : ''; });
+    return obj;
+  });
+  return { cabecera, filas };
+}
+
+app.post('/api/cuadrante/import/validar', ensureAdmin, uploadCsvMemoria.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Falta el fichero CSV (campo "file")' });
+  }
+  const contenido = req.file.buffer.toString('utf8');
+  const hash = sha256(contenido);
+  const { cabecera, filas } = parsearCsvCuadrante(contenido);
+
+  const columnasEsperadas = ['empleado_id', 'fecha', 'codigo_turno'];
+  const faltan = columnasEsperadas.filter(c => !cabecera.includes(c));
+  if (faltan.length) {
+    return res.status(400).json({ error: `Cabecera del CSV inválida — faltan columnas: ${faltan.join(', ')}` });
+  }
+
+  try {
+    const [{ rows: empleados }, { rows: turnos }] = await Promise.all([
+      pool.query('SELECT id FROM empleado WHERE property_id = $1', [PROPERTY_ID]),
+      pool.query('SELECT id, codigo FROM turno_config WHERE property_id = $1 AND activo = true', [PROPERTY_ID]),
+    ]);
+    const empleadosValidos = new Set(empleados.map(e => e.id));
+    const turnosPorCodigo = new Map(turnos.map(t => [t.codigo, t.id]));
+
+    const errores = [];
+    const duplicados = [];
+    const vistos = new Set();
+    const filasParseadas = [];
+
+    filas.forEach((fila, idx) => {
+      const numFila = idx + 2; // +1 cabecera, +1 base 1
+      const empleadoId = parseInt(fila.empleado_id, 10);
+      const fecha = fila.fecha;
+      const codigoTurno = fila.codigo_turno;
+      const nota = fila.nota || null;
+
+      if (!empleadoId || !empleadosValidos.has(empleadoId)) {
+        errores.push({ fila: numFila, motivo: `empleado_id "${fila.empleado_id}" no existe en esta propiedad` });
+        return;
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha || '') || isNaN(Date.parse(fecha))) {
+        errores.push({ fila: numFila, motivo: `fecha "${fecha}" no tiene formato válido YYYY-MM-DD` });
+        return;
+      }
+      if (!turnosPorCodigo.has(codigoTurno)) {
+        errores.push({ fila: numFila, motivo: `codigo_turno "${codigoTurno}" no existe o no está activo en esta propiedad` });
+        return;
+      }
+      const clave = `${empleadoId}|${fecha}`;
+      if (vistos.has(clave)) {
+        duplicados.push({ fila: numFila, motivo: `empleado_id ${empleadoId} + fecha ${fecha} repetido dentro del propio CSV` });
+        return;
+      }
+      vistos.add(clave);
+      filasParseadas.push({ fila: numFila, empleado_id: empleadoId, fecha, turno_config_id: turnosPorCodigo.get(codigoTurno), nota });
+    });
+
+    if (!req.session.cuadranteImportValidaciones) req.session.cuadranteImportValidaciones = {};
+    req.session.cuadranteImportValidaciones[hash] = {
+      nombreFichero: req.file.originalname,
+      filasParseadas,
+      errores,
+      duplicados,
+      filasTotales: filas.length,
+    };
+
+    res.json({
+      filas_ok: filasParseadas.length,
+      filas_totales: filas.length,
+      errores,
+      duplicados,
+      hash,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al validar el CSV' });
+  }
+});
+
+app.post('/api/cuadrante/import/confirmar', ensureAdmin, async (req, res) => {
+  const hashValidacion = req.body.hash_validacion;
+  const aplicaSoloFilasValidas = req.body.aplica_solo_filas_validas === true;
+  if (!hashValidacion) {
+    return res.status(400).json({ error: 'hash_validacion es obligatorio' });
+  }
+  const validacion = req.session.cuadranteImportValidaciones && req.session.cuadranteImportValidaciones[hashValidacion];
+  if (!validacion) {
+    return res.status(400).json({ error: 'Ejecuta primero /api/cuadrante/import/validar — el CSV ha caducado o no se reconoce en esta sesión' });
+  }
+  const totalErrores = validacion.errores.length + validacion.duplicados.length;
+  if (totalErrores > 0 && !aplicaSoloFilasValidas) {
+    return res.status(400).json({
+      error: 'El CSV tiene filas con error o duplicadas — pasa aplica_solo_filas_validas=true para aplicar solo las filas válidas, o corrige el fichero',
+      errores: validacion.errores,
+      duplicados: validacion.duplicados,
+    });
+  }
+
+  const creadoPor = req.session?.user?.login || req.user?.login || req.user?.username || 'admin';
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const f of validacion.filasParseadas) {
+      await client.query(
+        `INSERT INTO cuadrante(property_id, empleado_id, fecha, turno_config_id, nota, creado_por, origen)
+         VALUES ($1,$2,$3,$4,$5,$6,'import_csv')
+         ON CONFLICT (property_id, empleado_id, fecha)
+         DO UPDATE SET turno_config_id = EXCLUDED.turno_config_id, nota = EXCLUDED.nota,
+                        origen = 'import_csv', creado_por = EXCLUDED.creado_por, actualizado_en = now()`,
+        [PROPERTY_ID, f.empleado_id, f.fecha, f.turno_config_id, f.nota, creadoPor]
+      );
+    }
+    await client.query(
+      `INSERT INTO cuadrante_import_log(property_id, importado_por, nombre_fichero, filas_totales, filas_aplicadas, filas_error, hash)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [PROPERTY_ID, creadoPor, validacion.nombreFichero, validacion.filasTotales, validacion.filasParseadas.length, totalErrores, hashValidacion]
+    );
+    await client.query('COMMIT');
+    delete req.session.cuadranteImportValidaciones[hashValidacion];
+    res.json({
+      ok: true,
+      filas_aplicadas: validacion.filasParseadas.length,
+      filas_error: totalErrores,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Error al confirmar la importación del cuadrante', detalle: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// FASE 7 — Comparativa fichaje vs cuadrante + Plan B.
+// La lógica de comparación vive en lib/comparativa.js (módulo puro, sin
+// BD/Express, testeable en aislado). Aquí solo se cargan los datos
+// (turno_config+cuadrante, fichaje, ausencias aprobadas, Plan B de
+// property.json) y se le pasan ya en memoria.
+//
+// La tabla `ausencia_justificada` (Fase 8) alimenta ausenciasPorEmpleado:
+// solo se cargan las de estado='aprobada' que solapan [desde, hasta].
+// ═══════════════════════════════════════════════════════════════════
+
+// Agrupa los fichajes de un rango de empleados en jornadas (reutilizando
+// construirJornadas/fechaEnZona de la Fase 3) y las indexa por
+// `${empleado_id}|${fecha}` → array de fichajes de ESA jornada, con la
+// misma atribución de fecha que Fase 3 para turnos que cruzan medianoche
+// (la fecha es la del día de la ENTRADA).
+async function fichajesPorEmpleadoFechaPara(empleadoIds, desde, hasta) {
+  const tz = property.timezone || 'Europe/Madrid';
+  const fichajes = await fichajesParaCalculo(empleadoIds, desde, hasta);
+  const porEmpleado = new Map();
+  for (const f of fichajes) {
+    if (!porEmpleado.has(f.empleado_id)) porEmpleado.set(f.empleado_id, []);
+    porEmpleado.get(f.empleado_id).push(f);
+  }
+  const mapa = new Map();
+  for (const [empId, lista] of porEmpleado.entries()) {
+    const jornadas = construirJornadas(lista);
+    for (const j of jornadas) {
+      const fecha = fechaEnZona(j.inicio, tz);
+      if (fecha < desde || fecha > hasta) continue;
+      const eventos = [{ tipo: 'entrada', ts: j.inicio }];
+      for (const p of j.pausas) {
+        eventos.push({ tipo: 'pausa_inicio', ts: p.inicio });
+        if (p.fin) eventos.push({ tipo: 'pausa_fin', ts: p.fin });
+      }
+      if (j.fin) eventos.push({ tipo: 'salida', ts: j.fin });
+      mapa.set(`${empId}|${fecha}`, eventos);
+    }
+  }
+  return mapa;
+}
+
+// Cuadrante (turno_config unido a cuadrante) indexado por `${empleado_id}|${fecha}`.
+async function turnosPorEmpleadoFechaPara(empleadoIds, desde, hasta) {
+  const cond = ['c.property_id = $1', 'c.fecha >= $2', 'c.fecha <= $3'];
+  const params = [PROPERTY_ID, desde, hasta];
+  if (empleadoIds && empleadoIds.length) {
+    params.push(empleadoIds);
+    cond.push(`c.empleado_id = ANY($${params.length}::int[])`);
+  }
+  const { rows } = await pool.query(
+    `SELECT c.empleado_id, c.fecha, t.tipo, t.hora_entrada, t.hora_salida,
+            t.duracion_prevista_min, t.turno_nocturno, t.tolerancia_entrada_min, t.tolerancia_salida_min,
+            t.codigo AS turno_codigo, t.nombre AS turno_nombre
+     FROM cuadrante c
+     JOIN turno_config t ON t.id = c.turno_config_id
+     WHERE ${cond.join(' AND ')}`,
+    params
+  );
+  const mapa = new Map();
+  for (const r of rows) {
+    const fecha = r.fecha instanceof Date ? fechaEnZona(r.fecha, property.timezone || 'Europe/Madrid') : String(r.fecha).slice(0, 10);
+    mapa.set(`${r.empleado_id}|${fecha}`, r);
+  }
+  return mapa;
+}
+
+// Ausencias aprobadas que solapan [desde, hasta], indexadas por empleado_id →
+// array de filas (campos fecha_inicio/fecha_fin/tipo/estado, que
+// ausenciaCubreFecha() de lib/comparativa.js sabe leer directamente).
+async function ausenciasPorEmpleadoFechaPara(empleadoIds, desde, hasta) {
+  const cond = ['property_id = $1', "estado = 'aprobada'", 'fecha_inicio <= $2', 'fecha_fin >= $3'];
+  const params = [PROPERTY_ID, hasta, desde];
+  if (empleadoIds && empleadoIds.length) {
+    params.push(empleadoIds);
+    cond.push(`empleado_id = ANY($${params.length}::int[])`);
+  }
+  const { rows } = await pool.query(
+    `SELECT empleado_id, tipo, fecha_inicio, fecha_fin, estado
+     FROM ausencia_justificada
+     WHERE ${cond.join(' AND ')}`,
+    params
+  );
+  const mapa = new Map();
+  for (const r of rows) {
+    // lib/comparativa.js (ausenciaCubreFecha) espera desde/hasta (o
+    // fecha_desde/fecha_hasta), no los nombres de columna reales.
+    const ausencia = { ...r, desde: r.fecha_inicio, hasta: r.fecha_fin };
+    if (!mapa.has(r.empleado_id)) mapa.set(r.empleado_id, []);
+    mapa.get(r.empleado_id).push(ausencia);
+  }
+  return mapa;
+}
+
+async function empleadosParaComparativa(empleadoId, departamentoId) {
+  const cond = ['property_id = $1'];
+  const params = [PROPERTY_ID];
+  if (empleadoId) {
+    params.push(empleadoId);
+    cond.push(`id = $${params.length}`);
+  }
+  if (departamentoId) {
+    params.push(departamentoId);
+    cond.push(`departamento_id = $${params.length}`);
+  }
+  const { rows } = await pool.query(
+    `SELECT id, nombre, apellidos, departamento_id FROM empleado WHERE ${cond.join(' AND ')} ORDER BY apellidos, nombre`,
+    params
+  );
+  return rows;
+}
+
+async function construirComparativaPeriodo(desde, hasta, empleadoId, departamentoId) {
+  const empleados = await empleadosParaComparativa(empleadoId, departamentoId);
+  const empleadoIds = empleados.map((e) => e.id);
+  const fechas = listaDeDias(desde, hasta);
+  const [turnosPorEmpleadoFecha, fichajesPorEmpleadoFecha, ausenciasPorEmpleado] = await Promise.all([
+    turnosPorEmpleadoFechaPara(empleadoIds, desde, hasta),
+    fichajesPorEmpleadoFechaPara(empleadoIds, desde, hasta),
+    ausenciasPorEmpleadoFechaPara(empleadoIds, desde, hasta),
+  ]);
+  return compararRango({
+    fechas,
+    turnosPorEmpleadoFecha,
+    fichajesPorEmpleadoFecha,
+    ausenciasPorEmpleado,
+    empleados,
+    planB: PLAN_B,
+  });
+}
+
+function filtrarComparativa(filas, { tipoIncidencia, estado }) {
+  let out = filas;
+  if (estado) out = out.filter((f) => f.estado === estado);
+  if (tipoIncidencia) out = out.filter((f) => f.estado === tipoIncidencia);
+  return out;
+}
+
+// ─── Comparativa: fichaje real vs cuadrante previsto (+ Plan B) ───
+app.get('/api/comparativa', ensureAdmin, async (req, res) => {
+  const desde = req.query.desde;
+  const hasta = req.query.hasta;
+  const errFecha = validarRangoFechas(desde, hasta);
+  if (errFecha) return res.status(400).json({ error: errFecha });
+  const empleadoId = req.query.empleado_id || null;
+  const departamentoId = req.query.departamento_id || null;
+  try {
+    let filas = await construirComparativaPeriodo(desde, hasta, empleadoId, departamentoId);
+    filas = filtrarComparativa(filas, { tipoIncidencia: req.query.tipo_incidencia, estado: req.query.estado });
+    res.json({
+      desde,
+      hasta,
+      plan_b: PLAN_B,
+      nota_plan_b: NOTA_PLAN_B,
+      resultados: filas,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al calcular la comparativa' });
+  }
+});
+
+// ─── Exportación de la comparativa (PDF/CSV, con sello de integridad) ───
+app.get('/api/comparativa/export', ensureAdmin, async (req, res) => {
+  const desde = req.query.desde;
+  const hasta = req.query.hasta;
+  const errFecha = validarRangoFechas(desde, hasta);
+  if (errFecha) return res.status(400).json({ error: errFecha });
+  const empleadoId = req.query.empleado_id || null;
+  const departamentoId = req.query.departamento_id || null;
+  const formato = (req.query.formato || 'csv').toLowerCase();
+  if (!['pdf', 'csv'].includes(formato)) {
+    return res.status(400).json({ error: 'formato debe ser "pdf" o "csv"' });
+  }
+  try {
+    let filas = await construirComparativaPeriodo(desde, hasta, empleadoId, departamentoId);
+    filas = filtrarComparativa(filas, { tipoIncidencia: req.query.tipo_incidencia, estado: req.query.estado });
+    const generadoPor = req.session.user.login;
+    const generadoEn = new Date().toISOString();
+    const meta = { property_id: PROPERTY_ID, sociedad: property.sociedad || {}, desde, hasta, generado_por: generadoPor, generado_en: generadoEn };
+    const hash = sha256(JSON.stringify({ ...meta, filas }));
+    await registrarExport(empleadoId ? parseInt(empleadoId, 10) : null, desde, hasta, `comparativa_${formato}`, generadoPor, hash);
+
+    if (formato === 'csv') {
+      const csvEsc = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+      const cab = ['empleado', 'fecha', 'estado', 'source', 'minutos_retraso', 'minutos_anticipada', 'horas_esperadas', 'horas_trabajadas', 'detalle'];
+      const lineas = [cab.join(',')];
+      for (const f of filas) {
+        lineas.push([
+          csvEsc(`${f.apellidos}, ${f.nombre}`), f.fecha, f.estado, f.source,
+          f.minutos_retraso != null ? f.minutos_retraso : '',
+          f.minutos_anticipada != null ? f.minutos_anticipada : '',
+          f.horas_esperadas != null ? f.horas_esperadas : '',
+          f.horas_trabajadas != null ? f.horas_trabajadas : '',
+          csvEsc(f.detalle),
+        ].join(','));
+      }
+      lineas.push('');
+      const nJustificadas = filas.filter((f) => f.estado === 'JUSTIFICADO').length;
+      if (nJustificadas > 0) {
+        lineas.push(csvEsc(`Justificadas por ausencia aprobada: ${nJustificadas} registros`));
+      }
+      lineas.push(csvEsc(NOTA_PLAN_B));
+      lineas.push(csvEsc(`Sello de integridad (SHA-256): ${hash}`));
+      const nombreFichero = `comparativa-${desde}_${hasta}.csv`.replace(/[^a-zA-Z0-9._-]/g, '_');
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${nombreFichero}"`);
+      return res.send('﻿' + lineas.join('\n'));
+    }
+
+    // formato === 'pdf'
+    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+    const nombreFichero = `comparativa-${desde}_${hasta}.pdf`.replace(/[^a-zA-Z0-9._-]/g, '_');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${nombreFichero}"`);
+    doc.pipe(res);
+    doc.fontSize(16).text(`Comparativa fichaje vs cuadrante — ${PROPERTY_NAME}`, { align: 'left' });
+    doc.moveDown(0.3);
+    doc.fontSize(10).fillColor('#555').text(`Periodo: ${desde} a ${hasta}  ·  Generado por: ${generadoPor}  ·  ${generadoEn}`);
+    doc.moveDown(0.8);
+    doc.fontSize(9).fillColor('#000');
+    let usaPlanB = false;
+    for (const f of filas) {
+      if (f.source === 'PLAN_B') usaPlanB = true;
+      doc.text(
+        `${f.fecha}  ${f.apellidos}, ${f.nombre}  —  ${f.estado} (${f.source})` +
+        (f.minutos_retraso != null ? `  retraso: ${f.minutos_retraso} min` : '') +
+        (f.minutos_anticipada != null ? `  anticipada: ${f.minutos_anticipada} min` : '') +
+        (f.horas_trabajadas != null ? `  horas: ${f.horas_trabajadas}` : '')
+      );
+      doc.fontSize(8).fillColor('#666').text(f.detalle, { indent: 10 });
+      doc.fontSize(9).fillColor('#000');
+    }
+    doc.moveDown(1);
+    const nJustificadas = filas.filter((f) => f.estado === 'JUSTIFICADO').length;
+    if (nJustificadas > 0) {
+      doc.fontSize(8).fillColor('#888').text(`Justificadas por ausencia aprobada: ${nJustificadas} registros`);
+    }
+    if (usaPlanB) {
+      doc.fontSize(8).fillColor('#888').text(NOTA_PLAN_B);
+    }
+    doc.fontSize(7).fillColor('#aaa').text(`Sello de integridad (SHA-256): ${hash}`);
+    doc.end();
+  } catch (err) {
+    console.error(err);
+    if (!res.headersSent) res.status(500).json({ error: 'Error al exportar la comparativa' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// FASE 8 — Vacaciones y ausencias justificadas.
+// Solicitud (pendiente) → aprobar/rechazar → opcionalmente cancelar
+// (solo si ya estaba aprobada). Las aprobadas alimentan la comparativa
+// de Fase 7 (ver ausenciasPorEmpleadoPara() más abajo).
+// ═══════════════════════════════════════════════════════════════════
+
+const TIPOS_AUSENCIA = ['vacaciones', 'baja', 'permiso', 'libre', 'compensacion', 'otros'];
+
+app.get('/api/ausencias', ensureAdmin, async (req, res) => {
+  try {
+    const cond = ['property_id = $1'];
+    const params = [PROPERTY_ID];
+    if (req.query.empleado_id) {
+      params.push(req.query.empleado_id);
+      cond.push(`empleado_id = $${params.length}`);
+    }
+    if (req.query.estado) {
+      params.push(req.query.estado);
+      cond.push(`estado = $${params.length}`);
+    }
+    if (req.query.desde) {
+      params.push(req.query.desde);
+      cond.push(`fecha_fin >= $${params.length}`);
+    }
+    if (req.query.hasta) {
+      params.push(req.query.hasta);
+      cond.push(`fecha_inicio <= $${params.length}`);
+    }
+    const { rows } = await pool.query(
+      `SELECT a.*, e.nombre, e.apellidos
+       FROM ausencia_justificada a
+       JOIN empleado e ON e.id = a.empleado_id
+       WHERE ${cond.join(' AND ')}
+       ORDER BY a.fecha_inicio DESC, e.apellidos, e.nombre`,
+      params
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al leer las ausencias' });
+  }
+});
+
+app.post('/api/ausencias', ensureAdmin, async (req, res) => {
+  const empleadoId = parseInt(req.body.empleado_id, 10);
+  const tipo = req.body.tipo;
+  const fechaInicio = req.body.fecha_inicio;
+  const fechaFin = req.body.fecha_fin;
+  const dias = Number(req.body.dias);
+  const observaciones = (req.body.observaciones || '').trim() || null;
+  if (!empleadoId || !tipo || !fechaInicio || !fechaFin) {
+    return res.status(400).json({ error: 'empleado_id, tipo, fecha_inicio y fecha_fin son obligatorios' });
+  }
+  if (!TIPOS_AUSENCIA.includes(tipo)) {
+    return res.status(400).json({ error: `tipo debe ser uno de: ${TIPOS_AUSENCIA.join(', ')}` });
+  }
+  if (fechaFin < fechaInicio) {
+    return res.status(400).json({ error: 'fecha_fin no puede ser anterior a fecha_inicio' });
+  }
+  if (!(dias > 0)) {
+    return res.status(400).json({ error: 'dias debe ser un número mayor que 0' });
+  }
+  try {
+    if (!(await empleadoDeLaPropiedad(empleadoId))) {
+      return res.status(404).json({ error: 'Empleado no encontrado' });
+    }
+    const solicitadoPor = req.session.user.login;
+    const { rows } = await pool.query(
+      `INSERT INTO ausencia_justificada(property_id, empleado_id, tipo, fecha_inicio, fecha_fin, dias, estado, solicitado_por, observaciones)
+       VALUES ($1,$2,$3,$4,$5,$6,'pendiente',$7,$8) RETURNING id`,
+      [PROPERTY_ID, empleadoId, tipo, fechaInicio, fechaFin, dias, solicitadoPor, observaciones]
+    );
+    res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al crear la ausencia' });
+  }
+});
+
+app.put('/api/ausencias/:id/aprobar', ensureAdmin, async (req, res) => {
+  const observaciones = (req.body.observaciones_aprobador || '').trim() || null;
+  try {
+    const aprobadoPor = req.session.user.login;
+    const { rowCount } = await pool.query(
+      `UPDATE ausencia_justificada
+       SET estado='aprobada', aprobado_por=$1, fecha_aprobacion=now(),
+           observaciones = COALESCE($2, observaciones), actualizado_en=now()
+       WHERE id=$3 AND property_id=$4 AND estado='pendiente'`,
+      [aprobadoPor, observaciones, req.params.id, PROPERTY_ID]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Ausencia no encontrada o no está pendiente' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al aprobar la ausencia' });
+  }
+});
+
+app.put('/api/ausencias/:id/rechazar', ensureAdmin, async (req, res) => {
+  const observaciones = (req.body.observaciones_rechazo || '').trim();
+  if (!observaciones) {
+    return res.status(400).json({ error: 'observaciones_rechazo es obligatorio' });
+  }
+  try {
+    const aprobadoPor = req.session.user.login;
+    const { rowCount } = await pool.query(
+      `UPDATE ausencia_justificada
+       SET estado='rechazada', aprobado_por=$1, fecha_aprobacion=now(),
+           observaciones=$2, actualizado_en=now()
+       WHERE id=$3 AND property_id=$4 AND estado='pendiente'`,
+      [aprobadoPor, observaciones, req.params.id, PROPERTY_ID]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Ausencia no encontrada o no está pendiente' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al rechazar la ausencia' });
+  }
+});
+
+app.put('/api/ausencias/:id/cancelar', ensureAdmin, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE ausencia_justificada
+       SET estado='cancelada', actualizado_en=now()
+       WHERE id=$1 AND property_id=$2 AND estado='aprobada'`,
+      [req.params.id, PROPERTY_ID]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Ausencia no encontrada o no está aprobada (solo se puede cancelar una ausencia ya aprobada)' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al cancelar la ausencia' });
+  }
+});
+
+app.delete('/api/ausencias/:id', ensureAdmin, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      `DELETE FROM ausencia_justificada WHERE id=$1 AND property_id=$2 AND estado='pendiente'`,
+      [req.params.id, PROPERTY_ID]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Ausencia no encontrada o no está pendiente (solo se borra una solicitud sin procesar)' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al borrar la ausencia' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// FASE 9 — Auditoría legal de control horario.
+// El checklist vive en lib/auditoria.js (módulo puro, sin BD/Express,
+// testeable en aislado, mismo patrón que lib/comparativa.js de Fase 7).
+// Aquí solo se cargan los fichajes RAW del rango + los empleados, se le
+// pasan ya en memoria, y se persiste el resultado en auditoria_run +
+// auditoria_control (transacción), con sello de integridad SHA-256 sobre
+// la representación canónica de los controles — mismo patrón que
+// export_log (Fase 3/4/7).
+// ═══════════════════════════════════════════════════════════════════
+
+// Representación canónica y determinista del array de controles, para que
+// recalculando con los mismos controles se obtenga siempre el mismo hash.
+function contenidoCanonicoAuditoria(meta, controles) {
+  const controlesOrdenados = [...controles].sort((a, b) => {
+    if (a.codigo_control !== b.codigo_control) return a.codigo_control < b.codigo_control ? -1 : 1;
+    if ((a.empleado_id || 0) !== (b.empleado_id || 0)) return (a.empleado_id || 0) - (b.empleado_id || 0);
+    const fa = a.fecha_referencia || '';
+    const fb = b.fecha_referencia || '';
+    if (fa !== fb) return fa < fb ? -1 : 1;
+    return String(a.detalle).localeCompare(String(b.detalle));
+  });
+  return JSON.stringify({
+    property_id: meta.property_id,
+    desde: meta.desde,
+    hasta: meta.hasta,
+    ejecutado_por: meta.ejecutado_por,
+    controles: controlesOrdenados.map((c) => ({
+      codigo_control: c.codigo_control,
+      empleado_id: c.empleado_id,
+      estado: c.estado,
+      detalle: c.detalle,
+      fecha_referencia: c.fecha_referencia,
+    })),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FASE 10 — Incidencias.
+// Bandeja alimentada por Fase 7 (comparativa) y Fase 9 (auditoría).
+// Deduplicación vía UNIQUE(dedupe_key) + INSERT ... ON CONFLICT DO
+// NOTHING: recalcular nunca duplica ni reabre una incidencia ya
+// RESOLVED/DISMISSED (eso solo lo hace un admin explícitamente vía
+// PUT /api/incidencias/:id/estado).
+// ═══════════════════════════════════════════════════════════════════
+
+// calcularDeduperKey / severidadComparativa / severidadAuditoria /
+// ESTADOS_COMPARATIVA_SIN_INCIDENCIA ahora viven en lib/incidencias.js
+// (módulo puro, testeable sin BD — ver test/unit/deduplicacion.test.js).
+
+async function insertarIncidencia(client, {
+  propertyId, empleadoId, fecha, origen, tipo, severidad, descripcion, refTipo, refId,
+}) {
+  const dedupeKey = calcularDeduperKey(propertyId, empleadoId, fecha, origen, tipo);
+  const { rowCount } = await client.query(
+    `INSERT INTO incidencia(property_id, empleado_id, fecha, origen, tipo, severidad, descripcion, ref_tipo, ref_id, dedupe_key)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     ON CONFLICT (dedupe_key) DO NOTHING`,
+    [propertyId, empleadoId, fecha, origen, tipo, severidad, descripcion, refTipo || null, refId || null, dedupeKey]
+  );
+  return rowCount > 0; // true = creada, false = ya existía (duplicada/ignorada)
+}
+
+// ─── Genera incidencias a partir de la comparativa fichaje vs cuadrante ───
+async function generarIncidenciasDesdeComparativa(propertyId, desde, hasta) {
+  const filas = await construirComparativaPeriodo(desde, hasta, null, null);
+  let creadas = 0;
+  let duplicadas = 0;
+  for (const f of filas) {
+    if (ESTADOS_COMPARATIVA_SIN_INCIDENCIA.has(f.estado)) continue;
+    const severidad = severidadComparativa(f.estado, f.minutos_retraso);
+    const ok = await insertarIncidencia(pool, {
+      propertyId,
+      empleadoId: f.empleado_id,
+      fecha: f.fecha,
+      origen: 'comparativa',
+      tipo: f.estado,
+      severidad,
+      descripcion: f.detalle,
+      refTipo: null,
+      refId: null,
+    });
+    if (ok) creadas++; else duplicadas++;
+  }
+  return { creadas, duplicadas, total: creadas + duplicadas };
+}
+
+// ─── Genera incidencias a partir de una ejecución de auditoría legal ───
+async function generarIncidenciasDesdeAuditoria(auditoriaRunId) {
+  const { rows: runRows } = await pool.query(
+    'SELECT id, property_id FROM auditoria_run WHERE id = $1',
+    [auditoriaRunId]
+  );
+  if (!runRows.length) return { creadas: 0, duplicadas: 0, total: 0 };
+  const propertyId = runRows[0].property_id;
+  const { rows: controles } = await pool.query(
+    `SELECT id, empleado_id, codigo_control, estado, detalle, fecha_referencia
+     FROM auditoria_control WHERE auditoria_run_id = $1 AND estado != 'GREEN'`,
+    [auditoriaRunId]
+  );
+  const tz = property.timezone || 'Europe/Madrid';
+  let creadas = 0;
+  let duplicadas = 0;
+  for (const c of controles) {
+    // c.fecha_referencia llega como Date (tipo DATE de pg): normalizar a
+    // YYYY-MM-DD igual que el resto del código (ver fechaEnZona), para que
+    // el dedupe_key sea estable y no dependa del timezone del proceso.
+    const fecha = c.fecha_referencia
+      ? (c.fecha_referencia instanceof Date ? fechaEnZona(c.fecha_referencia, tz) : String(c.fecha_referencia).slice(0, 10))
+      : fechaEnZona(new Date(), tz);
+    const severidad = severidadAuditoria(c.estado);
+    const ok = await insertarIncidencia(pool, {
+      propertyId,
+      empleadoId: c.empleado_id,
+      fecha,
+      origen: 'auditoria',
+      tipo: `AUDIT_${c.codigo_control}`,
+      severidad,
+      descripcion: c.detalle,
+      refTipo: 'auditoria_control',
+      refId: c.id,
+    });
+    if (ok) creadas++; else duplicadas++;
+  }
+  return { creadas, duplicadas, total: creadas + duplicadas };
+}
+
+async function empleadosParaAuditoria(empleadoId) {
+  const cond = ['property_id = $1'];
+  const params = [PROPERTY_ID];
+  if (empleadoId) {
+    params.push(empleadoId);
+    cond.push(`id = $${params.length}`);
+  }
+  const { rows } = await pool.query(
+    `SELECT id, nombre, apellidos, pin_hash, qr_token FROM empleado WHERE ${cond.join(' AND ')} ORDER BY apellidos, nombre`,
+    params
+  );
+  return rows;
+}
+
+// Fichajes RAW del rango (sin el margen de 2/3 días de fichajesParaCalculo:
+// la auditoría necesita ver exactamente lo registrado en [desde, hasta],
+// incluida cualquier jornada que quede abierta al final del rango).
+async function fichajesRawParaAuditoria(desde, hasta) {
+  const { rows } = await pool.query(
+    `SELECT id, empleado_id, tipo, ts FROM fichaje
+     WHERE property_id = $1 AND ts >= $2::date AND ts < ($3::date + interval '1 day')
+     ORDER BY empleado_id, ts ASC, id ASC`,
+    [PROPERTY_ID, desde, hasta]
+  );
+  return rows;
+}
+
+// ─── Ejecutar el checklist de auditoría y persistir el resultado ───
+app.post('/api/auditoria/ejecutar', ensureAdmin, async (req, res) => {
+  const desde = req.query.desde;
+  const hasta = req.query.hasta;
+  const errFecha = validarRangoFechas(desde, hasta);
+  if (errFecha) return res.status(400).json({ error: errFecha });
+  const client = await pool.connect();
+  try {
+    const [fichajes, empleados] = await Promise.all([
+      fichajesRawParaAuditoria(desde, hasta),
+      empleadosParaAuditoria(null),
+    ]);
+    const { controles, resumen } = ejecutarChecklistAuditoria({
+      fichajes, empleados, property_id: PROPERTY_ID,
+    });
+    const ejecutadoPor = req.session.user.login;
+    const meta = { property_id: PROPERTY_ID, desde, hasta, ejecutado_por: ejecutadoPor };
+    const hash = sha256(contenidoCanonicoAuditoria(meta, controles));
+
+    await client.query('BEGIN');
+    const { rows: runRows } = await client.query(
+      'INSERT INTO auditoria_run(property_id, ejecutado_por, desde, hasta, hash) VALUES ($1,$2,$3,$4,$5) RETURNING id, ts',
+      [PROPERTY_ID, ejecutadoPor, desde, hasta, hash]
+    );
+    const auditoriaRunId = runRows[0].id;
+    for (const c of controles) {
+      await client.query(
+        `INSERT INTO auditoria_control(auditoria_run_id, empleado_id, codigo_control, estado, detalle, fecha_referencia)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [auditoriaRunId, c.empleado_id, c.codigo_control, c.estado, c.detalle, c.fecha_referencia]
+      );
+    }
+    await client.query('COMMIT');
+
+    await generarIncidenciasDesdeAuditoria(auditoriaRunId);
+
+    res.json({
+      auditoria_run_id: auditoriaRunId,
+      desde,
+      hasta,
+      fecha_ejecucion: runRows[0].ts,
+      resumen,
+      controles,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Error al ejecutar la auditoría' });
+  } finally {
+    client.release();
+  }
+});
+
+// ─── Histórico de ejecuciones ───
+app.get('/api/auditoria/runs', ensureAdmin, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const cond = ['r.property_id = $1'];
+    const params = [PROPERTY_ID];
+    if (req.query.desde) {
+      params.push(req.query.desde);
+      cond.push(`r.hasta >= $${params.length}`);
+    }
+    if (req.query.hasta) {
+      params.push(req.query.hasta);
+      cond.push(`r.desde <= $${params.length}`);
+    }
+    params.push(limit);
+    params.push(offset);
+    const { rows } = await pool.query(
+      `SELECT r.id, r.ejecutado_por, r.desde, r.hasta, r.ts, r.hash,
+              COUNT(c.id) AS total,
+              COUNT(*) FILTER (WHERE c.estado = 'GREEN') AS green,
+              COUNT(*) FILTER (WHERE c.estado = 'AMBER') AS amber,
+              COUNT(*) FILTER (WHERE c.estado = 'RED') AS red,
+              COUNT(*) FILTER (WHERE c.estado = 'UNKNOWN') AS unknown
+       FROM auditoria_run r
+       LEFT JOIN auditoria_control c ON c.auditoria_run_id = r.id
+       WHERE ${cond.join(' AND ')}
+       GROUP BY r.id
+       ORDER BY r.ts DESC
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+    res.json(rows.map((r) => ({
+      id: r.id, ejecutado_por: r.ejecutado_por, desde: r.desde, hasta: r.hasta, ts: r.ts, hash: r.hash,
+      resumen: {
+        total: Number(r.total), green: Number(r.green), amber: Number(r.amber),
+        red: Number(r.red), unknown: Number(r.unknown),
+      },
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al listar las ejecuciones de auditoría' });
+  }
+});
+
+// ─── Detalle de una ejecución ───
+app.get('/api/auditoria/runs/:id', ensureAdmin, async (req, res) => {
+  try {
+    const { rows: runRows } = await pool.query(
+      'SELECT id, ejecutado_por, desde, hasta, ts, hash FROM auditoria_run WHERE id = $1 AND property_id = $2',
+      [req.params.id, PROPERTY_ID]
+    );
+    if (!runRows.length) return res.status(404).json({ error: 'Ejecución de auditoría no encontrada' });
+    const { rows: controles } = await pool.query(
+      `SELECT c.id, c.empleado_id, e.nombre, e.apellidos, c.codigo_control, c.estado, c.detalle, c.fecha_referencia, c.creado_en
+       FROM auditoria_control c LEFT JOIN empleado e ON e.id = c.empleado_id
+       WHERE c.auditoria_run_id = $1
+       ORDER BY c.codigo_control, c.empleado_id, c.fecha_referencia`,
+      [req.params.id]
+    );
+    res.json({ ...runRows[0], controles });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al leer el detalle de la auditoría' });
+  }
+});
+
+// ─── Exportación PDF/CSV de una ejecución (informe sellado SHA-256) ───
+app.get('/api/auditoria/runs/:id/export', ensureAdmin, async (req, res) => {
+  const formato = (req.query.formato || 'csv').toLowerCase();
+  if (!['pdf', 'csv'].includes(formato)) {
+    return res.status(400).json({ error: 'formato debe ser "pdf" o "csv"' });
+  }
+  try {
+    const { rows: runRows } = await pool.query(
+      'SELECT id, ejecutado_por, desde, hasta, ts, hash FROM auditoria_run WHERE id = $1 AND property_id = $2',
+      [req.params.id, PROPERTY_ID]
+    );
+    if (!runRows.length) return res.status(404).json({ error: 'Ejecución de auditoría no encontrada' });
+    const run = runRows[0];
+    const { rows: controles } = await pool.query(
+      `SELECT c.empleado_id, e.nombre, e.apellidos, c.codigo_control, c.estado, c.detalle, c.fecha_referencia
+       FROM auditoria_control c LEFT JOIN empleado e ON e.id = c.empleado_id
+       WHERE c.auditoria_run_id = $1
+       ORDER BY c.codigo_control, c.empleado_id, c.fecha_referencia`,
+      [req.params.id]
+    );
+    const generadoPor = req.session.user.login;
+    const generadoEn = new Date().toISOString();
+    const meta = { property_id: PROPERTY_ID, sociedad: property.sociedad || {}, desde: run.desde, hasta: run.hasta, generado_por: generadoPor, generado_en: generadoEn };
+    const hashExport = sha256(JSON.stringify({ ...meta, run_id: run.id, controles }));
+    await registrarExport(null, run.desde, run.hasta, `auditoria_${formato}`, generadoPor, hashExport);
+
+    if (formato === 'csv') {
+      const csvEsc = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+      const cab = ['empleado', 'codigo_control', 'estado', 'fecha_referencia', 'detalle'];
+      const lineas = [cab.join(',')];
+      for (const c of controles) {
+        lineas.push([
+          csvEsc(c.empleado_id ? `${c.apellidos}, ${c.nombre}` : ''),
+          c.codigo_control, c.estado, c.fecha_referencia || '', csvEsc(c.detalle),
+        ].join(','));
+      }
+      lineas.push('');
+      lineas.push(csvEsc(`Auditoría ejecutada por ${run.ejecutado_por} el ${run.ts} · sello original: ${run.hash}`));
+      lineas.push(csvEsc(`Sello de integridad de esta exportación (SHA-256): ${hashExport}`));
+      const nombreFichero = `auditoria-${run.desde}_${run.hasta}.csv`.replace(/[^a-zA-Z0-9._-]/g, '_');
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${nombreFichero}"`);
+      return res.send('﻿' + lineas.join('\n'));
+    }
+
+    // formato === 'pdf'
+    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+    const nombreFichero = `auditoria-${run.desde}_${run.hasta}.pdf`.replace(/[^a-zA-Z0-9._-]/g, '_');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${nombreFichero}"`);
+    doc.pipe(res);
+    doc.fontSize(16).text(`Auditoría legal de control horario — ${PROPERTY_NAME}`, { align: 'left' });
+    doc.moveDown(0.3);
+    doc.fontSize(10).fillColor('#555').text(
+      `Periodo: ${run.desde} a ${run.hasta}  ·  Ejecutado por: ${run.ejecutado_por} el ${new Date(run.ts).toLocaleString('es-ES', { timeZone: property.timezone || 'Europe/Madrid' })}`
+    );
+    doc.moveDown(0.8);
+    doc.fontSize(9).fillColor('#000');
+    for (const c of controles) {
+      doc.text(
+        `[${c.estado}] ${c.codigo_control}` +
+        (c.empleado_id ? `  —  ${c.apellidos}, ${c.nombre}` : '') +
+        (c.fecha_referencia ? `  (${c.fecha_referencia})` : '')
+      );
+      doc.fontSize(8).fillColor('#666').text(c.detalle || '', { indent: 10 });
+      doc.fontSize(9).fillColor('#000');
+    }
+    if (!controles.length) doc.text('Sin hallazgos en este periodo.');
+    doc.moveDown(1);
+    doc.fontSize(7).fillColor('#aaa').text(`Sello original de la ejecución (SHA-256): ${run.hash}`);
+    doc.fontSize(7).fillColor('#aaa').text(`Sello de integridad de esta exportación (SHA-256): ${hashExport}`);
+    doc.end();
+  } catch (err) {
+    console.error(err);
+    if (!res.headersSent) res.status(500).json({ error: 'Error al exportar la auditoría' });
+  }
+});
+
+// ─── Bandeja de incidencias: listado con filtros ───
+app.get('/api/incidencias', ensureAdmin, async (req, res) => {
+  try {
+    const cond = ['i.property_id = $1'];
+    const params = [PROPERTY_ID];
+    if (req.query.empleado_id) {
+      params.push(req.query.empleado_id);
+      cond.push(`i.empleado_id = $${params.length}`);
+    }
+    if (req.query.estado) {
+      params.push(req.query.estado);
+      cond.push(`i.estado = $${params.length}`);
+    }
+    if (req.query.severidad) {
+      params.push(req.query.severidad);
+      cond.push(`i.severidad = $${params.length}`);
+    }
+    if (req.query.origen) {
+      params.push(req.query.origen);
+      cond.push(`i.origen = $${params.length}`);
+    }
+    if (req.query.desde) {
+      params.push(req.query.desde);
+      cond.push(`i.fecha >= $${params.length}`);
+    }
+    if (req.query.hasta) {
+      params.push(req.query.hasta);
+      cond.push(`i.fecha <= $${params.length}`);
+    }
+    const { rows } = await pool.query(
+      `SELECT i.*, e.nombre, e.apellidos
+       FROM incidencia i
+       LEFT JOIN empleado e ON e.id = i.empleado_id
+       WHERE ${cond.join(' AND ')}
+       ORDER BY i.fecha DESC, i.id DESC`,
+      params
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al listar las incidencias' });
+  }
+});
+
+// ─── Matriz explícita de transiciones de estado permitidas ───
+// OPEN        -> IN_PROGRESS, DISMISSED, OPEN (solo editar notas)
+// IN_PROGRESS -> RESOLVED, OPEN
+// RESOLVED    -> OPEN (reapertura manual, no automática)
+// DISMISSED   -> OPEN (cambio de criterio, no automática)
+// Cualquier transición no listada aquí se rechaza con 400.
+const TRANSICIONES_INCIDENCIA = {
+  OPEN: new Set(['OPEN', 'IN_PROGRESS', 'DISMISSED']),
+  IN_PROGRESS: new Set(['RESOLVED', 'OPEN']),
+  RESOLVED: new Set(['OPEN']),
+  DISMISSED: new Set(['OPEN']),
+};
+
+app.put('/api/incidencias/:id/estado', ensureAdmin, async (req, res) => {
+  const nuevoEstado = req.body.estado;
+  const notas = (req.body.notas || '').trim() || null;
+  if (!nuevoEstado || !['OPEN', 'IN_PROGRESS', 'RESOLVED', 'DISMISSED'].includes(nuevoEstado)) {
+    return res.status(400).json({ error: 'estado debe ser OPEN, IN_PROGRESS, RESOLVED o DISMISSED' });
+  }
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, estado FROM incidencia WHERE id = $1 AND property_id = $2',
+      [req.params.id, PROPERTY_ID]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Incidencia no encontrada' });
+    const estadoActual = rows[0].estado;
+    const permitidos = TRANSICIONES_INCIDENCIA[estadoActual];
+    if (!permitidos || !permitidos.has(nuevoEstado)) {
+      return res.status(400).json({ error: `Transición no permitida: ${estadoActual} → ${nuevoEstado}` });
+    }
+    const usuarioResponsable = req.session.user.login;
+    const resuelveAhora = nuevoEstado === 'RESOLVED' || nuevoEstado === 'DISMISSED';
+    const { rows: updated } = await pool.query(
+      `UPDATE incidencia
+       SET estado = $1,
+           notas = COALESCE($2, notas),
+           usuario_responsable = $3,
+           actualizado_en = now(),
+           resuelto_en = CASE WHEN $4 THEN now() ELSE resuelto_en END
+       WHERE id = $5 AND property_id = $6
+       RETURNING *`,
+      [nuevoEstado, notas, usuarioResponsable, resuelveAhora, req.params.id, PROPERTY_ID]
+    );
+    res.json(updated[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al cambiar el estado de la incidencia' });
+  }
+});
+
+// ─── Recalcular manualmente incidencias (sin re-ejecutar auditoría) ───
+app.post('/api/incidencias/generar', ensureAdmin, async (req, res) => {
+  const origen = req.query.origen;
+  if (!['comparativa', 'auditoria'].includes(origen)) {
+    return res.status(400).json({ error: 'origen debe ser "comparativa" o "auditoria"' });
+  }
+  try {
+    if (origen === 'comparativa') {
+      const desde = req.query.desde;
+      const hasta = req.query.hasta;
+      const errFecha = validarRangoFechas(desde, hasta);
+      if (errFecha) return res.status(400).json({ error: errFecha });
+      const resultado = await generarIncidenciasDesdeComparativa(PROPERTY_ID, desde, hasta);
+      return res.json(resultado);
+    }
+    // origen === 'auditoria'
+    const auditoriaRunId = parseInt(req.query.auditoria_run_id, 10);
+    if (!auditoriaRunId) {
+      return res.status(400).json({ error: 'auditoria_run_id es obligatorio para origen=auditoria' });
+    }
+    const { rows } = await pool.query(
+      'SELECT id FROM auditoria_run WHERE id = $1 AND property_id = $2',
+      [auditoriaRunId, PROPERTY_ID]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Ejecución de auditoría no encontrada' });
+    const resultado = await generarIncidenciasDesdeAuditoria(auditoriaRunId);
+    res.json(resultado);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al generar las incidencias' });
+  }
+});
+
+// Arranque real solo si se ejecuta directamente (`node server.js` / systemd).
+// Cuando el fichero se hace require() (p.ej. desde test/setup.js con
+// supertest, que no necesita el puerto TCP real) NO se levanta el listener.
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => console.log(`Adaria Personal v${APP_VERSION} (${PROPERTY_ID}) en :${PORT}`));
+}
+
+// Export para la suite de tests de integración (test/integration/*.test.js
+// vía supertest). La lógica pura de deduplicación/severidad se testea
+// directamente desde lib/incidencias.js (test/unit/deduplicacion.test.js),
+// sin necesidad de requerir este fichero completo (evita depender de
+// Redis/Postgres reales solo para un test de un helper de string).
+module.exports = { app, PROPERTY_ID };

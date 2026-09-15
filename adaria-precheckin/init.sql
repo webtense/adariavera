@@ -20,6 +20,10 @@ CREATE TABLE IF NOT EXISTS precheckin_reserva (
   procesado BOOLEAN NOT NULL DEFAULT false,
   procesado_por VARCHAR(60),
   procesado_en TIMESTAMP,
+  signature_png_path VARCHAR(300),   -- ruta relativa en storage/firmas/
+  pdf_path VARCHAR(300),             -- ruta relativa en storage/pdfs/
+  pdf_hash_sha256 VARCHAR(64),       -- SHA-256 del PDF generado
+  signed_at TIMESTAMPTZ,             -- cuándo se firmó (server time)
   creado_en TIMESTAMP NOT NULL DEFAULT now(),
   actualizado_en TIMESTAMP NOT NULL DEFAULT now(),
   UNIQUE (codigo)

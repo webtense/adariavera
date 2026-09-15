@@ -22,6 +22,17 @@ const I18N = {
     noRoom: 'Not assigned',
     guests: 'guest(s)',
     startCheckin: 'Start check-in'
+  },
+  fr: {
+    arrivalsTitle: "Arrivées d'aujourd'hui",
+    refresh: 'Actualiser',
+    loading: "Chargement des arrivées d'aujourd'hui depuis ACI…",
+    empty: "Aucune arrivée enregistrée aujourd'hui.",
+    error: 'Connexion à ACI impossible. Réessayez dans quelques instants.',
+    room: 'Chambre',
+    noRoom: 'Non assignée',
+    guests: 'client(s)',
+    startCheckin: 'Démarrer le check-in'
   }
 };
 

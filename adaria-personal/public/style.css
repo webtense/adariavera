@@ -52,3 +52,23 @@ tr.row:hover{background:#f5fafc}
 .pin-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
 .pin-form input{max-width:140px}
 small.hint{color:#999;font-size:12px;display:block;margin-top:4px}
+
+/* ─── FASE 6: Turnos / Cuadrantes / Comparativa / Vacaciones / Auditoría / Incidencias ─── */
+.pill.warn{background:#fff1de;color:#b8630a}
+.pill.err{background:#fdecea;color:#c0392b}
+.pill.info{background:#e6f0fb;color:#1b5e9c}
+.pill.est{background:#fff6e0;color:#b8860b}
+.btn{min-width:100px}
+.btn.sm{min-width:auto}
+table{display:block;overflow-x:auto;white-space:nowrap}
+table tr{white-space:normal}
+.import-errores td{color:#c0392b;font-size:12px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:50;align-items:center;justify-content:center;padding:16px}
+.modal-bg.on{display:flex}
+.modal-box{background:#fff;border-radius:14px;padding:20px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto}
+details.run{background:#fff;border:1px solid #eef3f5;border-radius:10px;margin-bottom:10px;padding:10px 14px}
+details.run summary{cursor:pointer;font-weight:600;color:var(--od)}
+.state-menu{position:relative;display:inline-block}
+.state-menu-list{position:absolute;top:100%;left:0;background:#fff;border:1px solid #cfdde3;border-radius:9px;box-shadow:0 4px 10px rgba(0,0,0,.12);z-index:20;padding:6px;min-width:180px}
+.state-menu-list button{display:block;width:100%;text-align:left;background:none;border:none;padding:7px 8px;font-size:13px;cursor:pointer;border-radius:6px}
+.state-menu-list button:hover{background:#f5fafc}

@@ -115,6 +115,14 @@ textarea{resize:vertical;min-height:70px}
 
     <div id="personas-container"></div>
 
+    <div class="box">
+      <h3 style="color:var(--od);margin-bottom:8px" data-i18n="form.firma">Firma</h3>
+      <p class="muted" style="margin-bottom:10px" data-i18n="form.firmaIntro">Firma con el dedo o el ratón para confirmar tus datos.</p>
+      <canvas id="firma-canvas" width="400" height="150" style="width:100%;height:150px;border:1px solid #cfdde3;border-radius:9px;touch-action:none;background:#fff"></canvas>
+      <button type="button" class="btn sec" id="btn-firma-limpiar" style="margin-top:8px" data-i18n="form.firmaLimpiar">Borrar firma</button>
+      <div id="firma-err" class="err hide" data-i18n="err.firma_requerida"></div>
+    </div>
+
     <button class="btn" id="btn-enviar" data-i18n="form.enviar">Enviar pre check-in</button>
     <div id="form-err" class="err hide"></div>
   </div>
@@ -153,6 +161,10 @@ const I18N = {
     'form.telefono': 'Teléfono',
     'form.horaLlegada': 'Hora estimada de llegada',
     'form.observaciones': 'Observaciones',
+    'form.firma': 'Firma',
+    'form.firmaIntro': 'Firma con el dedo o el ratón para confirmar tus datos.',
+    'form.firmaLimpiar': 'Borrar firma',
+    'err.firma_requerida': 'Por favor, firma antes de enviar el pre check-in.',
     'form.enviar': 'Enviar pre check-in',
     'form.persona': 'Persona',
     'form.titular': '(titular)',
@@ -194,6 +206,10 @@ const I18N = {
     'form.telefono': 'Phone',
     'form.horaLlegada': 'Estimated arrival time',
     'form.observaciones': 'Remarks',
+    'form.firma': 'Signature',
+    'form.firmaIntro': 'Sign with your finger or mouse to confirm your details.',
+    'form.firmaLimpiar': 'Clear signature',
+    'err.firma_requerida': 'Please sign before submitting the pre check-in.',
     'form.enviar': 'Send pre check-in',
     'form.persona': 'Guest',
     'form.titular': '(main guest)',
@@ -235,6 +251,10 @@ const I18N = {
     'form.telefono': 'Téléphone',
     'form.horaLlegada': "Heure d'arrivée estimée",
     'form.observaciones': 'Remarques',
+    'form.firma': 'Signature',
+    'form.firmaIntro': 'Signez avec le doigt ou la souris pour confirmer vos informations.',
+    'form.firmaLimpiar': 'Effacer la signature',
+    'err.firma_requerida': 'Veuillez signer avant d\'envoyer le pré check-in.',
     'form.enviar': 'Envoyer le pré check-in',
     'form.persona': 'Personne',
     'form.titular': '(titulaire)',
@@ -386,8 +406,61 @@ function renderPersonas() {
   cont.innerHTML = html;
 }
 
+// ─── Firma manuscrita (canvas) ──────────────────────────────────────────────
+// Se dibuja en un canvas a resolución fija (400x150) y se exporta como PNG
+// en base64 al enviar. hasFirma() decide si hay trazo real (no un canvas en
+// blanco) mirando si se ha registrado al menos un movimiento con el botón/
+// dedo pulsado.
+const firmaCanvas = document.getElementById('firma-canvas');
+const firmaCtx = firmaCanvas.getContext('2d');
+let firmaTrazada = false;
+let firmaDibujando = false;
+
+function limpiarFirma() {
+  firmaCtx.clearRect(0, 0, firmaCanvas.width, firmaCanvas.height);
+  firmaTrazada = false;
+}
+
+function posicionFirma(evt) {
+  const rect = firmaCanvas.getBoundingClientRect();
+  const escalaX = firmaCanvas.width / rect.width;
+  const escalaY = firmaCanvas.height / rect.height;
+  const p = evt.touches && evt.touches[0] ? evt.touches[0] : evt;
+  return { x: (p.clientX - rect.left) * escalaX, y: (p.clientY - rect.top) * escalaY };
+}
+
+function firmaIniciar(evt) {
+  evt.preventDefault();
+  firmaDibujando = true;
+  const { x, y } = posicionFirma(evt);
+  firmaCtx.beginPath();
+  firmaCtx.moveTo(x, y);
+}
+function firmaMover(evt) {
+  if (!firmaDibujando) return;
+  evt.preventDefault();
+  const { x, y } = posicionFirma(evt);
+  firmaCtx.lineWidth = 2;
+  firmaCtx.lineCap = 'round';
+  firmaCtx.strokeStyle = '#1b5e75';
+  firmaCtx.lineTo(x, y);
+  firmaCtx.stroke();
+  firmaTrazada = true;
+}
+function firmaTerminar() { firmaDibujando = false; }
+
+firmaCanvas.addEventListener('mousedown', firmaIniciar);
+firmaCanvas.addEventListener('mousemove', firmaMover);
+window.addEventListener('mouseup', firmaTerminar);
+firmaCanvas.addEventListener('touchstart', firmaIniciar, { passive: false });
+firmaCanvas.addEventListener('touchmove', firmaMover, { passive: false });
+firmaCanvas.addEventListener('touchend', firmaTerminar);
+
+document.getElementById('btn-firma-limpiar').addEventListener('click', limpiarFirma);
+
 document.getElementById('btn-enviar').addEventListener('click', async () => {
   document.getElementById('form-err').classList.add('hide');
+  document.getElementById('firma-err').classList.add('hide');
   const personas = [];
   document.querySelectorAll('#personas-container .persona').forEach((div, idx) => {
     personas.push({
@@ -404,6 +477,11 @@ document.getElementById('btn-enviar').addEventListener('click', async () => {
   const incompleta = personas.some((p) => p.nombre.length < 2 || p.apellido1.length < 2);
   if (incompleta) return mostrarError('form-err', 'err.personas_incompletas');
 
+  if (!firmaTrazada) {
+    document.getElementById('firma-err').classList.remove('hide');
+    return;
+  }
+
   const payload = {
     codigo: RESERVA._codigoBusqueda || RESERVA.codigo,
     fechaEntrada: RESERVA._fechaEntradaBusqueda,
@@ -416,6 +494,7 @@ document.getElementById('btn-enviar').addEventListener('click', async () => {
     horaLlegada: document.getElementById('in-hora').value,
     observaciones: document.getElementById('in-observaciones').value.trim(),
     personas,
+    signaturePngBase64: firmaCanvas.toDataURL('image/png'),
   };
 
   try {
