@@ -33,6 +33,8 @@ const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
+const redis = require('redis');
+const RedisStore = require('connect-redis').default;
 const ssoMiddleware = require('./sso-middleware');
 const multer = require('multer');
 const QRCode = require('qrcode');
@@ -129,25 +131,24 @@ if (BASE_PATH) {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+const redisClient = redis.createClient({
+  host: '127.0.0.1',
+  port: 6379,
+  legacyMode: false
+});
+redisClient.connect().catch(e => console.error('[Redis]', e.message));
+
 app.use(session({
-  name: 'adaria_personal_sid', // nombre propio: convive en el mismo host
-  // (gestion.hoteladariavera.com) con la cookie de sesión del portal
-  // (adaria-gestion) sin pisarla: dos cookies con nombre distinto no
-  // colisionan nunca, tengan el path que tengan.
-  // NOTA: NO se acota cookie.path a /rrhh aunque el módulo se publique en
-  // ese subpath. El edge hace ProxyPass /rrhh/ -> :3096/ RECORTANDO el
-  // prefijo (igual que /precheckin en guest): el backend nunca ve /rrhh en
-  // la URL real de la petición, y express-session compara internamente
-  // req.originalUrl contra cookie.path — con path=/rrhh la sesión no se
-  // crearía NUNCA (pathname mismatch permanente). path:'/' es el único
-  // valor compatible con ese recorte, igual que en el resto de módulos.
-  secret: SECRET,
+  store: new RedisStore({ client: redisClient }),
+  name: 'adaria_session',
+  secret: 'adaria-sso-secret-2026',
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    secure: false, // detrás de doble proxy TLS (proxy público .111 + edge Apache), igual que el resto de módulos
+    secure: false,
     path: '/',
     maxAge: 1000 * 60 * 60 * 8,
   },

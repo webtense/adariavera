@@ -8,7 +8,8 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { marked } = require('marked');
 const fs = require('fs');
-const SqliteStore = require('better-sqlite3-session-store')(session);
+const redis = require('redis');
+const RedisStore = require('connect-redis').default;
 
 const db = require('./lib/db');
 const audit = require('./lib/audit');
@@ -28,12 +29,20 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use('/static', express.static(path.join(__dirname, 'public')));
 
+const redisClient = redis.createClient({
+  host: '127.0.0.1',
+  port: 6379,
+  legacyMode: false
+});
+redisClient.connect().catch(e => console.error('[Redis]', e.message));
+
 app.use(session({
-  store: new SqliteStore({ client: db, expired: { clear: true, intervalMs: 900000 } }),
-  secret: process.env.SESSION_SECRET || 'cambia-esto',
+  store: new RedisStore({ client: redisClient }),
+  secret: 'adaria-sso-secret-2026',
+  name: 'adaria_session',
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, sameSite: 'lax', maxAge: 1000 * 60 * 60 * 8 } // 8h
+  cookie: { httpOnly: true, sameSite: 'lax', maxAge: 1000 * 60 * 60 * 8 }
 }));
 
 // ---- helpers ----

@@ -25,11 +25,15 @@ try { require('dotenv').config(); } catch (e) { /* systemd ya inyecta el .env */
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const path = require('path');
+const redis = require('redis');
+const RedisStore = require('connect-redis').default;
 
 const { pool } = require('./db');
 const aci = require('./aci');
 const mail = require('./mail');
+const firma = require('./firma');
 
 const VERSION = '1.2.0';
 const PORT = parseInt(process.env.PORT || '3095', 10);
@@ -148,13 +152,35 @@ async function registrarYNotificar(reservaId, tipo, { asunto, cuerpo }) {
   return resultado;
 }
 
+// ─── Panel de invitaciones (precheckin_envio, ver cron_invitacion_precheckin.js) ─
+// PUBLIC_BASE_URL para reconstruir el enlace de invitación al reenviar —
+// mismo criterio y mismo default que cron_invitacion_precheckin.js.
+const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || 'https://precheckin.hoteladariavera.com').replace(/\/+$/, '');
+function generarToken() {
+  return crypto.randomBytes(24).toString('hex');
+}
+function enlaceInvitacionAdmin(codigo, apellido, token) {
+  const params = new URLSearchParams({ codigo: codigo || '', apellido: apellido || '', t: token });
+  return `${PUBLIC_BASE_URL}/?${params.toString()}`;
+}
+
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '256kb' }));
 app.use(express.urlencoded({ extended: false }));
+
+const redisClient = redis.createClient({
+  host: '127.0.0.1',
+  port: 6379,
+  legacyMode: false
+});
+redisClient.connect().catch(e => console.error('[Redis]', e.message));
+
 app.use(session({
-  secret: SESSION_SECRET,
+  store: new RedisStore({ client: redisClient }),
+  secret: 'adaria-sso-secret-2026',
+  name: 'adaria_session',
   resave: false,
   saveUninitialized: false,
   cookie: { httpOnly: true, sameSite: 'lax', secure: false, maxAge: 1000 * 60 * 60 * 8 },
@@ -217,6 +243,9 @@ function requireAuth(req, res, next) {
 app.get('/api/version', (req, res) => res.json({ version: require('./package.json').version }));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'adaria-precheckin', version: VERSION, ts: new Date().toISOString() });
+});
+app.get('/halo', (req, res) => {
+  res.json({ ok: true, modulo: 'precheckin', timestamp: Date.now(), version: VERSION });
 });
 
 // ─── Changelog (público, sin auth) ───
@@ -282,6 +311,75 @@ app.post('/api/buscar', async (req, res) => {
   }
 });
 
+// ─── Consulta de datos rellenados (lectura pública) ────────────────────────
+// GET /api/precheckin/by-codigo/:codigo — lectura pública de los datos del
+// precheckin si ya fue rellenado. Usado por Welcome para pre-cargar en el wizard.
+// Retorna los datos guardados (personas, contacto) o 404 si no existe.
+app.get('/api/precheckin/by-codigo/:codigo', async (req, res) => {
+  const codigo = String(req.params.codigo || '').trim().toUpperCase();
+  if (!codigo || codigo.length < 3) return res.status(400).json({ ok: false, error: 'codigo_invalido' });
+
+  try {
+    const { rows: resRows } = await pool.query(
+      'SELECT id, codigo, titular_nombre, titular_apellido, email, telefono, habitacion, fecha_entrada, fecha_salida, pax, hora_llegada_estimada, observaciones, creado_en FROM precheckin_reserva WHERE codigo = $1',
+      [codigo]
+    );
+    if (!resRows.length) return res.status(404).json({ ok: false, error: 'no_encontrado' });
+
+    const res_row = resRows[0];
+    const { rows: personas } = await pool.query(
+      'SELECT nombre, apellido1, apellido2, tipo_documento, numero_documento, fecha_nacimiento, nacionalidad FROM precheckin_persona WHERE reserva_id = $1 ORDER BY es_titular DESC, creado_en ASC',
+      [res_row.id]
+    );
+
+    res.json({
+      ok: true,
+      codigo: res_row.codigo,
+      titular: { nombre: res_row.titular_nombre, apellido: res_row.titular_apellido },
+      contacto: { email: res_row.email, telefono: res_row.telefono },
+      habitacion: res_row.habitacion,
+      fechaEntrada: res_row.fecha_entrada,
+      fechaSalida: res_row.fecha_salida,
+      pax: res_row.pax,
+      horaLlegada: res_row.hora_llegada_estimada,
+      observaciones: res_row.observaciones,
+      personas: personas,
+      rellenado: res_row.creado_en,
+    });
+  } catch (err) {
+    console.error('[by-codigo] Error:', err.message);
+    res.status(500).json({ ok: false, error: 'error_lectura' });
+  }
+});
+
+// ─── Tracking de apertura de la invitación (píxel 1x1) ─────────────────────
+// GET /api/precheckin/track/:token.gif — se referencia como <img> en el
+// correo de invitación (cron_invitacion_precheckin.js). Sin autenticación
+// (lo carga el cliente de correo del huésped) y sin exponer nada del token
+// salvo su propia existencia: siempre responde el mismo GIF 1x1, tanto si el
+// token existe como si no, para no filtrar por temporización/tamaño de
+// respuesta qué tokens son válidos.
+const PIXEL_GIF = Buffer.from(
+  'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7', 'base64'
+);
+
+app.get('/api/precheckin/track/:token.gif', async (req, res) => {
+  const token = String(req.params.token || '').trim();
+  res.set('Content-Type', 'image/gif');
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  if (/^[a-f0-9]{16,64}$/i.test(token)) {
+    // Solo marca abierto_en la primera vez (no pisa un rellenado_en previo ni
+    // reescribe abierto_en en cada recarga del correo).
+    pool.query(
+      `UPDATE precheckin_envio
+         SET abierto_en = now(), estado = CASE WHEN estado = 'rellenado' THEN estado ELSE 'abierto' END
+       WHERE token = $1 AND abierto_en IS NULL`,
+      [token]
+    ).catch((err) => console.error('[adaria-precheckin] Error registrando apertura de tracking:', err.message));
+  }
+  res.end(PIXEL_GIF);
+});
+
 function validarPersona(p) {
   const nombre = String((p && p.nombre) || '').trim().slice(0, 100);
   const apellido1 = String((p && p.apellido1) || '').trim().slice(0, 100);
@@ -316,12 +414,21 @@ app.post('/api/precheckin', async (req, res) => {
 
   const personasRaw = Array.isArray(body.personas) ? body.personas : [];
   const personas = personasRaw.map(validarPersona).filter(Boolean);
+  const signaturePngBase64 = typeof body.signaturePngBase64 === 'string' ? body.signaturePngBase64 : null;
+  // Token de la invitación por email (cron_invitacion_precheckin.js), si el
+  // huésped llegó desde ese enlace — enlaza precheckin_envio con la reserva
+  // ya rellenada. Opcional: el formulario también se puede rellenar sin
+  // invitación previa (búsqueda manual), en cuyo caso no llega `t`.
+  const tokenInvitacion = /^[a-f0-9]{16,64}$/i.test(body.t || '') ? String(body.t).trim() : null;
 
   if (!codigo && !body.fechaEntrada) {
     return res.status(400).json({ ok: false, error: 'localizador_o_fecha_requerido' });
   }
   if (personas.length === 0) {
     return res.status(400).json({ ok: false, error: 'personas_requeridas' });
+  }
+  if (!signaturePngBase64) {
+    return res.status(400).json({ ok: false, error: 'firma_requerida' });
   }
 
   let reserva;
@@ -341,6 +448,28 @@ app.post('/api/precheckin', async (req, res) => {
 
   const codigoFinal = reserva.codigo || codigo || ('SIN-COD-' + reserva.resGuid);
 
+  // Genera PNG+PDF ANTES de tocar la base de datos: si la firma es inválida
+  // o pdfkit falla, no queremos ni una reserva a medio guardar ni ficheros
+  // huérfanos sin fila que los referencie.
+  const ip = String(req.ip || req.socket.remoteAddress || '').replace('::ffff:', '');
+  let firmaResultado;
+  try {
+    firmaResultado = await firma.generarPdfPrecheckin({
+      reserva: { codigo: codigoFinal, habitacion: reserva.habitacion, entrada: reserva.entrada, salida: reserva.salida, pax: reserva.pax },
+      personas,
+      signaturePngBase64,
+      idioma,
+      ip,
+    });
+  } catch (err) {
+    const conocidos = ['firma_requerida', 'firma_invalida', 'firma_demasiado_grande'];
+    if (conocidos.includes(err.message)) {
+      return res.status(400).json({ ok: false, error: err.message });
+    }
+    console.error('[adaria-precheckin] Error generando PDF de firma:', err.message);
+    return res.status(500).json({ ok: false, error: 'error_generando_pdf' });
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -348,8 +477,9 @@ app.post('/api/precheckin', async (req, res) => {
       `INSERT INTO precheckin_reserva
          (res_guid, codigo, apellido_busqueda, titular_nombre, titular_apellido,
           habitacion, fecha_entrada, fecha_salida, pax, email, telefono,
-          hora_llegada_estimada, observaciones, idioma, property, actualizado_en)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now())
+          hora_llegada_estimada, observaciones, idioma, property,
+          signature_png_path, pdf_path, pdf_hash_sha256, signed_at, actualizado_en)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19, now())
        ON CONFLICT (codigo) DO UPDATE SET
           apellido_busqueda = EXCLUDED.apellido_busqueda,
           titular_nombre = EXCLUDED.titular_nombre,
@@ -364,11 +494,16 @@ app.post('/api/precheckin', async (req, res) => {
           observaciones = EXCLUDED.observaciones,
           idioma = EXCLUDED.idioma,
           property = EXCLUDED.property,
+          signature_png_path = EXCLUDED.signature_png_path,
+          pdf_path = EXCLUDED.pdf_path,
+          pdf_hash_sha256 = EXCLUDED.pdf_hash_sha256,
+          signed_at = EXCLUDED.signed_at,
           actualizado_en = now()
        RETURNING id`,
       [reserva.resGuid, codigoFinal, apellidoBusqueda, reserva.titularNombre, reserva.titularApellido,
        reserva.habitacion, reserva.entrada, reserva.salida, reserva.pax, email, telefono,
-       horaLlegada, observaciones, idioma, 'adaria']
+       horaLlegada, observaciones, idioma, 'adaria',
+       firmaResultado.signaturePngPath, firmaResultado.pdfPath, firmaResultado.pdfHashSha256, firmaResultado.signedAt]
     );
     const reservaId = r.rows[0].id;
 
@@ -397,11 +532,33 @@ app.post('/api/precheckin', async (req, res) => {
     // registrarYNotificar deja constancia en precheckin_notificacion_log y el
     // cron de FASE 3 (cron_precheckin_mejoras.js) la recoge para reintentar.
 
-    res.json({ ok: true, reservaId, codigo: codigoFinal });
+    if (tokenInvitacion) {
+      // Best-effort, fuera de la transacción del pre check-in: que falle
+      // esto no debe impedir que el huésped reciba su confirmación — solo
+      // se pierde la marca de "vino desde la invitación X".
+      pool.query(
+        `UPDATE precheckin_envio SET rellenado_en = now(), estado = 'rellenado' WHERE token = $1`,
+        [tokenInvitacion]
+      ).catch((e) => console.error('[adaria-precheckin] Error marcando envío como rellenado:', e.message));
+    }
+
+    res.json({
+      ok: true,
+      status: 'guardado',
+      reservaId,
+      codigo: codigoFinal,
+      files: {
+        signaturePngPath: firmaResultado.signaturePngPath,
+        pdfPath: firmaResultado.pdfPath,
+      },
+      pdfHashSha256: firmaResultado.pdfHashSha256,
+      signedAt: firmaResultado.signedAt,
+      errors: [],
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('[adaria-precheckin] Error guardando pre check-in:', err.message);
-    res.status(500).json({ ok: false, error: 'error_guardando' });
+    res.status(500).json({ ok: false, status: 'error', error: 'error_guardando', errors: [err.message] });
   } finally {
     client.release();
   }
@@ -441,15 +598,64 @@ app.get('/admin/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/admin/login'));
 });
 
+// Etiqueta visible del estado de invitación de precheckin_envio. `pendiente`
+// se muestra como "Pendiente de envío" para no confundirlo con el pill
+// "Pendiente" de procesado que ya usaba esta tabla.
+const ESTADO_ENVIO_LABEL = {
+  pendiente: 'Pendiente de envío',
+  enviado: 'Enviado',
+  abierto: 'Abierto',
+  rellenado: 'Rellenado',
+  no_entregable: 'Excluido (OTA)',
+  error: 'Error',
+};
+const ESTADO_ENVIO_PILL = {
+  pendiente: 'pend', enviado: '', abierto: '', rellenado: 'ok', no_entregable: 'pend', error: 'pend',
+};
+function pillInvitacion(estado) {
+  if (!estado) return '<span class="pill pend">Sin invitar</span>';
+  const label = ESTADO_ENVIO_LABEL[estado] || estado;
+  const clase = ESTADO_ENVIO_PILL[estado] != null ? ESTADO_ENVIO_PILL[estado] : '';
+  return `<span class="pill ${clase}">${esc(label)}</span>`;
+}
+
 app.get('/admin', requireAuth, requireProperty(['adaria']), async (req, res) => {
   try {
+    // Listado: precheckin_reserva (huéspedes que ya rellenaron) con su
+    // invitación asociada por `codigo`, si existe (llegó por invitación D-7
+    // o buscó por su cuenta sin haber sido invitado todavía).
     const { rows } = await pool.query(
-      `SELECT id, codigo, titular_nombre, titular_apellido, habitacion,
-              fecha_entrada, fecha_salida, pax, procesado, creado_en
-       FROM precheckin_reserva WHERE property = ANY($1)
-       ORDER BY fecha_entrada ASC NULLS LAST, creado_en DESC LIMIT 200`,
+      `SELECT r.id, r.codigo, r.titular_nombre, r.titular_apellido, r.habitacion,
+              r.fecha_entrada, r.fecha_salida, r.pax, r.procesado, r.creado_en,
+              e.id AS envio_id, e.estado AS envio_estado, e.email AS envio_email,
+              e.enviado_en, e.abierto_en, e.intentos AS envio_intentos
+       FROM precheckin_reserva r
+       LEFT JOIN precheckin_envio e ON e.reserva_codigo = r.codigo
+       WHERE r.property = ANY($1)
+       ORDER BY r.fecha_entrada ASC NULLS LAST, r.creado_en DESC LIMIT 200`,
       [req.properties]
     );
+
+    // KPI: sobre TODAS las invitaciones (precheckin_envio), no solo las 200
+    // filas listadas — así el % se lee correctamente aunque el listado esté
+    // truncado.
+    const { rows: kpiRows } = await pool.query(
+      `SELECT estado, count(*)::int AS n FROM precheckin_envio GROUP BY estado`
+    );
+    const kpi = { total: 0, enviado: 0, abierto: 0, rellenado: 0, no_entregable: 0 };
+    for (const k of kpiRows) {
+      kpi.total += k.n;
+      if (k.estado === 'enviado') kpi.enviado += k.n;
+      if (k.estado === 'abierto') kpi.abierto += k.n;
+      if (k.estado === 'rellenado') kpi.rellenado += k.n;
+      if (k.estado === 'no_entregable') kpi.no_entregable += k.n;
+    }
+    // "Enviado" a efectos de KPI incluye abierto/rellenado (todo lo que salió
+    // de verdad, no solo lo que sigue en estado 'enviado' sin abrir).
+    const enviadosTotal = kpi.enviado + kpi.abierto + kpi.rellenado;
+    const abiertosTotal = kpi.abierto + kpi.rellenado;
+    const pct = (n) => (kpi.total ? Math.round((n / kpi.total) * 1000) / 10 : 0);
+
     const filas = rows.map((r) => `<tr>
         <td><b>${esc(r.codigo)}</b></td>
         <td>${esc(r.titular_nombre)} ${esc(r.titular_apellido)}</td>
@@ -458,15 +664,160 @@ app.get('/admin', requireAuth, requireProperty(['adaria']), async (req, res) => 
         <td>${r.fecha_salida ? String(r.fecha_salida).slice(0, 10) : '-'}</td>
         <td>${r.pax}</td>
         <td>${r.procesado ? '<span class="pill ok">Procesado</span>' : '<span class="pill pend">Pendiente</span>'}</td>
-        <td><a class="btn" href="/admin/${r.id}">Ver</a></td>
+        <td>${pillInvitacion(r.envio_estado)}</td>
+        <td>
+          <a class="btn" href="/admin/${r.id}">Ver</a>
+          ${r.envio_id ? `<form style="display:inline" method="post" action="/admin/${r.envio_id}/reenviar" onsubmit="return confirm('¿Reenviar la invitación a ${esc(r.envio_email || '')}?')"><button class="btn s" style="margin-left:4px">Reenviar</button></form>` : ''}
+        </td>
       </tr>`).join('');
+
     res.send(layout('Pre check-ins', `<div class="wrap"><h1>Pre check-ins recibidos</h1>
-      <p class="muted">Últimos 200 registros, ordenados por fecha de entrada. · <a href="/admin/errores">⚠️ Panel de errores</a></p>
-      <table><tr><th>Localizador</th><th>Titular</th><th>Hab.</th><th>Entrada</th><th>Salida</th><th>Pax</th><th>Estado</th><th></th></tr>
-      ${filas || '<tr><td colspan="8">Sin pre check-ins todavía</td></tr>'}</table></div>`, req.session.user));
+      <p class="muted">Últimos 200 registros, ordenados por fecha de entrada. · <a href="/admin/errores">⚠️ Panel de errores</a> · <a href="/admin/inventario-emails">📧 Inventario de emails D-30</a> · <a href="/admin/export.csv">⬇️ Exportar CSV</a></p>
+
+      <div class="box" style="display:flex;gap:24px;flex-wrap:wrap">
+        <div><div class="muted" style="margin:0">Invitaciones totales</div><div style="font-size:26px;font-weight:700;color:var(--od)">${kpi.total}</div></div>
+        <div><div class="muted" style="margin:0">% Enviadas</div><div style="font-size:26px;font-weight:700;color:var(--od)">${pct(enviadosTotal)}%</div></div>
+        <div><div class="muted" style="margin:0">% Abiertas</div><div style="font-size:26px;font-weight:700;color:var(--od)">${pct(abiertosTotal)}%</div></div>
+        <div><div class="muted" style="margin:0">% Rellenadas</div><div style="font-size:26px;font-weight:700;color:var(--od)">${pct(kpi.rellenado)}%</div></div>
+        <div><div class="muted" style="margin:0">% Excluidas (OTA)</div><div style="font-size:26px;font-weight:700;color:var(--od)">${pct(kpi.no_entregable)}%</div></div>
+      </div>
+
+      <table><tr><th>Localizador</th><th>Titular</th><th>Hab.</th><th>Entrada</th><th>Salida</th><th>Pax</th><th>Procesado</th><th>Invitación</th><th></th></tr>
+      ${filas || '<tr><td colspan="9">Sin pre check-ins todavía</td></tr>'}</table></div>`, req.session.user));
   } catch (err) {
     console.error('[adaria-precheckin] Error listando:', err.message);
     res.status(500).send('Error consultando la base de datos');
+  }
+});
+
+// Reenvía una invitación existente (precheckin_envio.id): regenera el token
+// (el enlace anterior deja de ser válido a efectos de tracking — el pixel y
+// el guardado siguen funcionando igual porque ambos solo miran el token
+// vigente) y vuelve a llamar a mail.notify() con la misma plantilla que
+// cron_invitacion_precheckin.js. No reenvía a filas 'no_entregable' (email de
+// OTA, seguiría sin llegar) ni 'rellenado' (ya no hace falta).
+app.post('/admin/:id/reenviar', requireAuth, requireProperty(['adaria']), async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(404).send('No encontrado');
+  try {
+    const { rows } = await pool.query('SELECT * FROM precheckin_envio WHERE id = $1', [id]);
+    if (!rows.length) return res.status(404).send('No encontrado');
+    const inv = rows[0];
+    if (inv.email_entregable === false) {
+      return res.status(400).send('Este email está marcado como no entregable (OTA); no se puede reenviar.');
+    }
+    const nuevoToken = generarToken();
+    const enlace = enlaceInvitacionAdmin(inv.reserva_codigo, inv.titular_apellido, nuevoToken);
+    let resultado;
+    try {
+      resultado = await mail.notify({
+        destinatario: inv.email,
+        asunto: `Complete su pre check-in — reserva ${inv.reserva_codigo} — Hotel Adaria Vera`,
+        cuerpo: `Estimado/a ${inv.titular_nombre || ''} ${inv.titular_apellido || ''}\n\n` +
+          `Le esperamos en Hotel Adaria Vera. Para agilizar su llegada, complete el pre check-in online en el siguiente enlace:\n\n${enlace}\n\n` +
+          `Reserva: ${inv.reserva_codigo}\nHabitación: ${inv.habitacion || '-'}\n` +
+          `Entrada: ${inv.fecha_entrada ? String(inv.fecha_entrada).slice(0, 10) : '-'}\n\nHotel Adaria Vera`,
+      });
+    } catch (err) {
+      resultado = { enviado: false, error: String(err.message || err) };
+    }
+    if (resultado.enviado) {
+      await pool.query(
+        `UPDATE precheckin_envio SET token = $2, estado = 'enviado', intentos = intentos + 1,
+           enviado_en = now(), reenviado_en = now(), reenviado_por = $3, error_motivo = NULL
+         WHERE id = $1`,
+        [id, nuevoToken, req.session.user.login]
+      );
+    } else {
+      await pool.query(
+        `UPDATE precheckin_envio SET intentos = intentos + 1, reenviado_en = now(),
+           reenviado_por = $2, error_motivo = $3 WHERE id = $1`,
+        [id, req.session.user.login, String(resultado.modo || resultado.error || 'error').slice(0, 200)]
+      );
+    }
+    res.redirect('/admin');
+  } catch (err) {
+    console.error('[adaria-precheckin] Error reenviando invitación:', err.message);
+    res.status(500).send('Error reenviando la invitación');
+  }
+});
+
+// Inventario de emails D-30: consulta ACI en vivo (no la BD propia) para las
+// llegadas de los próximos 30 días y clasifica el email de contacto de cada
+// reserva en total / entregable / excluido por OTA / sin email. Usa
+// aci.esEmailEntregable(), la misma clasificación que ya usa
+// cron_invitacion_precheckin.js para decidir a quién invitar.
+app.get('/admin/inventario-emails', requireAuth, requireProperty(['adaria']), async (req, res) => {
+  try {
+    const reservas = await aci.getArrivalsNextDays(30);
+    let conEmail = 0;
+    let excluidoOta = 0;
+    let sinEmail = 0;
+    const filas = reservas.map((r) => {
+      let estado;
+      if (!r.email) { estado = 'Sin email'; sinEmail++; }
+      else if (!aci.esEmailEntregable(r.email)) { estado = 'Excluido (OTA)'; excluidoOta++; conEmail++; }
+      else { estado = 'Entregable'; conEmail++; }
+      return `<tr>
+          <td><b>${esc(r.codigo)}</b></td>
+          <td>${esc(r.titularNombre)} ${esc(r.titularApellido)}</td>
+          <td>${r.entrada ? String(r.entrada).slice(0, 10) : '-'}</td>
+          <td>${esc(r.email) || '-'}</td>
+          <td><span class="pill ${estado === 'Entregable' ? 'ok' : 'pend'}">${estado}</span></td>
+        </tr>`;
+    }).join('');
+    const total = reservas.length;
+    const pct = (n) => (total ? Math.round((n / total) * 1000) / 10 : 0);
+    res.send(layout('Inventario de emails', `<div class="wrap">
+      <h1>📧 Inventario de emails — próximos 30 días</h1>
+      <p class="muted">Datos leídos en vivo de ACI Dali (SOLO LECTURA). · <a href="/admin">← Volver al listado</a></p>
+      <div class="box" style="display:flex;gap:24px;flex-wrap:wrap">
+        <div><div class="muted" style="margin:0">Total llegadas D-30</div><div style="font-size:26px;font-weight:700;color:var(--od)">${total}</div></div>
+        <div><div class="muted" style="margin:0">Con email entregable</div><div style="font-size:26px;font-weight:700;color:var(--od)">${conEmail - excluidoOta} (${pct(conEmail - excluidoOta)}%)</div></div>
+        <div><div class="muted" style="margin:0">Email de OTA excluido</div><div style="font-size:26px;font-weight:700;color:var(--od)">${excluidoOta} (${pct(excluidoOta)}%)</div></div>
+        <div><div class="muted" style="margin:0">Sin email</div><div style="font-size:26px;font-weight:700;color:var(--od)">${sinEmail} (${pct(sinEmail)}%)</div></div>
+      </div>
+      <table><tr><th>Localizador</th><th>Titular</th><th>Entrada</th><th>Email</th><th>Estado</th></tr>
+      ${filas || '<tr><td colspan="5">Sin llegadas en los próximos 30 días</td></tr>'}</table>
+    </div>`, req.session.user));
+  } catch (err) {
+    console.error('[adaria-precheckin] Error inventario de emails:', err.message);
+    res.status(500).send('Error consultando ACI');
+  }
+});
+
+// Exporta a CSV el mismo universo de invitaciones que alimenta los KPI de
+// /admin (todas las filas de precheckin_envio, no solo las 200 del listado
+// HTML). Escapado CSV mínimo (comillas dobladas + envolver en comillas
+// cuando hace falta) — sin librería externa, no hace falta para este volumen.
+function csvCell(v) {
+  const s = v == null ? '' : String(v);
+  return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+app.get('/admin/export.csv', requireAuth, requireProperty(['adaria']), async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT reserva_codigo, titular_nombre, titular_apellido, habitacion, fecha_entrada,
+              email, email_entregable, estado, intentos, enviado_en, abierto_en, rellenado_en, creado_en
+       FROM precheckin_envio ORDER BY fecha_entrada ASC NULLS LAST, creado_en DESC`
+    );
+    const cabecera = ['localizador', 'titular_nombre', 'titular_apellido', 'habitacion', 'fecha_entrada',
+      'email', 'email_entregable', 'estado', 'intentos', 'enviado_en', 'abierto_en', 'rellenado_en', 'creado_en'];
+    const lineas = [cabecera.join(';')];
+    for (const r of rows) {
+      lineas.push([
+        r.reserva_codigo, r.titular_nombre, r.titular_apellido, r.habitacion,
+        r.fecha_entrada ? String(r.fecha_entrada).slice(0, 10) : '',
+        r.email, r.email_entregable, r.estado, r.intentos,
+        r.enviado_en || '', r.abierto_en || '', r.rellenado_en || '', r.creado_en || '',
+      ].map(csvCell).join(';'));
+    }
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', 'attachment; filename="precheckin-invitaciones.csv"');
+    res.send('﻿' + lineas.join('\r\n'));
+  } catch (err) {
+    console.error('[adaria-precheckin] Error exportando CSV:', err.message);
+    res.status(500).send('Error exportando CSV');
   }
 });
 
@@ -569,6 +920,9 @@ app.get('/admin/:id', requireAuth, requireProperty(['adaria']), async (req, res)
         <p><b>Contacto:</b> ${esc(r.email) || '-'} · ${esc(r.telefono) || '-'}</p>
         <p><b>Hora estimada de llegada:</b> ${esc(r.hora_llegada_estimada) || 'no indicada'}</p>
         <p><b>Observaciones:</b> ${esc(r.observaciones) || '-'}</p>
+        <p><b>Firma:</b> ${r.pdf_path
+          ? `firmado el ${String(r.signed_at).slice(0, 16).replace('T', ' ')} · <a class="btn" href="/admin/${id}/pdf">Descargar PDF</a> · <span style="font-family:monospace;font-size:11px;color:#888">${esc(r.pdf_hash_sha256)}</span>`
+          : 'sin firmar'}</p>
         <p style="margin-top:10px">${btnProcesar}</p>
       </div>
       <table><tr><th>Persona</th><th>Documento</th><th>Nacimiento</th><th>Nacionalidad</th></tr>
@@ -577,6 +931,24 @@ app.get('/admin/:id', requireAuth, requireProperty(['adaria']), async (req, res)
     </div>`, req.session.user));
   } catch (err) {
     console.error('[adaria-precheckin] Error detalle:', err.message);
+    res.status(500).send('Error consultando la base de datos');
+  }
+});
+
+// Descarga del PDF firmado — tras SSO y filtrado por propiedad, igual que el
+// resto del panel. Nunca se sirve desde /public: contiene datos de huésped.
+app.get('/admin/:id/pdf', requireAuth, requireProperty(['adaria']), async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(404).send('No encontrado');
+  try {
+    const { rows } = await pool.query(
+      'SELECT codigo, pdf_path FROM precheckin_reserva WHERE id = $1 AND property = ANY($2)', [id, req.properties]);
+    if (!rows.length || !rows[0].pdf_path) return res.status(404).send('No encontrado');
+    const abs = path.join(firma.STORAGE_DIR, rows[0].pdf_path);
+    if (!abs.startsWith(firma.STORAGE_DIR)) return res.status(400).send('Ruta inválida');
+    res.download(abs, `precheckin_${rows[0].codigo}.pdf`);
+  } catch (err) {
+    console.error('[adaria-precheckin] Error descargando PDF:', err.message);
     res.status(500).send('Error consultando la base de datos');
   }
 });
