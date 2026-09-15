@@ -2250,4 +2250,20 @@ app.get('/api/motivacion/mes', async (req, res) => {
   }
 });
 
+// ─── Admin: generar enlace de autorización del quiosco ────────────────
+// Endpoint para que el admin genere un enlace que pueda compartir con alguien
+// que vaya a configurar una tablet/kiosco de fichaje.
+// POST /api/admin/kiosk-link → { link: "https://..." }
+app.post('/api/admin/kiosk-link', (req, res) => {
+  if (!req.session?.user || !['admin', 'superadmin'].includes(req.session.user.rol)) {
+    return res.status(403).json({ error: 'Acceso restringido a admin/superadmin' });
+  }
+  if (!KIOSK_KEY) {
+    return res.status(503).json({ error: 'Quiosco no configurado en servidor (falta KIOSK_KEY)' });
+  }
+  const baseUrl = (process.env.PUBLIC_BASE_URL || `https://gestion.hoteladariavera.com`).replace(/\/+$/, '');
+  const link = `${baseUrl}${BASE_PATH}/quiosco?key=${encodeURIComponent(KIOSK_KEY)}`;
+  res.json({ link, info: 'Comparte este enlace con el dispositivo para configurar como quiosco de fichaje' });
+});
+
 app.listen(PORT, '0.0.0.0', () => console.log(`Adaria Personal v${APP_VERSION} (${PROPERTY_ID}) en :${PORT}`));
