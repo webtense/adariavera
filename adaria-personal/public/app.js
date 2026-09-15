@@ -35,6 +35,7 @@ function tabs(active) {
     <button class="${active === 'inspeccion' ? 'on' : ''}" onclick="location.hash='#/inspeccion'">📋 Inspección de Trabajo</button>
     <button class="${active === 'informes' ? 'on' : ''}" onclick="location.hash='#/informes'">📊 Informes</button>
     <button class="${active === 'motivacion' ? 'on' : ''}" onclick="location.hash='#/motivacion'">🎉 Motivación</button>
+    <button class="${active === 'quiosco' ? 'on' : ''}" onclick="location.hash='#/quiosco'">🔑 Quiosco</button>
   </div>`;
 }
 
@@ -967,12 +968,56 @@ async function router() {
     if (partes[0] === 'inspeccion') return await vistaInspeccion();
     if (partes[0] === 'informes') return await vistaInformes();
     if (partes[0] === 'motivacion') return await vistaMotivacion();
+    if (partes[0] === 'quiosco') return await vistaQuiosco();
     if (partes[0] === 'empleados' && partes[1] === 'nuevo') return await vistaNuevoEmpleado();
     if (partes[0] === 'empleados' && partes[1]) return await vistaFichaEmpleado(partes[1]);
     return await vistaEmpleados();
   } catch (e) {
     app.innerHTML = `<div class="err">${esc(e.message)}</div>`;
   }
+}
+
+// ─── Vista: Quiosco — generar enlace de autorización ───
+async function vistaQuiosco() {
+  app.innerHTML = `<h1>Quiosco de Fichaje</h1><p class="muted">Generar enlace para configurar un dispositivo como quiosco de fichaje.</p>
+    ${tabs('quiosco')}
+    <div class="box">
+      <h3>🔑 Generar Enlace de Autorización</h3>
+      <p>Haz clic en el botón para generar un enlace que puedas compartir con alguien que vaya a configurar una tablet o dispositivo como quiosco de fichaje.</p>
+      <button class="btn" id="btnGenerarQuiosco" onclick="generarEnlaceQuiosco()">📋 Generar Enlace</button>
+      <div id="resultadoQuiosco"></div>
+    </div>`;
+}
+
+async function generarEnlaceQuiosco() {
+  const btn = document.getElementById('btnGenerarQuiosco');
+  const res = document.getElementById('resultadoQuiosco');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generando...';
+  try {
+    const data = await api('POST', '/api/admin/kiosk-link');
+    res.innerHTML = `<div class="ok" style="margin-top: 16px; padding: 12px; border-radius: 8px; background: #e8f8ef; border-left: 4px solid #27ae60;">
+      <b>✅ Enlace generado</b><br><br>
+      <div style="background: #fff; padding: 12px; border-radius: 6px; font-family: monospace; word-break: break-all; margin-bottom: 12px; font-size: 12px;">
+        ${esc(data.link)}
+      </div>
+      <button class="btn" onclick="copiarAlPortapapeles('${data.link.replace(/'/g, '\\'')}')" style="background: #27ae60;">📋 Copiar enlace</button>
+      <p style="margin-top: 12px; font-size: 12px; color: #555;">${esc(data.info)}</p>
+    </div>`;
+  } catch (e) {
+    res.innerHTML = `<div class="err" style="margin-top: 16px;">${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📋 Generar Enlace';
+  }
+}
+
+function copiarAlPortapapeles(texto) {
+  navigator.clipboard.writeText(texto).then(() => {
+    alert('✅ Enlace copiado al portapapeles');
+  }).catch(() => {
+    alert('❌ No se pudo copiar. Copia manualmente: ' + texto);
+  });
 }
 
 window.addEventListener('hashchange', router);
