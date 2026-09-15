@@ -197,6 +197,7 @@ function ensureSuperadmin(req, res, next) {
 app.get('/api/version', (req, res) => res.json({ version: require('./package.json').version }));
 
 app.get('/health', (req, res) => res.json({ ok: true, app: 'adaria-personal', v: APP_VERSION, property: PROPERTY_ID }));
+app.get('/halo', (req, res) => res.json({ ok: true, modulo: 'personal', timestamp: Date.now(), version: APP_VERSION }));
 
 // ─── Changelog (público, sin auth) ───
 // Sirve VERSION/changelog.json (histórico de commits generado desde git log)
@@ -958,7 +959,9 @@ app.get('/quiosco', (req, res) => {
     res.cookie(KIOSK_COOKIE_NAME, KIOSK_KEY, KIOSK_COOKIE_OPTS);
     return res.redirect(BASE_PATH + '/quiosco');
   }
-  if (!kioskAutorizado(req)) {
+  // Permitir acceso si: (1) cookie válida O (2) sesión de admin válida (superadmin/admin desde gestion)
+  const tieneSessionAdmin = req.session?.user?.role && ['admin', 'superadmin'].includes(req.session.user.role);
+  if (!kioskAutorizado(req) && !tieneSessionAdmin) {
     return res.status(403).send(kioskAvisoPage(
       'Dispositivo no configurado',
       'Este dispositivo no está autorizado como quiosco de fichaje. Pide a administración la URL de configuración (con la clave) para configurarlo una vez.'
