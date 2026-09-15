@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Monitoreo · Hotel Adaria Vera</title>
+<style>
+:root{--od:#1b5e75;--om:#2d8aa3;--ch:#333;--off:#f8f9fa}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:var(--ch);background:var(--off)}
+.top{background:linear-gradient(135deg,var(--od),var(--om));color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px}
+.top .b{font-size:17px;font-weight:700}.top .b span{font-size:21px;margin-right:6px}
+.top a{color:#fff;text-decoration:none;margin-left:auto;font-size:14px;opacity:.85}
+.wrap{max-width:900px;margin:0 auto;padding:26px 24px}
+h1{color:var(--od);font-size:22px;margin-bottom:4px}
+.muted{color:#888;font-size:14px;margin-bottom:20px}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.06);font-size:14px}
+th{background:var(--od);color:#fff;text-align:left;padding:9px 12px;font-size:13px}
+td{border-bottom:1px solid #eee;padding:9px 12px}
+.ok{color:#27ae60;font-weight:700}.bad{color:#e74c3c;font-weight:700}
+.lat{color:#666;font-variant-numeric:tabular-nums}
+.foot{color:#999;font-size:12px;text-align:center;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="top"><div class="b"><span>🔄</span>Monitoreo de módulos</div><a href="/">← Volver</a></div>
+<div class="wrap">
+<h1>Estado en vivo</h1>
+<p class="muted">Consulta /halo de los 6 módulos en paralelo. Refresco automático cada 10s.</p>
+<table>
+<thead><tr><th>Módulo</th><th>Estado</th><th>Latencia</th><th>Última respuesta</th></tr></thead>
+<tbody id="rows"><tr><td colspan="4">Cargando…</td></tr></tbody>
+</table>
+<div class="foot" id="lastcheck"></div>
+</div>
+<script>
+async function refresh(){
+  const tbody = document.getElementById('rows');
+  const lastcheck = document.getElementById('lastcheck');
+  try{
+    const r = await fetch('/api/halo', { cache: 'no-store' });
+    const data = await r.json();
+    tbody.innerHTML = data.map(function(m){
+      const estado = m.ok ? '<span class="ok">✅ OK</span>' : '<span class="bad">❌ Caído</span>' + (m.error ? ' <small>(' + m.error + ')</small>' : '');
+      const ts = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('es-ES') : '—';
+      return '<tr><td><b>' + m.modulo + '</b></td><td>' + estado + '</td><td class="lat">' + m.latencia + ' ms</td><td>' + ts + '</td></tr>';
+    }).join('');
+    lastcheck.textContent = 'Última comprobación: ' + new Date().toLocaleTimeString('es-ES');
+  }catch(e){
+    tbody.innerHTML = '<tr><td colspan="4">Error consultando /api/halo</td></tr>';
+  }
+}
+refresh();
+setInterval(refresh, 10000);
+</script>
+</body>
+</html>
