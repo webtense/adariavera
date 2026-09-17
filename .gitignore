@@ -35,3 +35,10 @@ storage/
 
 # Sistema
 .DS_Store
+
+# ===== SECRETOS - NUNCA COMMITEAR =====
+*.env.bak*
+.env.*.bak
+.env.production.bak
+.env.production
+.env.*.backup
