@@ -45,7 +45,7 @@ npm run dev
 Las credenciales se encuentran en archivos `.env` locales (no comiteados).
 
 Servidores principales:
-- **Proxmox**: 192.168.1.10:8006 (root/***REMOVED***)
+- **Proxmox**: 192.168.1.10:8006 (credenciales en `.env.bak`, NO en git)
 - **Frigate NVR**: CT/VM pendiente de crear
 - **Tailscale**: Pendiente instalación en host Proxmox
 
